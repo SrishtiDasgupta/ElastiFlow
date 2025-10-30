@@ -1,0 +1,62 @@
+# config/licenses.yaml
+
+version: 1
+
+# Global pools tracked by the scheduler
+pools:
+  ANSYS:
+    total_tokens: 12         # total floating tokens available
+    reserved_floor: 0        # optionally keep some tokens unallocatable
+    burst_cap: null          # optional short-term cap > total_tokens for grace windows
+  ABAQUS:
+    total_tokens: 8
+    reserved_floor: 0
+    burst_cap: null
+  LSDYNA:
+    total_tokens: 10
+    reserved_floor: 0
+    burst_cap: null
+
+# Accounting policy for how tokens are consumed
+policy:
+  mode: per_core           # per_chain | per_core | custom
+  tokens_per_chain: 1        # used when mode == per_chain
+  tokens_per_core: null      # used when mode == per_core (e.g., 0.25)
+  rounding: ceil             # ceil | floor | nearest (when per_core is used)
+  two_phase_commit: true     # hold() then commit() to avoid races
+  lifo_release: true         # release newest allocations first within a pool
+
+  per_core:
+  # default if software not matched
+    default_strategy: linear 
+
+    strategies:
+      lsdyna:
+        type: linear
+
+      abaqus: 
+        type: powerlaw
+        a: 5.0
+        b: 0.422
+        min_tokens: 5
+
+      ansys:
+        type: ansys_workgroup 
+
+# Optional fairness/anti-starvation knobs for admission/backfill
+fairness:
+  max_consecutive_starts_per_pool: 3
+  rebalance_weight: 0.25     # 0..1; higher = stronger push toward underused pools
+
+# Optional mapping conveniences / normalization
+aliases:
+  ansys: ANSYS
+  abaqus: ABAQUS
+  lsdyna: LSDYNA
+
+# Validation rules and guardrails
+guards:
+  enforce_known_pools: true  # reject unknown license names
+  deny_if_tokens_exact_zero: true
+  warn_below_reserved_floor: true
+

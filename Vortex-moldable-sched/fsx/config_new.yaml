@@ -1,0 +1,38 @@
+Region: eu-north-1
+Image:
+  Os: ubuntu2204
+HeadNode:
+  InstanceType: c5n.4xlarge
+  Networking:
+    SubnetId: subnet-03e7330f6288164e3
+  Ssh:
+    KeyName: srishti-vdi
+Scheduling:
+  Scheduler: slurm
+  SlurmSettings:
+    QueueUpdateStrategy: TERMINATE
+  SlurmQueues:
+  - Name: onprem
+    Networking:
+      PlacementGroup:
+        Enabled: true
+      SubnetIds:
+      - subnet-03e7330f6288164e3
+      AssignPublicIp: false
+    ComputeResources:
+    - Name: hpc7a
+      Instances:
+      - InstanceType: hpc7a.24xlarge
+      MinCount: 4
+      MaxCount: 4
+      Efa:
+        Enabled: true
+      DisableSimultaneousMultithreading: true
+SharedStorage:
+   - MountDir: /fsx
+     Name: fsx
+     StorageType: FsxLustre
+     FsxLustreSettings:
+      FileSystemId: fs-07b0f86690688abd6
+                                                                                                          
+

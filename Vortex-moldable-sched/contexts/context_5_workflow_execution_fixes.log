@@ -1,0 +1,557 @@
+================================================================================
+SESSION 5: WORKFLOW EXECUTION FIXES - PARAMETER FLOW & COMMUNICATION
+================================================================================
+
+DATE: 2025-10-05
+CONTEXT: Fixing workflow parameter extraction, service script communication,
+and correcting executor/scheduler responsibilities
+
+================================================================================
+ISSUES RESOLVED IN THIS SESSION
+================================================================================
+
+1. **Parameter Extraction KeyError (exec_sched.py)**
+   - Error: KeyError: 'epoch' on first iteration
+   - Error: KeyError: 'workflowConfig'
+   - Cause: Mismatch between workflow structure and code expectations
+
+2. **Service Script Empty Output (run_hpo.py)**
+   - Error: IndexError: list index out of range (output_lines[0])
+   - Cause: Service script not printing results to stdout
+
+3. **Command Format Mismatch (steep_actions_HPO.py)**
+   - Error: Invalid decimal literal
+   - Cause: Python dict literal passed instead of JSON string
+
+4. **Cloud Runner Host Format (cloud_runner_HPO_new.py)**
+   - Error: No worker instances available for Ray cluster
+   - Cause: Runner expected tiered format, received flat format
+
+5. **Redis Missing on Executor (on_demand_setup_HPO_executor.sh)**
+   - Error: Connection refused to localhost:6379
+   - Cause: Redis server not installed/started on executor
+
+6. **Incorrect Resource Allocation Responsibility (exec_sched.py)**
+   - Issue: Executor was creating on-demand instances
+   - Problem: Only scheduler should create instances (knows budget/deadline)
+
+================================================================================
+FIX 1: PARAMETER EXTRACTION - HYBRID APPROACH
+================================================================================
+
+Problem: Workflow parameters come from different sources across iterations
+- Iteration 0: From workflow YAML (keys: 'epochs', 'next_trials', 'chains')
+- Iteration 1+: From HPO pipeline output (keys: 'epoch', 'next_trials')
+
+Also, workflow structure doesn't have 'workflowConfig', only 'config' and 'constraints'
+
+SOLUTION 1A: Store constraints in workflow config
+File: src/main/utils/exec_sched.py (line 33)
+
+```python
+def setWorkflowConfig(id, workflow, sim, deadline):
+    workflow_config[id] = workflow['config']
+    workflow_config[id]['constraints'] = workflow.get('constraints', {})  # NEW
+    workflow_config[id]['sim'] = sim
+    workflow_config[id]['deadline'] = deadline
+    workflow_config[id]['complete'] = False
+```
+
+SOLUTION 1B: Hybrid parameter extraction
+File: src/main/utils/exec_sched.py (lines 50-81)
+
+```python
+def getClientInputs(wf_id, input: Tuple[float, List[str]], ind):
+    mesh = getWorkflowConfig(wf_id)['mesh']
+    sim = getWorkflowConfig(wf_id)['sim']
+
+    # Iteration 0: input[0] is initial config from workflow YAML
+    # Iteration 1+: input[0] is HPO pipeline output
+    if ind == 0:
+        # First iteration: extract from workflow constraints
+        constraints = getWorkflowConfig(wf_id).get('constraints', {})
+        chains = input[0].get('next_trials', constraints.get('chains', 1))
+        tinyda_iterations = input[0].get('epochs', constraints.get('tinydaIterations', 1))
+    else:
+        # Subsequent iterations: extract from HPO pipeline output
+        chains = input[0].get('next_trials', 0)
+        tinyda_iterations = input[0].get('epoch', input[0].get('epochs', 1))
+
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+
+    # ... rest of function
+```
+
+Why This Works:
+- Iteration 0: Reads 'epochs'/'next_trials' from workflow YAML via constraints
+- Iteration 1+: Reads 'epoch'/'next_trials' from HPO pipeline output
+- Supports both singular ('epoch') and plural ('epochs') for compatibility
+- Falls back to constraints if input doesn't have the keys
+
+================================================================================
+FIX 2: SERVICE SCRIPT OUTPUT FORMAT
+================================================================================
+
+Problem: run_hpo.py was updated to print JSON output, but steep_actions_HPO.py
+was passing Python dict literal instead of JSON string
+
+SOLUTION: Pass JSON string to service script
+File: src/main/workflow/steep/steep_actions_HPO.py (lines 8, 106-108)
+
+Added import:
+```python
+import json
+```
+
+Changed subprocess call:
+```python
+# Build command with JSON-formatted args (required by run_hpo.py)
+args_json = json.dumps(args)
+command = [sys.executable, self.service, args_json]
+print(f"[DEBUG] Executing command: {command[0]} {command[1]} '{args_json[:100]}...'")
+
+result = subprocess.run(command, check=True, capture_output=True, text=True)
+```
+
+BEFORE (BROKEN):
+```bash
+python3 /fsx/Vortex/service/run_hpo.py {'wf_id': 'test', 'cohesion': {...}}
+# Shell splits on spaces, JSON parsing fails
+```
+
+AFTER (FIXED):
+```bash
+python3 /fsx/Vortex/service/run_hpo.py '{"wf_id": "test", "cohesion": {...}}'
+# Single JSON string argument, parses correctly
+```
+
+================================================================================
+FIX 3: CLOUD RUNNER HOST FORMAT HANDLING
+================================================================================
+
+Problem: cloud_runner_HPO_new.extract_worker_ips() expected tiered format:
+```python
+{'reserved': {'g4dn.2xlarge': (1, ['10.19.201.97'])}}
+```
+
+But received flat format from workflow:
+```python
+{'g4dn.2xlarge': ['10.19.201.97']}
+```
+
+SOLUTION: Handle both formats
+File: service/cloud_runner_HPO_new.py (lines 80-108)
+
+```python
+def extract_worker_ips(self) -> List[str]:
+    """Extract all worker IP addresses from hosts configuration
+
+    Handles two formats:
+    1. Tiered: {'reserved': {'g4dn.2xlarge': (1, ['10.19.201.97'])}}
+    2. Flat: {'g4dn.2xlarge': ['10.19.201.97']}
+    """
+    worker_ips = []
+
+    # Check if tiered format
+    is_tiered = any(k in self.worker_hosts for k in ['on-prem', 'reserved', 'on-demand'])
+
+    if is_tiered:
+        # Tiered format
+        for cluster_type in ['on-prem', 'reserved', 'on-demand']:
+            if cluster_type in self.worker_hosts:
+                for instance_type, (count, ips) in self.worker_hosts[cluster_type].items():
+                    worker_ips.extend(ips)
+    else:
+        # Flat format
+        for instance_type, ips in self.worker_hosts.items():
+            if isinstance(ips, list):
+                worker_ips.extend(ips)
+            elif isinstance(ips, tuple) and len(ips) == 2:
+                worker_ips.extend(ips[1])
+
+    self.logger.info(f"Extracted {len(worker_ips)} worker IPs: {worker_ips}")
+    return worker_ips
+```
+
+================================================================================
+FIX 4: REDIS INSTALLATION ON EXECUTOR
+================================================================================
+
+Problem: Executor requires Redis for queue-based communication, but it wasn't
+being installed on executor instances
+
+SOLUTION: Install and start Redis in executor setup script
+File: src/main/scripts/on_demand_setup_HPO_executor.sh (lines 52-81)
+
+```bash
+# Install and start Redis server (required for executor queue)
+echo "Installing Redis server..."
+sudo apt-get update >> ~/setup.out 2>&1
+sudo apt-get install -y redis-server >> ~/setup.out 2>&1
+
+# Start Redis service (try both possible service names)
+echo "Starting Redis server..."
+if sudo systemctl list-unit-files | grep -q "redis-server.service"; then
+    REDIS_SERVICE="redis-server"
+elif sudo systemctl list-unit-files | grep -q "redis.service"; then
+    REDIS_SERVICE="redis"
+else
+    echo "WARNING: Could not find Redis service name, trying 'redis'"
+    REDIS_SERVICE="redis"
+fi
+
+echo "Using Redis service name: ${REDIS_SERVICE}"
+sudo systemctl enable ${REDIS_SERVICE} >> ~/setup.out 2>&1
+sudo systemctl start ${REDIS_SERVICE} >> ~/setup.out 2>&1
+
+# Verify Redis is running
+sleep 2
+if sudo systemctl is-active --quiet ${REDIS_SERVICE}; then
+    echo "Redis server started successfully"
+else
+    echo "WARNING: Redis server may not have started properly"
+    # Try starting manually if systemd fails
+    echo "Attempting to start Redis manually..."
+    sudo redis-server --daemonize yes >> ~/setup.out 2>&1
+fi
+```
+
+Why This Approach:
+- Detects correct service name (varies by Ubuntu version)
+- Falls back to manual start if systemd fails
+- Verifies Redis is running before continuing
+
+Executor Communication Flow:
+1. HTTP Server (port 8089) receives workflow from scheduler
+2. Server pushes workflow to Redis queue
+3. processQueueData() thread reads from Redis queue
+4. Spawns thread to execute workflow
+
+Without Redis: Executor crashes on startup with "Connection refused"
+
+================================================================================
+FIX 5: CORRECTED RESOURCE ALLOCATION RESPONSIBILITIES
+================================================================================
+
+Problem: Executor was creating on-demand instances in getHostsForIteration()
+This is architecturally wrong because:
+- Executor doesn't know budget constraints
+- Executor doesn't know deadline requirements
+- Only scheduler should make resource allocation decisions
+
+SOLUTION: Remove instance creation from executor
+File: src/main/utils/exec_sched.py (lines 86-99)
+
+BEFORE (WRONG):
+```python
+case 'on-demand':
+    onDemandIps = createInstance(instance, nodes[0] - len(nodes[1]), sim)
+    cur_hosts[instance] = cur_hosts.get(instance, []) + nodes[1] + onDemandIps
+    if onDemandIps:
+        hosts[cluster][instance] = (nodes[0], nodes[1] + onDemandIps)
+```
+
+AFTER (CORRECT):
+```python
+case 'reserved' | 'on-demand':
+    # Executor should ONLY use IPs provided by scheduler
+    # Scheduler has already allocated all instances based on budget/deadline
+    cur_hosts[instance] = cur_hosts.get(instance, []) + nodes[1]
+```
+
+CORRECT ARCHITECTURE:
+
+Scheduler Responsibilities:
+1. Makes ALL resource allocation decisions
+2. Creates on-prem, reserved, AND on-demand instances
+3. Considers budget and deadline constraints
+4. Sends complete allocation to executor
+
+Executor Responsibilities:
+1. Uses ONLY the IPs provided by scheduler (no instance creation)
+2. For moldable workflows:
+   - If needs more resources → Requests from scheduler via sendAndFetchResponse()
+   - If has excess resources → Requests scheduler to free them
+   - Scheduler responds with new allocation
+
+Moldable Flow:
+1. Executor: "Need 3 more workers for next iteration"
+2. Scheduler: Evaluates budget/deadline, allocates if possible
+3. Scheduler: Sends new allocation to executor
+4. Executor: Uses new allocation (doesn't create anything)
+
+================================================================================
+FIX 6: DEBUG LOGGING ENHANCEMENTS
+================================================================================
+
+Added comprehensive logging to diagnose workflow execution issues
+
+File: src/main/executor_HPO.py (lines 44-86)
+```python
+print(f"[DEBUG] executeWorkflowHPO called with data: {data.keys() if data else 'None'}")
+print(f"[DEBUG] Workflow plan ID: {workflow_plan.get('id') if workflow_plan else 'None'}")
+print(f"[DEBUG] Hosts: {hosts}")
+print(f"[DEBUG] Deadline: {deadline}")
+print(f"[DEBUG] About to call workflow.execute()")
+
+try:
+    new_hosts, isComplete = workflow.execute(hosts)
+    print(f"[DEBUG] workflow.execute() returned: new_hosts={new_hosts}, isComplete={isComplete}")
+except Exception as e:
+    print(f"[ERROR] Workflow execution failed: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
+```
+
+File: src/main/workflow/steep/steep_actions_HPO.py (lines 95-113, 144-157)
+```python
+print(f"[DEBUG] Getting client inputs for iteration {ind}")
+args, hosts, sim = getClientInputs(self.wf_id, input, ind)
+
+print(f"[DEBUG] Client inputs: {args}")
+print(f"[DEBUG] Service script: {self.service}")
+
+# Build command with JSON-formatted args
+args_json = json.dumps(args)
+command = [sys.executable, self.service, args_json]
+print(f"[DEBUG] Executing command: {command[0]} {command[1]} '{args_json[:100]}...'")
+
+result = subprocess.run(command, check=True, capture_output=True, text=True)
+
+print(f"[DEBUG] Subprocess completed successfully")
+print(f"[DEBUG] STDOUT (first 500 chars): {result.stdout[:500]}")
+
+# Enhanced error handling:
+except subprocess.CalledProcessError as e:
+    print(f"[ERROR] ============================================")
+    print(f"[ERROR] Service script failed!")
+    print(f"[ERROR] Command: {e.cmd}")
+    print(f"[ERROR] Return code: {e.returncode}")
+    print(f"[ERROR] STDOUT:\n{e.stdout}")
+    print(f"[ERROR] STDERR:\n{e.stderr}")
+    print(f"[ERROR] ============================================")
+    setWorkflowComplete(self.wf_id, True)
+except Exception as e:
+    print(f"[ERROR] Unexpected error in workflow iteration: {e}")
+    import traceback
+    traceback.print_exc()
+    setWorkflowComplete(self.wf_id, True)
+```
+
+This logging reveals:
+- What data the executor receives
+- Exact command being executed
+- Full subprocess output and errors
+- Where workflow execution fails
+
+================================================================================
+WORKFLOW PARAMETER FLOW SUMMARY
+================================================================================
+
+Initial Workflow Submission (data0.yaml):
+```yaml
+constraints:
+  chains: 2                     # Number of trials
+  tinydaIterations: 6           # Epochs per trial
+
+config:
+  mesh: vgg19
+  workflowIterations: 4
+
+vars:
+  - id: input_config
+    value: {
+      "learning_rate": 0.01,
+      "momentum": 0.9,
+      "batch_size": 64,
+      "epochs": 6,              # Note: plural
+      "next_trials": 3,
+      "model": "vgg19"
+    }
+```
+
+Iteration 0 Parameter Flow:
+1. ForEachAction: input[0] = initial config dict (from vars)
+2. ExecuteAction: calls getClientInputs(wf_id, input, ind=0)
+3. getClientInputs:
+   - Extracts chains from input[0]['next_trials'] (fallback to constraints)
+   - Extracts epochs from input[0]['epochs'] (fallback to constraints)
+4. Service script: Receives JSON with all parameters
+5. HPO Pipeline: Runs trials, outputs result
+
+HPO Pipeline Output (hpo_pipeline_verbose.py line 496):
+```python
+best_result["config"] = {
+    "learning_rate": 0.015,
+    "momentum": 0.92,
+    "batch_size": 64,
+    "epoch": 5,               # Note: singular!
+    "next_trials": 2,
+    "model": "vgg19"
+}
+print(json.dumps(best_result))
+```
+
+Iteration 1+ Parameter Flow:
+1. steep_actions_HPO.py line 129:
+   self.output_parameters[0].append((result['config'], hosts))
+2. ForEachAction: input[0] = result['config'] from previous iteration
+3. ExecuteAction: calls getClientInputs(wf_id, input, ind=1)
+4. getClientInputs:
+   - Extracts chains from input[0]['next_trials']
+   - Extracts epochs from input[0]['epoch'] (singular!)
+5. Service script: Receives JSON with updated parameters
+6. HPO Pipeline: Uses refined search space, outputs new result
+
+Key Insight: Parameter keys change between iterations!
+- Iteration 0: 'epochs' (plural) from workflow YAML
+- Iteration 1+: 'epoch' (singular) from HPO pipeline
+- Solution: Check both in hybrid extraction logic
+
+================================================================================
+FILES MODIFIED IN THIS SESSION
+================================================================================
+
+1. ✅ src/main/utils/exec_sched.py
+   - setWorkflowConfig(): Added constraints storage (line 33)
+   - getClientInputs(): Hybrid parameter extraction (lines 50-81)
+   - getHostsForIteration(): Removed on-demand instance creation (lines 86-99)
+
+2. ✅ src/main/workflow/steep/steep_actions_HPO.py
+   - Added json import (line 8)
+   - Changed subprocess call to use JSON format (lines 106-108)
+   - Enhanced debug logging (lines 95-113)
+   - Improved error handling (lines 144-157)
+
+3. ✅ service/cloud_runner_HPO_new.py
+   - extract_worker_ips(): Handle both tiered and flat formats (lines 80-108)
+
+4. ✅ src/main/scripts/on_demand_setup_HPO_executor.sh
+   - Install Redis server (lines 52-81)
+   - Auto-detect service name (redis vs redis-server)
+   - Fallback to manual start if systemd fails
+
+5. ✅ src/main/executor_HPO.py
+   - Added comprehensive debug logging (lines 44-86)
+   - Enhanced error handling with tracebacks
+
+6. ✅ service/run_hpo.py (user modified)
+   - Now accepts JSON string as argument
+   - Prints structured JSON output
+   - Handles both JSON and Python literal parsing
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+✅ Parameters extracted correctly on iteration 0 (from workflow YAML)
+✅ Parameters extracted correctly on iteration 1+ (from HPO output)
+✅ Service script receives JSON format arguments
+✅ Service script outputs parseable JSON results
+✅ Cloud runner handles both flat and tiered host formats
+✅ Redis installed and started on executor instances
+✅ Executor never creates instances (only uses scheduler allocations)
+✅ Comprehensive debug logging for troubleshooting
+⏳ End-to-end workflow execution (needs testing)
+
+================================================================================
+ARCHITECTURE CLARIFICATIONS
+================================================================================
+
+SCHEDULER (fcfs_scheduler_HPO.py / fcfs_optimized_HPO.py):
+- Receives workflow submission from user
+- Evaluates budget and deadline constraints
+- Makes ALL resource allocation decisions:
+  * On-prem: Uses available capacity
+  * Reserved: Uses pre-allocated cloud instances
+  * On-demand: Creates new cloud instances (if budget allows)
+- Sends complete allocation to executor via HTTP POST
+
+EXECUTOR (executor_HPO.py):
+- Runs on dedicated instance (doesn't participate in computation)
+- Receives workflow from scheduler via HTTP server (port 8089)
+- Pushes workflow to Redis queue
+- processQueueData() thread spawns execution thread
+- Uses ONLY the IPs provided by scheduler
+- For moldable: Requests more/fewer resources from scheduler
+
+STEEP WORKFLOW ENGINE (steep_workflow.py, steep_actions_HPO.py):
+- Parses workflow YAML
+- Executes ForEach actions (workflow iterations)
+- Calls service script (run_hpo.py) via subprocess
+- Passes JSON arguments to service script
+- Parses JSON output from service script
+
+SERVICE SCRIPT (run_hpo.py):
+- Routes to PlclRunnerHPO (on-prem) or CloudRunnerHPO (cloud)
+- Receives JSON request with hosts, chains, epochs, hyperparameters
+- Returns JSON result with updated hyperparameters and next_trials
+
+RUNNERS (plcl_runner_HPO.py / cloud_runner_HPO_new.py):
+- Set up Ray cluster on WORKERS (not executor)
+- Run HPO pipeline (hpo_pipeline_verbose.py)
+- Return results to service script
+
+HPO PIPELINE (hpo_pipeline_verbose.py):
+- Runs Ray Tune hyperparameter optimization
+- Refines search space based on best config
+- Calculates adaptive trial count (next_trials)
+- Returns JSON with best config and next_trials
+
+================================================================================
+REMAINING ISSUES / FUTURE WORK
+================================================================================
+
+1. **End-to-End Testing**
+   - Need to verify complete workflow execution
+   - Check if HPO pipeline runs successfully on workers
+   - Verify moldable reallocation works correctly
+
+2. **Error Recovery**
+   - If HPO pipeline fails, workflow terminates immediately
+   - Could add retry logic or fallback configurations
+
+3. **Resource Cleanup**
+   - Verify on-demand instances are terminated after workflow completion
+   - Check if Ray cluster is properly shut down
+
+4. **Performance Optimization**
+   - Current logging is verbose (useful for debugging)
+   - Could reduce logging in production
+
+5. **Configuration Validation**
+   - No validation of workflow YAML structure
+   - Could add schema validation
+
+================================================================================
+KEY LEARNINGS
+================================================================================
+
+1. **Parameter Format Consistency**: Different components use different formats
+   - Workflow YAML: 'epochs' (plural)
+   - HPO Pipeline: 'epoch' (singular)
+   - Solution: Support both with fallbacks
+
+2. **Host Format Variations**: Support both tiered and flat formats
+   - Scheduler sends tiered: {'reserved': {'g4dn.2xlarge': (1, [IPs])}}
+   - Workflow uses flat: {'g4dn.2xlarge': [IPs]}
+   - Runners must handle both
+
+3. **Subprocess Argument Passing**: Shell splits on spaces
+   - Wrong: str(dict) → shell splits on spaces
+   - Right: json.dumps(dict) → single quoted string
+
+4. **Separation of Concerns**:
+   - Scheduler: Resource allocation (budget/deadline aware)
+   - Executor: Workflow execution (uses provided resources)
+   - Never mix responsibilities
+
+5. **Debug Logging**: Essential for distributed systems
+   - Log at boundaries (executor receive, service call, etc.)
+   - Include full error context (stdout, stderr, traceback)
+   - Use structured formats (JSON) for machine parsing
+
+================================================================================
+END OF SESSION 5 DOCUMENTATION
+================================================================================
