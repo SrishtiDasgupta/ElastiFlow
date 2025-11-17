@@ -13,7 +13,7 @@ workflow_config = {}
 
 
 def getWorkflowOnpremPort():
-    with open("/home/ubuntu/Vortex/src/main/config/ports.yaml", "r") as f:
+    with open("/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "r") as f:
         data = yaml.safe_load(f)
 
     ports = data.get("onprem_ports", [])
@@ -23,7 +23,7 @@ def getWorkflowOnpremPort():
     popped = ports.pop(0)
     data["onprem_ports"] = ports
 
-    with open("/home/ubuntu/Vortex/src/main/config/ports.yaml", "w") as f:
+    with open("/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "w") as f:
         yaml.safe_dump(data, f) # default = block style
 
     return popped

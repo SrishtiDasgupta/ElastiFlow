@@ -12,8 +12,48 @@ import yaml
 workflow_config = {}
 
 
+def detectWorkflowType(wf_id):
+    """
+    Detect workflow type based on distinguishing fields.
+
+    Three workflow types:
+    - PLAIN: Plain SeisSol (uses workflowConfig array, no licenses)
+    - LA: License-Aware SeisSol (has license_pool/software_id, uses constraints)
+    - HPO: Hyperparameter Optimization (string mesh, dict inputs)
+
+    Detection hierarchy (order matters - check most specific first):
+    1. License fields (license_pool/software_id) → LA
+    2. String mesh → HPO
+    3. workflowConfig array → PLAIN
+    4. Integer mesh → PLAIN (fallback)
+    """
+    config = getWorkflowConfig(wf_id)
+    constraints = config.get('constraints', {})
+    mesh = config.get('mesh')
+
+    # 1. Check for LA-specific fields (most specific)
+    if 'license_pool' in constraints or 'software_id' in config:
+        return 'LA'
+
+    # 2. Check for HPO-specific fields (string mesh = model names like "vgg19")
+    if isinstance(mesh, str):
+        return 'HPO'
+
+    # 3. Check for Plain-specific fields (workflowConfig array)
+    if 'workflowConfig' in config:
+        return 'PLAIN'
+
+    # 4. Fallback: integer mesh likely means Plain or LA without explicit fields
+    #    Default to PLAIN for backwards compatibility
+    if isinstance(mesh, int):
+        return 'PLAIN'
+
+    # 5. Ultimate fallback
+    raise ValueError(f"Cannot determine workflow type for {wf_id}: mesh={mesh}, config keys={config.keys()}")
+
+
 def getWorkflowOnpremPort():
-    with open("/home/ubuntu/Vortex/src/main/config/ports.yaml", "r") as f:
+    with open("/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "r") as f:
         data = yaml.safe_load(f)
 
     ports = data.get("onprem_ports", [])
@@ -23,7 +63,7 @@ def getWorkflowOnpremPort():
     popped = ports.pop(0)
     data["onprem_ports"] = ports
 
-    with open("/home/ubuntu/Vortex/src/main/config/ports.yaml", "w") as f:
+    with open("/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "w") as f:
         yaml.safe_dump(data, f) # default = block style
 
     return popped
@@ -34,6 +74,9 @@ def setWorkflowConfig(id, workflow, sim, deadline):
     workflow_config[id]['sim'] = sim
     workflow_config[id]['deadline'] = deadline
     workflow_config[id]['complete'] = False
+
+    # Detect and cache workflow type for efficient routing
+    workflow_config[id]['workflow_type'] = detectWorkflowType(id)
 
 def getWorkflowConfig(id):
     return workflow_config[id]
@@ -47,19 +90,92 @@ def setNewResources(id, data: Tuple):
 def setWorkflowComplete(id, isComplete: bool):
     workflow_config[id]['complete'] = isComplete
 
-def getClientInputs(wf_id, input: Tuple[float, List[str]], ind):
+
+def getClientInputs_Plain(wf_id, input: Tuple, ind):
+    """
+    Handler for Plain SeisSol workflows.
+
+    Plain workflows use workflowConfig array for pre-planned iteration configs.
+    Input format: (cohesion_value, hosts) where cohesion_value is numeric/string scalar.
+    """
+    mesh = getWorkflowConfig(wf_id)['mesh']
+    sim = getWorkflowConfig(wf_id)['sim']
+    workflow_config_array = getWorkflowConfig(wf_id)['workflowConfig']
+
+    # Extract from pre-planned workflowConfig array
+    chains = workflow_config_array[ind]['chains']
+    tinyda_iterations = workflow_config_array[ind]['tinydaIterations']
+
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+
+    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
+        port = getWorkflowOnpremPort()
+    else:
+        port = 4242
+
+    return {
+        'wf_id': wf_id,
+        'cohesion': input[0],  # Simple scalar value
+        'hosts': alloc_hosts,
+        'chains': chains,
+        'tinyda_iterations': tinyda_iterations,
+        'mesh': mesh,
+        'port': port
+    }, hosts, sim
+
+
+def getClientInputs_LA(wf_id, input: Tuple, ind):
+    """
+    Handler for License-Aware SeisSol workflows.
+
+    LA workflows use constraints for static iteration config.
+    Input format: (cohesion_value, hosts) where cohesion_value is numeric scalar.
+    """
+    mesh = getWorkflowConfig(wf_id)['mesh']
+    sim = getWorkflowConfig(wf_id)['sim']
+    constraints = getWorkflowConfig(wf_id).get('constraints', {})
+
+    # Extract from constraints (static across iterations)
+    chains = constraints.get('chains', 1)
+    tinyda_iterations = constraints.get('tinydaIterations', 1)
+
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+
+    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
+        port = getWorkflowOnpremPort()
+    else:
+        port = 4242
+
+    return {
+        'wf_id': wf_id,
+        'cohesion': input[0],  # Simple scalar value
+        'hosts': alloc_hosts,
+        'chains': chains,
+        'tinyda_iterations': tinyda_iterations,
+        'mesh': mesh,
+        'port': port
+    }, hosts, sim
+
+
+def getClientInputs_HPO(wf_id, input: Tuple, ind):
+    """
+    Handler for HPO (Hyperparameter Optimization) workflows.
+
+    HPO workflows use dynamic dict input for iteration config.
+    Input format: (config_dict, hosts) where config_dict has epochs/next_trials keys.
+    """
     mesh = getWorkflowConfig(wf_id)['mesh']
     sim = getWorkflowConfig(wf_id)['sim']
 
     # Iteration 0: input[0] is initial config from workflow YAML (has 'epochs', 'next_trials')
-    # Iteration 1+: input[0] is HPO pipeline output (result['config']) (has 'epoch', 'next_trials')
+    # Iteration 1+: input[0] is HPO pipeline output (has 'epoch', 'next_trials')
     if ind == 0:
-        # First iteration: extract from workflow constraints as fallback, prefer input if available
+        # First iteration: use 'epochs' (plural) and 'next_trials'
         constraints = getWorkflowConfig(wf_id).get('constraints', {})
         chains = input[0].get('next_trials', constraints.get('chains', 1))
         tinyda_iterations = input[0].get('epochs', constraints.get('tinydaIterations', 1))
     else:
-        # Subsequent iterations: extract from HPO pipeline output
+        # Subsequent iterations: use 'epoch' (singular) from HPO output
         chains = input[0].get('next_trials', 0)
         tinyda_iterations = input[0].get('epoch', input[0].get('epochs', 1))
 
@@ -68,17 +184,40 @@ def getClientInputs(wf_id, input: Tuple[float, List[str]], ind):
     if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
         port = getWorkflowOnpremPort()
     else:
-        port = 4242  # for cloud, this can be hardcoded since executor runs in isolated instances
+        port = 4242
 
     return {
         'wf_id': wf_id,
-        'cohesion': input[0],
+        'cohesion': input[0],  # Full dict (HPO config)
         'hosts': alloc_hosts,
         'chains': chains,
         'tinyda_iterations': tinyda_iterations,
         'mesh': mesh,
         'port': port
     }, hosts, sim
+
+
+def getClientInputs(wf_id, input: Tuple, ind):
+    """
+    Dispatcher function that routes to type-specific input handlers.
+
+    Routes to:
+    - getClientInputs_Plain() for Plain SeisSol workflows
+    - getClientInputs_LA() for License-Aware SeisSol workflows
+    - getClientInputs_HPO() for HPO workflows
+
+    Workflow type is detected once at initialization and cached in workflow_config.
+    """
+    workflow_type = getWorkflowConfig(wf_id).get('workflow_type', 'PLAIN')
+
+    if workflow_type == 'PLAIN':
+        return getClientInputs_Plain(wf_id, input, ind)
+    elif workflow_type == 'LA':
+        return getClientInputs_LA(wf_id, input, ind)
+    elif workflow_type == 'HPO':
+        return getClientInputs_HPO(wf_id, input, ind)
+    else:
+        raise ValueError(f"Unknown workflow type: {workflow_type} for workflow {wf_id}")
 
 
 # hosts = {'on-prem': {}, 'reserved': {name: (n, [ips])}, 'on-demand': {}}

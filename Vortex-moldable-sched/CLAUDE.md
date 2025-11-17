@@ -77,7 +77,7 @@ sudo systemctl start redis-server
 
 ### Core Configuration Files
 - `src/main/config/resources.yaml`: Defines compute resources (on-prem/cloud instances, runtimes, costs)
-- `src/main/config/licenses.yaml`: License pool management (ANSYS, ABAQUS, LSDYNA tokens)
+- `src/main//Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml`: License pool management (ANSYS, ABAQUS, LSDYNA tokens)
 - `src/main/config/ports.yaml`: Service port mappings
 - `src/main/config/constants.py`: Application constants
 
@@ -95,16 +95,78 @@ The system implements a subset of the Steep workflow API (version 4.7.0):
 - Variable substitution and basic dependency handling
 - Workflow submission via HTTP POST to scheduler:8080
 
+### Three Workflow Types
+
+The system supports three distinct workflow types with different input handling:
+
+#### 1. Plain SeisSol Workflows
+- **Entry point**: `simulate_main.py`
+- **Workflows**: `sample_workflows/data0.yaml`
+- **Input format**: Simple numeric cohesion value (e.g., `3`)
+- **Configuration**: Uses `workflowConfig` array for per-iteration chains/tinydaIterations
+- **Detection**: Presence of `workflowConfig` array in config
+- **Use case**: Basic seismic simulations without license management
+
+#### 2. License-Aware (LA) SeisSol Workflows
+- **Entry point**: `simulate_main_LA.py`
+- **Workflows**: `workflow/sample_workflows_LA/data*.yaml`
+- **Input format**: Simple numeric cohesion value (e.g., `3`)
+- **Configuration**: Uses `constraints` for static chains/tinydaIterations
+- **License fields**: `license_pool` (ANSYS/ABAQUS/LSDYNA), `software_id` (1/2/3)
+- **Detection**: Presence of `license_pool` or `software_id` fields
+- **Use case**: Seismic simulations with commercial software license tracking
+
+#### 3. HPO (Hyperparameter Optimization) Workflows
+- **Entry point**: `simulate_main_HPO.py`
+- **Workflows**: `workflow/sample_workflows_HPO/data*.yaml`
+- **Input format**: Dictionary with hyperparameters (`learning_rate`, `epochs`, `next_trials`, etc.)
+- **Configuration**: Mesh is string (model name like "vgg19", "convnext_large")
+- **Detection**: Mesh field is string type
+- **Use case**: Machine learning hyperparameter tuning on CIFAR-10
+
+### Workflow Type Detection
+
+The `utils/exec_sched.py` module implements automatic workflow type detection:
+
+```python
+detectWorkflowType(wf_id)  # Returns 'PLAIN', 'LA', or 'HPO'
+```
+
+Detection hierarchy:
+1. Check for license fields (`license_pool`, `software_id`) → LA
+2. Check if mesh is string → HPO
+3. Check if `workflowConfig` array exists → PLAIN
+4. Check if mesh is integer → PLAIN (fallback)
+
+Workflow type is detected once at initialization and cached in `workflow_config` for efficient routing.
+
+### Input Handler Functions
+
+- `getClientInputs_Plain()`: Reads chains/iterations from `workflowConfig[ind]` array
+- `getClientInputs_LA()`: Reads chains/iterations from `constraints` (static)
+- `getClientInputs_HPO()`: Reads chains/iterations from input dict (dynamic)
+- `getClientInputs()`: Dispatcher that routes to appropriate handler
+
 ## Testing
 
 ```bash
-# Run simulation mode
+# Run Plain SeisSol workflows
 python src/main/simulate_main.py
 
+# Run License-Aware workflows
+python src/main/simulate_main_LA.py
+
+# Run HPO workflows
+python src/main/simulate_main_HPO.py
+
 # Test workflows are located in:
-# - src/main/workflow/
-# - src/test/
+# - Plain: src/main/sample_workflows/
+# - LA: src/main/workflow/sample_workflows_LA/
+# - HPO: src/main/workflow/sample_workflows_HPO/
+# - Unit tests: src/test/
 ```
+
+**Note**: `simulate_main_LA.py` uses `enable_smp=False` for Simulus to avoid Python 3.13 multiprocessing pickle errors on macOS.
 
 ## Development Notes
 
@@ -113,3 +175,16 @@ python src/main/simulate_main.py
 - Resource manager supports both reserved and on-demand cloud instances
 - License management includes fairness policies and anti-starvation mechanisms
 - SeisSol integration provides seismic simulation workload support
+- **Workflow input handling**: Three workflow types (Plain, LA, HPO) have separate input handlers in `utils/exec_sched.py` - see `context_7_workflow_type_separation.log` for details
+
+## Context Files
+
+Development history and debugging sessions are documented in `contexts/`:
+- `context_1.log`: Initial setup and architecture
+- `context_2_ondemand_implementation.log`: On-demand cloud instance provisioning
+- `context_3_runtime_calculation_fix.log`: Runtime estimation fixes
+- `context_4_debugging_executor_communication.log`: Executor-scheduler communication
+- `context_5_workflow_execution_fixes.log`: Workflow execution issues
+- `context_6_hpo_runtime_fix.log`: HPO 3x slowdown debugging
+- `context_7_workflow_type_separation.log`: Workflow type input handler separation (Nov 2025)
+- `context_8_LA_workflow_debugging.log`: License-aware workflow debugging, deadline/budget fixes (Nov 2025)

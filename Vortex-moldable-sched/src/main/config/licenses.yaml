@@ -1,19 +1,19 @@
-# config/licenses.yaml
+# /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml
 
 version: 1
 
 # Global pools tracked by the scheduler
 pools:
   ANSYS:
-    total_tokens: 12         # total floating tokens available
+    total_tokens: 150        # Increased for LAMF testing (was 12)
     reserved_floor: 0        # optionally keep some tokens unallocatable
     burst_cap: null          # optional short-term cap > total_tokens for grace windows
   ABAQUS:
-    total_tokens: 8
+    total_tokens: 100        # Increased for LAMF testing (was 8)
     reserved_floor: 0
     burst_cap: null
   LSDYNA:
-    total_tokens: 10
+    total_tokens: 120        # Increased for LAMF testing (was 10)
     reserved_floor: 0
     burst_cap: null
 

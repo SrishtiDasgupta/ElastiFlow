@@ -5,6 +5,7 @@ import time
 from typing import List
 import subprocess
 import yaml 
+import numpy as np
 
 from config.constants import SIMULATE
 from utils.sim import getTime
@@ -62,7 +63,7 @@ class ExecuteAction(Action):
 
     def __init__(self, wf_id, service, input_parameters : List[Variable] = [], output_parameters: List[Variable] = []):
         self.type = ActionType.Execute
-        self.service = "scripts/simulate-tinyda-seissol.py" 
+        self.service = "/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/simulate-tinyda-seissol.py" 
         self.output_parameters = output_parameters
         self.input_parameters = input_parameters # Technically the enumerator of the for action
         self.wf_id = wf_id
@@ -113,19 +114,32 @@ class ExecuteAction(Action):
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
             if not SIMULATE and len(args['hosts'].get('on-prem', [])) != 0:
                 port = args['port']
-                with open("/home/ubuntu/Vortex/src/main/config/ports.yaml", "r") as f:
+                with open("/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "r") as f:
                     data = yaml.safe_load(f)
                 ports = data.get("onprem_ports", [])
                 ports.append(port)
                 data["onprem_ports"] = ports
-                with open("/home/ubuntu/Vortex/src/main/config/ports.yaml", "w") as f:
+                with open("/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "w") as f:
                     yaml.safe_dump(data, f) 
             self.workflow_iterator = self.workflow_iterator + 1 # increment the iterator for the workflow
+            print(f"[DEBUG] {self.wf_id}: iteration {self.workflow_iterator}/{self.workflow_iterations}")
             if self.workflow_iterator < self.workflow_iterations:
-                self.output_parameters[0].append((float(result['cohesion']), hosts))
+                # Handle output based on workflow type
+                print(f"[DEBUG] {self.wf_id}: Continuing to next iteration")
+                workflow_type = getWorkflowConfig(self.wf_id).get('workflow_type', 'PLAIN')
+                if workflow_type == 'HPO':
+                    # HPO returns full config dict for next iteration
+                    output_value = result.get('config', result)
+                else:
+                    # Plain and LA return numeric cohesion value
+                    output_value = float(result['cohesion'])
+
+                self.output_parameters[0].append((output_value, hosts))
             else:
                 # Else condition terminates the execution since a new input value is not appended
+                print(f"[DEBUG] {self.wf_id}: Final iteration, calling setWorkflowComplete")
                 setWorkflowComplete(self.wf_id, True)
+                print(f"[DEBUG] {self.wf_id}: setWorkflowComplete called, complete={getWorkflowConfig(self.wf_id)['complete']}")
         except subprocess.CalledProcessError as e:
             print("Error occurred while executing the script: " + e.stderr)
         

@@ -55,15 +55,15 @@ class PerCoreSoftwareCalculations:
       - ansys_packs     : tokens = 1 (MEBA) + ceil(log2(cores/4)) for cores > 4, else 1
     """
 
-def __init__(self, cfg: Dict[str, Any], rounding: str):
-    pc =cfg or {}
-    self.rounding = (rounding or "ceil").lower()
-    self.default = (pc.get("default_strategy") or "linear").lower()
+    def __init__(self, cfg: Dict[str, Any], rounding: str):
+        pc = cfg or {}
+        self.rounding = (rounding or "ceil").lower()
+        self.default = (pc.get("default_strategy") or "linear").lower()
 
-    # Normalize strategy dictionary keys to lowercase
-    self.strategies: Dict[str, Dict[str, Any]] = {
-        (k or "").strip().lower(): (v or {}) for k, v in (pc.get("strategies") or {}).items()
-    }
+        # Normalize strategy dictionary keys to lowercase
+        self.strategies: Dict[str, Dict[str, Any]] = {
+            (k or "").strip().lower(): (v or {}) for k, v in (pc.get("strategies") or {}).items()
+        }
 
     # ---------- strategy implementations ---------- #
     def _linear(self, cores: int, _: Dict[str, Any]) -> int:
@@ -90,7 +90,7 @@ def __init__(self, cfg: Dict[str, Any], rounding: str):
         # 1 MEBA + number of doubling packs beyond 4 cores
         packs = 0 if cores <= 4 else _round(log2(float(cores) / 4.0), "ceil")
         return 1 + packs
-    
+
     # ---------- dispatcher ---------- #
     def tokens_for(self, software: Optional[str], cores: int) -> int:
         """
@@ -141,7 +141,7 @@ class Policy:
             raise ValueError(f"Unknown policy mode: {self.mode}")
 
         # Per-core calculators (software-specific)
-        self.per_core = PerCoreSoftwareCalculators(per_core_cfg or {}, self.rounding)
+        self.per_core = PerCoreSoftwareCalculations(per_core_cfg or {}, self.rounding)
 
     def tokens_required(self, chain_cores: int, software: Optional[str] = None) -> int:
         """
