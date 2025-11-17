@@ -55,7 +55,7 @@ def plotSubmitTimes(submitTimes):
     plt.savefig('submitTimes.png')
 
 def delayGenerationFromSubmitTimes(workflows):
-    data = pd.read_csv('/home/ubuntu/Vortex/src/main/scripts/submitTimes.csv', sep="\t")
+    data = pd.read_csv('/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv', sep="\t")
     data['submit times'] = pd.to_datetime(data['submit times'])
     data['submit_time_only'] = data['submit times'].dt.time
     totalSubmitTimes = data['ID'].sum()
@@ -86,7 +86,7 @@ def delayGenerationFromSubmitTimes(workflows):
     # print(newSubmitTimesData['submit times'])
 
 
-def fetchWorkflow(i, path = "/home/ubuntu/Vortex/src/main/sample_workflows/data"):
+def fetchWorkflow(i, path = "/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/sample_workflows/data"):
     file_name = path + str(i) + ".yaml"
     with open(file_name, 'r') as stream:
         try:
@@ -123,7 +123,7 @@ def dispatcher(sim, wf_mb):
 
     # Send END after all requests are complete
     sim.sleep(150000)
-    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/home/ubuntu/Vortex/src/main/")))
+    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/")))
 
 
 if __name__ == "__main__":

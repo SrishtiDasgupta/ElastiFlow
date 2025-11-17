@@ -126,7 +126,7 @@ def launchInstance(instanceName: str, count):
         sftp = ssh.open_sftp()
         print(f"Setting up on-demand")
         remote_command_script = '/home/ubuntu/on_demand_setup.sh'
-        local_script = '/home/ubuntu/Vortex/src/main/scripts/on_demand_setup.sh'
+        local_script = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/on_demand_setup.sh'
         sftp.put(local_script, remote_command_script)
         sftp.chmod(remote_command_script, 0o700)
         
@@ -165,7 +165,7 @@ def launchInstance(instanceName: str, count):
         # sftp = ssh.open_sftp()
         # print(f"Setting up on-demand")
         # remote_command_script = '/home/ubuntu/on_demand_setup.sh'
-        # local_script = '/home/ubuntu/Vortex/src/main/scripts/on_demand_setup.sh'
+        # local_script = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/on_demand_setup.sh'
         # sftp.put(local_script, remote_command_script)
         # sftp.chmod(remote_command_script, 0o700)
         
