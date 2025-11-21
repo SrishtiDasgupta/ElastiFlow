@@ -18,7 +18,12 @@ import os
 
 # Import constants from centralized config
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from config.constants_LA import TOTAL_WORKFLOWS, WORKFLOW_OUTPUT_DIR_LA
+from config.constants_LA import (
+    TOTAL_WORKFLOWS,
+    WORKFLOW_OUTPUT_DIR_LA,
+    TEMPORAL_COMPRESSION_FACTOR,
+    SUBMISSION_JITTER_MINUTES
+)
 
 
 def plotSubmitTimes(submitTimes):
@@ -65,7 +70,8 @@ def delayGenerationFromSubmitTimes(workflows):
             if remaining <= 0:
                 break
             count = min(workflows_per_slot, remaining)
-            times = np.random.uniform(0, 20, count)
+            # SOLUTION 4: Use configurable jitter for small workflow counts too
+            times = np.random.uniform(0, SUBMISSION_JITTER_MINUTES, count)
             currTime = pd.to_datetime(data.at[i, 'submit times'])
             for time_val in times:
                 newSubmitTimes.append(currTime + pd.to_timedelta(time_val, unit='m'))
@@ -77,6 +83,10 @@ def delayGenerationFromSubmitTimes(workflows):
         newSubmitTimesData['delays'] = newSubmitTimesData['delays'].dt.total_seconds()
         delays = newSubmitTimesData['delays'].to_list()
         delays[0] = 0
+
+        # SOLUTION 4: Apply temporal compression to small workflow counts too
+        delays = [max(1.0, d * TEMPORAL_COMPRESSION_FACTOR) for d in delays]
+
         return delays[:workflows]
 
     # Original logic for production (workflows >= 20)
@@ -93,7 +103,8 @@ def delayGenerationFromSubmitTimes(workflows):
     data.at[int(data.shape[0] / 2), 'ID'] += workflows - newTotalSubmits
 
     for i in range(data.shape[0]):
-        times = np.random.uniform(0, 20, data.at[i, 'ID'])
+        # SOLUTION 4: Reduced jitter for burst clustering
+        times = np.random.uniform(0, SUBMISSION_JITTER_MINUTES, data.at[i, 'ID'])
         currTime = pd.to_datetime(data.at[i, 'submit times'])
         for time_val in times:
             newSubmitTimes.append(currTime + pd.to_timedelta(time_val, unit='m'))
@@ -104,6 +115,11 @@ def delayGenerationFromSubmitTimes(workflows):
     newSubmitTimesData['delays'] = newSubmitTimesData['delays'].dt.total_seconds()
     delays = newSubmitTimesData['delays'].to_list()
     delays[0] = 0
+
+    # SOLUTION 4: Temporal compression for peak demand scenario
+    # Compress timeline by TEMPORAL_COMPRESSION_FACTOR
+    # 0.5 = 2× faster (20hrs → 10hrs), 0.25 = 4× faster (20hrs → 5hrs)
+    delays = [max(1.0, d * TEMPORAL_COMPRESSION_FACTOR) for d in delays]
 
     return delays[:workflows]
 
@@ -182,6 +198,11 @@ def dispatcher_LA(sim, wf_mb):
 
     print(f'Starting LAMF dispatcher for {TOTAL_WORKFLOWS} workflows at {sim.now}...')
     print(f'All workflows require licenses (ANSYS/ABAQUS/LSDYNA)')
+    print('')
+    print(f'Temporal Scaling Configuration (Solution 4):')
+    print(f'  - Compression factor: {TEMPORAL_COMPRESSION_FACTOR} ({20*TEMPORAL_COMPRESSION_FACTOR:.1f}-hour window)')
+    print(f'  - Submission jitter: {SUBMISSION_JITTER_MINUTES} minutes')
+    print(f'  - Arrival rate multiplier: {1/TEMPORAL_COMPRESSION_FACTOR:.1f}×')
     print('')
 
     for i in range(TOTAL_WORKFLOWS):

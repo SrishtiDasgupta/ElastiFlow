@@ -7,7 +7,8 @@ All workflows require licenses (ANSYS, ABAQUS, or LSDYNA).
 """
 
 import simulus
-from scheduler.fcfs_optimized_LA import FCFS_Optimized_LA
+#from scheduler.fcfs_optimized_LA import FCFS_Optimized_LA
+from scheduler.fcfs_scheduler_LA import FCFS_Scheduler_LA
 from wf_queue.redis_queue import Redis_Queue
 from scripts.dispatcher_LA import dispatcher_LA
 from config.constants_LA import (
@@ -39,8 +40,16 @@ queue = Redis_Queue(queue_name='wf-queue')
 finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
 resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
 
-# Create LAMF scheduler with cost-based sorting
-sched = FCFS_Optimized_LA(
+# Create LAMF scheduler with cost-based sorting (MOLDABLE)
+""" sched = FCFS_Optimized_LA(
+    queue,
+    finish_queue,
+    resource_request_queue,
+    sort_key='cost_per_iteration'
+) """
+
+#Create BASELINE scheduler with cost-based sorting (STATIC - NO MOLDABILITY)
+sched = FCFS_Scheduler_LA(
     queue,
     finish_queue,
     resource_request_queue,

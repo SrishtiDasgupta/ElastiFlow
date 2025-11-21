@@ -1,0 +1,80 @@
+ 
+📊 License usage data saved to LAMF_400_license_usage.csv (468 samples)
+
+Total workflows: 400
+Executed workflows: 263
+Incomplete workflows: 137
+
+--- Performance Metrics ---
+Average Flowtime: 35501.1746 seconds
+Average Cost: €150.8754
+  - Average Hardware Cost: €39.7681
+  - Average License Cost: €111.1073
+  - License Cost %: 73.64%
+Average Wait Time: 15584.5853 seconds
+
+--- Total Costs Summary ---
+Total Hardware Cost: €10459.01
+Total License Cost (additional): €29221.23
+Total Combined Cost: €39680.24
+License Cost Overhead: 279.39% of hardware cost
+Average Resource Utilization: 57.7543%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 27.91%
+  Peak Allocated: 1657/2200 tokens (75.32%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 33.34%
+  Peak Allocated: 5404/6700 tokens (80.66%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 28.34%
+  Peak Allocated: 5744/7600 tokens (75.58%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.3425 (0/263 executed)
+Budget miss rate: 0.02 (8/263 executed)
+Overall miss rate: 0.3625
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 346.41 hours
+Wasted cost on incomplete workflows: €12966.61
+  - Wasted Hardware Cost: €6149.77
+  - Wasted License Cost: €6816.84
+
+--- Moldability Effectiveness ---
+Scale-up attempts: 680
+  Successes: 667 (98.1%)
+  Failures: 13
+    - Insufficient compute: 2
+    - Insufficient licenses: 8
+    - Budget exhausted: 3
+    - Time exhausted: 0
+  Total instances added: 1967
+  Total cores added: 90288
+  Total licenses acquired: 68320
+
+Scale-down attempts: 597
+  Successes: 554 (92.8%)
+  Blocked: 43
+    - License pool saturated: 26
+    - Late iteration (>3): 0
+    - Time progress (>70%): 1
+    - Budget or time progress (>50%): 16
+  Total instances removed: 1967
+  Total cores removed: 90240
+  Total licenses released: 54753
+
+Net moldability impact:
+  Net instances: +0
+  Net cores: +48
+  Net licenses: +13567
+  ✓ Moldability appears effective - 667 successful scale-ups
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 0 (0.0%)
+Workflows with <2 scale-up attempts: 220 (83.7%)
+Average scale-up attempts per workflow: 2.59

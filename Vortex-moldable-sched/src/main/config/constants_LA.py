@@ -26,7 +26,7 @@ FREE_RESOURCES = True
 
 # Total workflows to generate and simulate
 # NOTE: Must match between workflow_generator_LA.py and dispatcher_LA.py
-TOTAL_WORKFLOWS = 4  # Changed from 5 for meaningful license testing
+TOTAL_WORKFLOWS = 400  # Increased for comprehensive testing
 
 # Workflow size distribution (mesh sizes)
 MESH_DISTRIBUTION = {
@@ -34,6 +34,25 @@ MESH_DISTRIBUTION = {
     750: 0.25,   # 25% medium mesh
     500: 0.50    # 50% small mesh
 }
+
+# ============================================================================
+# TEMPORAL SCALING SETTINGS (for dispatcher)
+# ============================================================================
+
+# Temporal compression factor for arrival pattern
+# 1.0  = Baseline (20-hour window, original trace)
+# 0.75 = Moderate peak (1.33× arrival rate, 15-hour window)
+# 0.5  = Peak demand (2× arrival rate, 10-hour window)
+# 0.25 = Extreme burst (4× arrival rate, 5-hour window)
+TEMPORAL_COMPRESSION_FACTOR = 0.5
+
+# Submission jitter window (minutes)
+# Controls workflow clustering within each time slot
+# 20 = Original (workflows spread across 20-minute slot)
+# 10 = Moderate clustering
+# 2  = Tight clustering (burst scenario)
+# 1  = Very tight clustering (extreme burst)
+SUBMISSION_JITTER_MINUTES = 2
 
 # ============================================================================
 # LICENSE SETTINGS
@@ -54,10 +73,14 @@ LICENSE_SOFTWARE_ID = {
 }
 
 # License pool capacities (must match /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml)
+# UPDATED: Reduced from 16,800 to create meaningful license scarcity
+# Based on 400-workflow test: measured peaks were ANSYS=5,843, ABAQUS=1,894, LSDYNA=6,592
+# Using 1.15× factor for 15% headroom → ~87% peak utilization (high scarcity)
+# Old values caused only 3-13% utilization - licenses were not a constraint
 LICENSE_POOL_CAPACITY = {
-    'ANSYS': 150,
-    'ABAQUS': 100,
-    'LSDYNA': 120
+    'ANSYS': 6700,    # Was 16,800 (60% reduction) - measured peak: 5,843 tokens
+    'ABAQUS': 2200,   # Was 16,800 (87% reduction) - measured peak: 1,894 tokens
+    'LSDYNA': 7600    # Was 16,800 (55% reduction) - measured peak: 6,592 tokens
 }
 
 # License calculation strategies

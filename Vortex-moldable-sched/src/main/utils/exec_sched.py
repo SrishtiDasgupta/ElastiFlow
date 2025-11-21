@@ -128,16 +128,31 @@ def getClientInputs_LA(wf_id, input: Tuple, ind):
     """
     Handler for License-Aware SeisSol workflows.
 
-    LA workflows use constraints for static iteration config.
+    LA workflows can use either:
+    - workflowConfig array for moldable scheduling (chains vary per iteration)
+    - constraints for static allocation (chains constant across iterations)
+
     Input format: (cohesion_value, hosts) where cohesion_value is numeric scalar.
     """
     mesh = getWorkflowConfig(wf_id)['mesh']
     sim = getWorkflowConfig(wf_id)['sim']
-    constraints = getWorkflowConfig(wf_id).get('constraints', {})
 
-    # Extract from constraints (static across iterations)
-    chains = constraints.get('chains', 1)
-    tinyda_iterations = constraints.get('tinydaIterations', 1)
+    # Read from workflowConfig if present (for moldable LAMF scheduling)
+    # This allows chains to vary per iteration, triggering resource requests
+    if 'workflowConfig' in getWorkflowConfig(wf_id):
+        workflow_config_array = getWorkflowConfig(wf_id)['workflowConfig']
+        chains = workflow_config_array[ind]['chains']
+        tinyda_iterations = workflow_config_array[ind]['tinydaIterations']
+    else:
+        # Fallback to static constraints (for baseline static scheduling)
+        constraints = getWorkflowConfig(wf_id).get('constraints', {})
+        chains = constraints.get('chains', 1)
+        tinyda_iterations = constraints.get('tinydaIterations', 1)
+
+    # OLD CODE (always used static constraints):
+    # constraints = getWorkflowConfig(wf_id).get('constraints', {})
+    # chains = constraints.get('chains', 1)
+    # tinyda_iterations = constraints.get('tinydaIterations', 1)
 
     alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
 
@@ -257,13 +272,24 @@ def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0):
 
 def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
 
+    config = getWorkflowConfig(wf_id)
+
+    # Get tinyda_iterations from workflowConfig or constraints (for all workflow types)
+    if 'workflowConfig' in config:
+        tinyda_iterations = config['workflowConfig'][ind]['tinydaIterations']
+    else:
+        tinyda_iterations = config.get('constraints', {}).get('tinydaIterations', 1)
+
+    # OLD CODE (commented out, broke scheduler):
     # config = getWorkflowConfig(wf_id)['workflowConfig']
+    # "tinyda-iterations": config[ind]['tinydaIterations'] + 1,
+
     request = {
-        "request":request_type,
+        "request": request_type,
         "wf-id": wf_id,
         "count": n,
         "iteration": ind,
-        # "tinyda-iterations": config[ind]['tinydaIterations'] + 1,
+        "tinyda-iterations": tinyda_iterations,  # Fixed: now works for Plain/LA/HPO
         "chains": chains
     }
 

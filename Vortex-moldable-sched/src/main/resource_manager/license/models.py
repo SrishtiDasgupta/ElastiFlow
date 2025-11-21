@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-@dataclass(frozen=True)
+@dataclass
 class Hold:
     id: str
     pool: str
@@ -15,6 +15,7 @@ class Hold:
 @dataclass(frozen=True)
 class Allocation:
     hold_id: str
+    pool: str
     amount: int
     owner: Optional[str]
     committed_at: float

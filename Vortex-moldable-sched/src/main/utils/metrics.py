@@ -1,7 +1,10 @@
 import pandas as pd
 import time
 
-from config.constants import RESOURCE_UTILIZATION_POLLING, TOTAL_RESOURCES, TOTAL_WORKFLOWS
+# Import from constants_LA to get correct TOTAL_WORKFLOWS for LA simulations
+# constants_LA inherits from constants and overrides specific values
+from config.constants_LA import RESOURCE_UTILIZATION_POLLING, TOTAL_RESOURCES, TOTAL_WORKFLOWS
+
 from resource_manager.instance import CloudReservedInstance, OnPremInstance
 from resource_manager.resource_manager import ResourceManager
 

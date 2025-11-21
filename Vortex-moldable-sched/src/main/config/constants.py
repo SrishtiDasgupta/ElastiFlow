@@ -1,8 +1,8 @@
 SIMULATE = True
-MOLDABLE = False
+MOLDABLE = True
 FREE_RESOURCES = True
-TOTAL_WORKFLOWS = 5
-TOTAL_RESOURCES = 3 # onprem and cloud reserved resources - for resurce utilization calculation
+TOTAL_WORKFLOWS = 400
+TOTAL_RESOURCES = 256 # onprem and cloud reserved resources - for resurce utilization calculation
 AVG_WORKFLOW_ITERATIONS = 4
 AVG_TINYDA_ITERATIONS = 7
 # MIN_ALLOC_INSTANCES = 1 # What can be min allocated instances for a workflow
@@ -33,7 +33,16 @@ DEADLINE_FACTOR = 7.5
 
 # OPTIM_FCFS_BFACTOR = {0: 0.3, 1: 0.6, 2: 0.8}#{0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}
 # OPTIM_FCFS_DFACTOR = {0: 0.3, 1: 0.6, 2: 0.8}
-OPTIM_FCFS_BFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}
-OPTIM_FCFS_DFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}
+
+# OLD (too conservative for license-aware workloads):
+# OPTIM_FCFS_BFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}
+# OPTIM_FCFS_DFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}
+
+# NEW (updated for better initial allocation with license constraints):
+# Further increased after 400-workflow analysis showed chronic under-allocation
+# Previous: {0: 0.3, 1: 0.5, 2: 0.6, 3: 0.7, 4: 0.8, 5: 0.9}
+# Current:  Start aggressive (0.6), ramp to full allocation (1.0)
+OPTIM_FCFS_BFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
+OPTIM_FCFS_DFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
 SPEEDUP_THRESHOLD = 1.4
 DEADLINE_BUFFER = 180

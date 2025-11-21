@@ -1,0 +1,29 @@
+api: 4.7.0
+id: seissol-abaqus-large-wf10
+constraints:
+  budget: 285.60
+  deadline: 68000
+  chains: 5
+  tinydaIterations: 18
+  license_pool: ABAQUS
+config:
+  mesh: 1000
+  workflowIterations: 5
+  software_id: 2
+vars:
+- id: input_coh
+  value: 3
+actions:
+- type: for
+  input: input_coh
+  enumerator: i
+  yieldToInput: output_coh
+  actions:
+  - type: execute
+    service: ../../service/simulate-tinyda-seissol.py
+    inputs:
+    - id: tinyda_input
+      var: i
+    outputs:
+    - id: tinyda_output
+      var: output_coh

@@ -121,7 +121,7 @@ class LicenseManager:
         }
 
         software = pool_to_software.get(pool, 'default')
-        return self.policy.calculate_tokens(software, cores, chains)
+        return self.policy.tokens_required(cores, software)
 
     def get_pool_for_software(self, software_id: int) -> Optional[str]:
         """
@@ -169,7 +169,7 @@ class LicenseManager:
         # Create hold
         hold_id = str(uuid.uuid4())
         hold = Hold(
-            hold_id=hold_id,
+            id=hold_id,
             pool=pool,
             amount=amount,
             owner=owner,
@@ -216,7 +216,7 @@ class LicenseManager:
             pool=hold.pool,
             amount=hold.amount,
             owner=hold.owner,
-            allocated_at=time.time()
+            committed_at=time.time()
         )
 
         self.allocations[hold_id] = allocation

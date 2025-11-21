@@ -1,0 +1,29 @@
+api: 4.7.0
+id: seissol-ansys-parallel-wf8
+constraints:
+  budget: 195.30
+  deadline: 48000
+  chains: 4
+  tinydaIterations: 16
+  license_pool: ANSYS
+config:
+  mesh: 500
+  workflowIterations: 4
+  software_id: 1
+vars:
+- id: input_coh
+  value: 3
+actions:
+- type: for
+  input: input_coh
+  enumerator: i
+  yieldToInput: output_coh
+  actions:
+  - type: execute
+    service: ../../service/simulate-tinyda-seissol.py
+    inputs:
+    - id: tinyda_input
+      var: i
+    outputs:
+    - id: tinyda_output
+      var: output_coh

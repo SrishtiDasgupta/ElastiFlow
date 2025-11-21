@@ -3,17 +3,20 @@
 version: 1
 
 # Global pools tracked by the scheduler
+# UPDATED: Reduced from 16,800 to create meaningful license scarcity
+# Based on 400-workflow test: measured peaks were ANSYS=5,843, ABAQUS=1,894, LSDYNA=6,592
+# Using 1.15× factor for 15% headroom → ~87% peak utilization (high scarcity)
 pools:
   ANSYS:
-    total_tokens: 150        # Increased for LAMF testing (was 12)
-    reserved_floor: 0        # optionally keep some tokens unallocatable
-    burst_cap: null          # optional short-term cap > total_tokens for grace windows
+    total_tokens: 6700         # Was 16,800 - measured peak: 5,843 tokens (87% at peak)
+    reserved_floor: 0          # optionally keep some tokens unallocatable
+    burst_cap: null            # optional short-term cap > total_tokens for grace windows
   ABAQUS:
-    total_tokens: 100        # Increased for LAMF testing (was 8)
+    total_tokens: 2200         # Was 16,800 - measured peak: 1,894 tokens (86% at peak)
     reserved_floor: 0
     burst_cap: null
   LSDYNA:
-    total_tokens: 120        # Increased for LAMF testing (was 10)
+    total_tokens: 7600         # Was 16,800 - measured peak: 6,592 tokens (87% at peak)
     reserved_floor: 0
     burst_cap: null
 

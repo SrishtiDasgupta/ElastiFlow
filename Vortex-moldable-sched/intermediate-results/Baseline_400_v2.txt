@@ -1,0 +1,29 @@
+
+Total workflows: 400
+Executed workflows: 260
+Incomplete workflows: 140
+
+--- Performance Metrics ---
+Average Flowtime: 33586.0723 seconds
+Average Cost: $36.737
+Average Wait Time: 17257.6757 seconds
+Average Resource Utilization: 53.5833%
+
+--- Constraint Violations ---
+Deadline miss rate: 0.35 (0/260 executed)
+Budget miss rate: 0.0125 (5/260 executed)
+Overall miss rate: 0.3625
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 440.54 hours
+Wasted cost on incomplete workflows: $6401.4
+
+--- Moldability Effectiveness ---
+Scale-up attempts: 0
+
+Scale-down attempts: 0
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 400 (153.8%)
+Workflows with <2 scale-up attempts: 0 (0.0%)
+Average scale-up attempts per workflow: 0.00

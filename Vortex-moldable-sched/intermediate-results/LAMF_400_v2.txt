@@ -1,0 +1,63 @@
+Total workflows: 400
+Executed workflows: 270
+Incomplete workflows: 130
+
+--- Performance Metrics ---
+Average Flowtime: 34172.8869 seconds
+Average Cost: $30.2524
+Average Wait Time: 14802.6871 seconds
+Average Resource Utilization: 57.0519%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 25.73%
+  Peak Allocated: 1718/2200 tokens (78.09%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 33.85%
+  Peak Allocated: 6169/6700 tokens (92.07%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 34.95%
+  Peak Allocated: 7096/7600 tokens (93.37%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.325 (0/270 executed)
+Budget miss rate: 0.0175 (7/270 executed)
+Overall miss rate: 0.3425
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 446.84 hours
+Wasted cost on incomplete workflows: $6170.09
+
+--- Moldability Effectiveness ---
+Scale-up attempts: 540
+  Successes: 514 (95.2%)
+  Failures: 26
+    - Insufficient compute: 3
+    - Insufficient licenses: 12
+    - Budget exhausted: 11
+    - Time exhausted: 0
+  Total instances added: 26
+  Total licenses acquired: 514
+
+Scale-down attempts: 231
+  Successes: 135 (58.4%)
+  Blocked: 96
+    - License pool saturated: 81
+    - Late iteration (>3): 1
+    - Time progress (>70%): 3
+    - Budget or time progress (>50%): 11
+  Total instances removed: 298
+  Total licenses released: 10185
+
+Net moldability impact:
+  Net instances: -272
+  Net licenses: -9671
+  ✓ Moldability appears effective - 514 successful scale-ups
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 161 (59.6%)
+Workflows with <2 scale-up attempts: 81 (30.0%)
+Average scale-up attempts per workflow: 2.00

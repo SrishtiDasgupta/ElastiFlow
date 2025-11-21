@@ -5,11 +5,12 @@ from config.constants import COLD_START_TIME
 from utils.request import getConfig
 
 class Instance(ABC):
-    def __init__(self, name, runtime, cost):
+    def __init__(self, name, runtime, cost, cores):
         self.runtime_per_iteration = runtime # 500 mesh
         self.cost_per_iteration = cost * runtime # 500 mesh
         self.cost_per_second = cost
         self.name = name
+        self.cores = cores
        
     def getValue(self, key) -> any:
         return vars(self).get(key)
@@ -33,12 +34,12 @@ class Instance(ABC):
         pass
 
 class OnPremInstance(Instance):
-    def __init__(self, name, runtime, cost, slots, ip):
+    def __init__(self, name, runtime, cost, slots, ip, cores):
         self.free_slots = slots
         self.ip = ip
         self.type = 'on-prem'
         self.cold_start_cost = 0
-        super().__init__(name, runtime, cost)
+        super().__init__(name, runtime, cost, cores)
 
     def allocate(self, n) -> List[str]:
         self.free_slots -= n
@@ -51,12 +52,12 @@ class OnPremInstance(Instance):
         self.free_slots += count
         
 class CloudReservedInstance(Instance):
-    def __init__(self, name, runtime, cost, ip):
+    def __init__(self, name, runtime, cost, ip, cores):
         self.free_slots = ip
         self.allocated_slots = []
         self.type = 'reserved'
         self.cold_start_cost = 0
-        super().__init__(name, runtime, cost + getConfig('fsx-cost'))
+        super().__init__(name, runtime, cost + getConfig('fsx-cost'), cores)
     
     # Update slots and return IPs
     def allocate(self, n: int) -> List[str]:
@@ -73,11 +74,11 @@ class CloudReservedInstance(Instance):
         self.allocated_slots = list(set(self.allocated_slots) - set(ips))
 
 class CloudOnDemandInstance(Instance):
-    def __init__(self, name, runtime, cost, slots):
+    def __init__(self, name, runtime, cost, slots, cores):
         self.free_slots = slots
         self.type = 'on-demand'
         self.cold_start_cost = COLD_START_TIME * cost
-        super().__init__(name, runtime, cost + getConfig('fsx-cost'))
+        super().__init__(name, runtime, cost + getConfig('fsx-cost'), cores)
 
     def allocate(self, n: int) -> List[str]:
         self.free_slots -= n

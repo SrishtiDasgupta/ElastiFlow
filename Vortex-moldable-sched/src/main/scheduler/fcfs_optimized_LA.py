@@ -29,7 +29,8 @@ from resource_manager.resource_manager_LA import ResourceManager_LA
 from resource_manager.license.manager import LicenseManager
 from resource_manager.license.exceptions import InsufficientTokens, LicenseError
 from utils.sim import getTime, peekElement, removeElement
-from utils.resource import getConstraintsFromWorkflow, getEstimate
+from utils.resource_LA import getConstraintsFromWorkflow
+from utils.resource import getEstimate
 from scheduler.scheduler_LA import Scheduler_LA
 
 
@@ -51,17 +52,26 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
         super().__init__(queue, finish_queue, resource_request_queue)
 
+        # Use resource_manager's license_manager (shared instance)
+        self.license_manager = self.resource_manager.license_manager
+
+        # LAMF is moldable (dynamic resource scaling)
+        self.is_moldable = True
+
     def run(self, sim=None, wf_mb=None, resource_request_mb=None):
 
         print(f'Starting LAMF (License-Aware Moldable FCFS) Scheduler...')
 
-        # Start resource utilization collection
+        # Track workflows that are impossible to allocate (prevent infinite retries)
+        rejected_workflows = set()
+
+        # Start resource utilization collection (including license pools)
         if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager)
+            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
         else:
             thread = threading.Thread(
                 target=self.metrics.collectResourceUtilization,
-                args=[sim, self.resource_manager]
+                args=[sim, self.resource_manager, self.license_manager]
             )
             thread.start()
 
@@ -95,8 +105,15 @@ class FCFS_Optimized_LA(Scheduler_LA):
                 # End simulation
                 if wf_plan['id'] == 'END':
                     removeElement(wf_mb, self.queue)
-                    self.metrics.computeMetrics()
+                    from config.constants_LA import TOTAL_WORKFLOWS
+                    self.metrics.computeMetrics(file_prefix=f'LAMF_{TOTAL_WORKFLOWS}_')
                     break
+
+                # Skip workflows that have been rejected as impossible
+                if wf_plan['id'] in rejected_workflows:
+                    removeElement(wf_mb, self.queue)
+                    print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
+                    continue
 
                 # Scheduling
                 if self.resource_manager.getResourcesAvailable():
@@ -135,10 +152,67 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
 
+                        # Track initial allocation in moldability metrics (BUG FIX #1)
+                        instances_added = sum(count for _, count, _ in alloc_resources)
+                        cores_added = sum(inst.cores * count for inst, count, _ in alloc_resources)
+
+                        # Calculate actual license tokens from holds
+                        licenses_acquired = 0
+                        if license_holds:
+                            for hold_id in license_holds:
+                                if hold_id in self.license_manager.allocations:
+                                    licenses_acquired += self.license_manager.allocations[hold_id].amount
+
+                        # Record as initial "scale-up" (iteration 0 allocation)
+                        self.metrics.recordScaleUpAttempt(
+                            success=True,
+                            instances_added=instances_added,
+                            cores_added=cores_added,
+                            licenses_acquired=licenses_acquired,
+                            workflow_id=wf_plan['id']
+                        )
+                        print(f"  📊 Tracked initial allocation: {instances_added} instances, {cores_added} cores, {licenses_acquired} licenses")
+
                     else:
-                        # Wait until BOTH resources and licenses become available
-                        self.resource_manager.setResourcesAvailable(False)
-                        print(f'⏳ {wf_plan["id"]} waiting for resources or licenses...')
+                        # Allocation failed - could be compute OR licenses
+                        # Check if this is an impossible allocation (exceeds pool capacity)
+
+                        # Calculate required licenses to check if impossible
+                        license_pool = constraints.get('license_pool')
+                        if license_pool:
+                            # Get hypothetical instance allocation
+                            instances = self.resource_manager.getResources()
+                            count, instance_list = self.checkResources(instances, constraints['min_instances'])
+
+                            if count >= constraints['min_instances']:
+                                total_cores = sum(inst.cores * cnt for inst, cnt in instance_list)
+                                licenses_needed = self.license_manager.calculate_tokens(
+                                    pool=license_pool,
+                                    cores=total_cores,
+                                    chains=constraints.get('chains', 1)
+                                )
+                                pool_status = self.license_manager.get_pool_status(license_pool)
+
+                                if licenses_needed > pool_status['total']:
+                                    # Impossible allocation - reject permanently
+                                    rejected_workflows.add(wf_plan['id'])
+                                    print(f'⊘ {wf_plan["id"]} REJECTED - needs {licenses_needed} tokens, pool has {pool_status["total"]}')
+                                    # Will be removed from queue on next iteration
+                                    continue
+
+                        # Check if ANY compute resources are available
+                        available_resources = self.resource_manager.getResources()
+                        has_available_compute = any(r.getFreeSlots() > 0 for r in available_resources)
+
+                        if not has_available_compute:
+                            # Compute resources exhausted - block queue
+                            self.resource_manager.setResourcesAvailable(False)
+                            print(f'⏳ {wf_plan["id"]} waiting for compute resources...')
+                        else:
+                            # Temporary license shortage - don't block, just skip this workflow
+                            # It will retry on next polling cycle
+                            print(f'⏳ {wf_plan["id"]} insufficient licenses ({constraints.get("license_pool", "unknown")}), will retry...')
+                            # Don't remove from queue - will retry later
 
             (sim or time).sleep(WORKFLOW_POLLING)
 
@@ -152,14 +226,9 @@ class FCFS_Optimized_LA(Scheduler_LA):
         3. If not, check if should scale up (allocate compute + licenses)
         4. Account for license availability in all decisions
         """
-        wf_data = self.resource_manager.getWorkflow(request['wf-id'])
-        if len(wf_data) == 7:
-            instances, budget, deadline, start_time, mesh, software_id, license_holds = wf_data
-        else:
-            # Fallback for workflows without license tracking
-            instances, budget, deadline, start_time, mesh = wf_data
-            software_id = 0
-            license_holds = []
+        # LA workflows always return 7-value tuples
+        instances, budget, deadline, start_time, mesh, software_id, license_holds = \
+            self.resource_manager.getWorkflow(request['wf-id'])
 
         # Get license pool for this workflow
         license_pool = self.license_manager.get_pool_for_software(software_id) if software_id else None
@@ -174,40 +243,184 @@ class FCFS_Optimized_LA(Scheduler_LA):
         if not isinstance(instances[0][0], OnPremInstance):
             cur_count = sum(inst_tuple[1] for inst_tuple in instances)
 
+        # === DIAGNOSTIC LOGGING ===
+        print(f"\n🔍 [DIAGNOSTIC] processFreeRequestWithLicenses called:")
+        print(f"  wf-id: {request['wf-id']}, iteration: {ind}")
+        print(f"  current instances: {cur_count}, chains: {request['chains']}, tinyda-iterations: {request['tinyda-iterations']}")
+        print(f"  deadline: {deadline:.1f}s, current time: {getTime(sim):.1f}s")
+        print(f"  available_time (after OPTIM factor {OPTIM_FCFS_DFACTOR[ind]}): {available_time:.1f}s")
+
+        # === EARLY SCALE-UP TRIGGER (Priority 3 Fix) ===
+        # Check if workflow is falling behind schedule - if so, skip scale-down and go to scale-up
+        elapsed_time = getTime(sim) - start_time
+        total_time = deadline - start_time
+        time_progress = elapsed_time / total_time if total_time > 0 else 0.0
+
+        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+        budget_progress = used_budget / budget if budget > 0 else 0.0
+
+        # UPDATED: More sensitive trigger (5% instead of 10%) to intervene earlier
+        # If time progress exceeds budget progress by 5%, workflow is falling behind
+        # Skip scale-down entirely and go straight to scale-up attempt
+        skip_scale_down = False
+        force_scale_up_attempt = False
+
+        if time_progress > budget_progress + 0.05:
+            print(f"  ⚡ EARLY SCALE-UP TRIGGER: time {time_progress*100:.1f}% > budget {budget_progress*100:.1f}% + 5%")
+            print(f"  → Skipping scale-down check, will attempt scale-up")
+            skip_scale_down = True
+            force_scale_up_attempt = True
+
+        # === LATE-ITERATION PROACTIVE SCALE-UP ===
+        # At late iterations (>= 3), proactively attempt scale-up if >50% time elapsed
+        # Don't wait for deficit - preemptively add resources
+        if ind >= 3 and time_progress > 0.50 and not force_scale_up_attempt:
+            print(f"  ⚡ LATE-ITERATION SCALE-UP: iteration {ind}, time {time_progress*100:.1f}% elapsed")
+            print(f"  → Proactively attempting scale-up (don't wait for crisis)")
+            skip_scale_down = True
+            force_scale_up_attempt = True
+
         # === SCALE DOWN CHECK ===
         # Can we free resources without missing deadline?
         chains_per_node = 3
         request['count'] = None
         min_needed_count = request['chains']
         runtime_per_model = getRuntime(1, mesh, cur_instance.name)
+        print(f"  runtime_per_model: {runtime_per_model:.1f}s")
 
-        while chains_per_node > 0:
+        # Only attempt scale-down if not skipped by early trigger
+        while chains_per_node > 0 and not skip_scale_down:
             runtime = chains_per_node * runtime_per_model * request['tinyda-iterations']
+            print(f"  [chains_per_node={chains_per_node}] runtime={runtime:.1f}s vs available_time={available_time:.1f}s")
+
             if runtime < available_time:  # Can complete with fewer resources
                 min_needed_count = request['chains'] // chains_per_node + bool(request['chains'] % chains_per_node)
+                print(f"  ✓ Can complete with fewer resources: min_needed={min_needed_count} vs cur_count={cur_count}")
 
-                if cur_count >= min_needed_count:
-                    # Can scale down!
-                    request['count'] = cur_count - min_needed_count
-                    print(f"⬇ Scaling down: freeing {request['count']} instances")
+                if cur_count > min_needed_count:  # Only scale down if have more than needed
+                    # === SMART SCALE-DOWN GUARDS (Solution 2) ===
+                    # Check if safe to scale down given license constraints
+                    should_scale_down = True
 
-                    # Free compute AND licenses
-                    self.freeResourcesWithLicenses(instances, request, sim, license_pool)
-                    return
+                    # GUARD 1: Check license pool utilization
+                    blocked_reason = None
+                    if license_pool:
+                        pool_status = self.license_manager.get_pool_status(license_pool)
+                        pool_utilization = pool_status['allocated'] / pool_status['total']
+
+                        if pool_utilization > 0.70:  # Pool >70% utilized
+                            print(f"  ⏸ Scale-down BLOCKED: {license_pool} pool at {pool_utilization*100:.1f}% utilization (threshold: 70%)")
+                            should_scale_down = False
+                            blocked_reason = 'license_pool_saturated'
+
+                    # GUARD 2: Check iteration number (don't scale down too late)
+                    if should_scale_down and ind > 3:  # After iteration 3
+                        print(f"  ⏸ Scale-down BLOCKED: too late in workflow (iteration {ind})")
+                        should_scale_down = False
+                        blocked_reason = 'late_iteration'
+
+                    # GUARD 3: Check time progress (don't scale down late in workflow)
+                    if should_scale_down:
+                        elapsed_time = getTime(sim) - start_time
+                        total_time = deadline - start_time
+                        time_progress = elapsed_time / total_time if total_time > 0 else 1.0
+                        # Ensure time_progress is a real number
+                        time_progress = float(abs(time_progress)) if isinstance(time_progress, complex) else float(time_progress)
+
+                        if time_progress > 0.70:  # More than 70% time elapsed
+                            print(f"  ⏸ Scale-down BLOCKED: workflow {time_progress*100:.1f}% complete (threshold: 70%)")
+                            should_scale_down = False
+                            blocked_reason = 'time_progress'
+
+                    # GUARD 4: Check budget progress (only scale down if ahead on budget)
+                    if should_scale_down:
+                        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+                        budget_progress = used_budget / budget if budget > 0 else 1.0
+
+                        # Only scale down if both time AND budget are under 50% used
+                        # This prevents releasing resources we'll need to re-acquire
+                        if budget_progress > 0.50 or time_progress > 0.50:
+                            print(f"  ⏸ Scale-down BLOCKED: budget {budget_progress*100:.1f}% or time {time_progress*100:.1f}% > 50%")
+                            should_scale_down = False
+                            blocked_reason = 'budget_or_time_progress'
+
+                    # === OLD CODE (unconditional scale-down): ===
+                    # request['count'] = cur_count - min_needed_count
+                    # print(f"⬇ Scaling down: freeing {request['count']} instances")
+                    # self.freeResourcesWithLicenses(instances, request, sim, license_pool)
+                    # return
+
+                    # === NEW CODE (conditional scale-down with guards): ===
+                    if should_scale_down:
+                        request['count'] = cur_count - min_needed_count
+                        print(f"⬇ Scaling down: freeing {request['count']} instances (guards passed)")
+
+                        # Track resource deallocation in metrics (before freeing)
+                        current_time = getTime(sim)
+                        self.metrics.updateResources(
+                            request['wf-id'], cur_instance, request['count'], current_time, 'remove'
+                        )
+
+                        # Calculate cores being freed
+                        cores_freed = cur_instance.cores * request['count']
+
+                        # Free compute AND licenses (get ACTUAL licenses released)
+                        actual_licenses_released = self.freeResourcesWithLicenses(instances, request, sim, license_pool)
+
+                        # Record scale-down success with ACTUAL values (BUG FIX #3)
+                        self.metrics.recordScaleDownAttempt(
+                            success=True,
+                            instances_removed=request['count'],
+                            cores_removed=cores_freed,
+                            licenses_released=actual_licenses_released  # Use actual, not calculated
+                        )
+
+                        return
+                    else:
+                        # Don't scale down - too risky
+                        print(f"  → Keeping current allocation ({cur_count} instances)")
+
+                        # Record blocked scale-down
+                        self.metrics.recordScaleDownAttempt(
+                            success=False,
+                            blocked_reason=blocked_reason
+                        )
+                        break
                 else:
                     # Need to scale up
+                    print(f"  ✗ Cannot scale down: cur_count ({cur_count}) < min_needed ({min_needed_count})")
                     break
             else:
                 chains_per_node -= 1
 
+        if skip_scale_down:
+            print(f"  → Scale-down skipped (workflow falling behind). Moving to scale-up check.\n")
+        else:
+            print(f"  → Scale-down check complete. Moving to scale-up check.\n")
+
         # === SCALE UP CHECK ===
-        used_budget = self.metrics.computeCost(request['wf-id'], getTime(sim))
-        available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]
+        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+
+        # SCALE-UP BOOST: When forcing scale-up (early trigger or late-iteration proactive),
+        # allocate 20% more budget than normal OPTIM factor allows
+        SCALE_UP_BOOST_FACTOR = 1.2
+
+        if force_scale_up_attempt:
+            available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind] * SCALE_UP_BOOST_FACTOR
+            print(f"  💪 SCALE-UP BOOST: budget factor {OPTIM_FCFS_BFACTOR[ind]:.2f} → {OPTIM_FCFS_BFACTOR[ind] * SCALE_UP_BOOST_FACTOR:.2f}")
+            print(f"  💰 Available budget: ${available_budget:.2f} (boosted from ${max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]:.2f})")
+        else:
+            available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]
 
         free_resources = self.resource_manager.getResources()
 
         if request['count'] is None:
             request['count'] = min_needed_count - cur_count
+
+            # Handle case where scale-down was blocked (cur_count >= min_needed_count)
+            if request['count'] <= 0:
+                print(f"  → No resource adjustment needed (current: {cur_count}, minimum: {min_needed_count})")
+                return  # Exit - maintain current allocation
 
         # Check NEW resources with license constraints
         alloc_instances, license_holds_new = self.checkNewResourcesWithLicenses(
@@ -220,6 +433,36 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
             # Allocate compute
             ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
+
+            # Track resource allocation in metrics
+            current_time = getTime(sim)
+            # Use alloc_resources (3-tuples after allocateResources mutation)
+            instances_added = sum(c for _, c, _ in alloc_resources)
+            cores_added = sum(inst.cores * count for inst, count, _ in alloc_resources)
+
+            # Calculate actual license tokens (not hold_id count)
+            licenses_acquired = 0
+            if license_holds_new and license_pool:
+                total_cores = sum(inst.cores * count for inst, count, _ in alloc_resources)
+                licenses_acquired = self.license_manager.calculate_tokens(
+                    pool=license_pool,
+                    cores=total_cores,
+                    chains=request.get('chains', 1)
+                )
+
+            for instance_obj, count, _ in alloc_resources:
+                self.metrics.updateResources(
+                    request['wf-id'], instance_obj, count, current_time, 'add'
+                )
+
+            # Record scale-up success
+            self.metrics.recordScaleUpAttempt(
+                success=True,
+                instances_added=instances_added,
+                cores_added=cores_added,
+                licenses_acquired=licenses_acquired,
+                workflow_id=request['wf-id']
+            )
 
             # Send to executor with new licenses
             self.sendNewResources(
@@ -235,6 +478,17 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
         else:
             print(f"⏸ No scaling: insufficient resources or licenses")
+            # Record scale-up failure (determine reason)
+            # Check if it was compute or licenses that blocked
+            free_compute = any(r.getFreeSlots() > 0 for r in free_resources)
+            if not free_compute:
+                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_compute', workflow_id=request['wf-id'])
+            elif available_budget <= 0:
+                self.metrics.recordScaleUpAttempt(success=False, reason='budget_exhausted', workflow_id=request['wf-id'])
+            elif available_time <= 0:
+                self.metrics.recordScaleUpAttempt(success=False, reason='time_exhausted', workflow_id=request['wf-id'])
+            else:
+                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_licenses', workflow_id=request['wf-id'])
 
     def checkNewResourcesWithLicenses(
         self,
@@ -253,8 +507,9 @@ class FCFS_Optimized_LA(Scheduler_LA):
             (alloc_instances, license_holds)
         """
         # First, get compute allocation (from parent class)
+        # Note: available_runtime not passed - parent class doesn't use it
         alloc_instances = self.checkNewResources(
-            resources, current_resources, budget, available_runtime, request, mesh
+            resources, current_resources, budget, request, mesh
         )
 
         if not alloc_instances:
@@ -375,10 +630,14 @@ class FCFS_Optimized_LA(Scheduler_LA):
         Free resources AND licenses
 
         Extends base freeResources() to also release licenses.
+
+        Returns:
+            actual_licenses_released: Actual number of license tokens released
         """
         response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
         freed_count = 0
         to_free_instances = []
+        actual_licenses_released = 0  # Track actual releases (BUG FIX #3)
 
         # Free compute resources (LIFO)
         if request['count'] > 0:
@@ -394,7 +653,8 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
 
-            # Free licenses corresponding to freed instances
+            # === PARTIAL LICENSE RELEASE (Solution 3) ===
+            # Free licenses corresponding to freed instances (but only partially)
             if license_pool and to_free_instances:
                 total_cores_freed = sum(inst.cores * count for inst, count, _ in to_free_instances)
 
@@ -405,13 +665,60 @@ class FCFS_Optimized_LA(Scheduler_LA):
                         chains=1
                     )
 
-                    # Release licenses (proportional to freed compute)
+                    # === OLD CODE (release all licenses): ===
+                    # wf_id = request['wf-id']
+                    # if wf_id in self.license_holds and self.license_holds[wf_id]:
+                    #     hold_id = self.license_holds[wf_id].pop()
+                    #     self.license_manager.release(hold_id)
+                    #     print(f"  ✓ Released ~{licenses_to_free} licenses (hold: {hold_id})")
+
+                    # === NEW CODE (partial release with buffer retention): ===
+                    PARTIAL_RELEASE_FRACTION = 0.50  # Release 50%, keep 50% as buffer
+
                     wf_id = request['wf-id']
                     if wf_id in self.license_holds and self.license_holds[wf_id]:
-                        # Release most recent hold (LIFO)
-                        hold_id = self.license_holds[wf_id].pop()
-                        self.license_manager.release(hold_id)
-                        print(f"  ✓ Released ~{licenses_to_free} licenses (hold: {hold_id})")
+                        # Get most recent hold (LIFO)
+                        hold_id = self.license_holds[wf_id][-1]
+
+                        # Get allocation info to determine hold size
+                        if hold_id in self.license_manager.allocations:
+                            alloc = self.license_manager.allocations[hold_id]
+                            licenses_to_actually_release = int(licenses_to_free * PARTIAL_RELEASE_FRACTION)
+
+                            if licenses_to_actually_release >= alloc.amount:
+                                # Release entire hold (can't partially release more than exists)
+                                self.license_holds[wf_id].pop()
+                                self.license_manager.release(hold_id)
+                                actual_licenses_released += alloc.amount  # Track actual release
+                                print(f"  ✓ Released full hold: {alloc.amount} licenses (hold: {hold_id})")
+                            else:
+                                # Partial release: release old hold, create new smaller hold
+                                remaining_licenses = alloc.amount - licenses_to_actually_release
+
+                                # Release old hold
+                                self.license_holds[wf_id].pop()
+                                self.license_manager.release(hold_id)
+                                actual_licenses_released += licenses_to_actually_release  # Track actual release
+
+                                # Create new smaller hold for retained licenses
+                                new_hold_id = self.license_manager.hold(
+                                    pool=license_pool,
+                                    amount=remaining_licenses,
+                                    owner=wf_id,
+                                    ttl=300
+                                )
+                                self.license_manager.commit(new_hold_id)
+                                self.license_holds[wf_id].append(new_hold_id)
+
+                                print(f"  ✓ Partial release: {licenses_to_actually_release}/{alloc.amount} licenses ({PARTIAL_RELEASE_FRACTION*100:.0f}%)")
+                                print(f"    Retained {remaining_licenses} licenses as buffer (new hold: {new_hold_id})")
+                        else:
+                            # Fallback: just release the hold if not in allocations
+                            # Estimate licenses (can't get exact amount without allocation record)
+                            self.license_holds[wf_id].pop()
+                            self.license_manager.release(hold_id)
+                            actual_licenses_released += int(licenses_to_free * PARTIAL_RELEASE_FRACTION)  # Estimate
+                            print(f"  ✓ Released hold: {hold_id} (allocation not tracked)")
 
                 except LicenseError as e:
                     print(f"  ⚠ License release error: {e}")
@@ -421,6 +728,8 @@ class FCFS_Optimized_LA(Scheduler_LA):
             request['wf-id'], to_free_instances, instances,
             response_instances, sim, request.get('client-ip', None)
         )
+
+        return actual_licenses_released  # Return actual amount released (BUG FIX #3)
 
     # === INHERITED METHODS FROM PARENT ===
     # The following methods are inherited from Scheduler_LA and fcfs_optimized:

@@ -1,0 +1,10 @@
+Scheduler,Num_Workflows,Completed,Incomplete,Avg_Flowtime_Sec,Avg_Cost_USD,Avg_Wait_Sec,Resource_Util_Pct,Dea
+  dline_Miss_Rate,Budget_Miss_Rate,Wasted_Time_Hours,Wasted_Cost_USD
+Baseline,100,99,1,10025.5274 secs,$18.2699,41.8289 secs,18.671%,0.01,0.0,0.01,5.38 hours,$1139.64 
+LAMF,100,99,1,10026.4437 secs,$18.2699,42.7453 secs,18.5063%,0.01,0.0,0.01,35.37 hours,$1139.42
+Baseline,200,186,14,18100.9138 secs,$40.3091,3778.7252 secs,29.8129%,0.07
+LAMF,200,185,15,17601.7019 secs,$36.9141,3864.4198	secs,34.0834%,0.07
+Baseline,300,238,62,22048.2991 secs,$29.4603,9406.5749 secs,41.5586%
+LAMF,300,242,58,22507.2849 secs,$31.0649,9577.5778 secs,38.3656%
+Baseline,400,273,127,29128.8131 secs,$32.6864,15500.6738 secs,53.1545%
+LAMF,400,278,122,28036.4504 secs,$28.9582,15161.5092 secs,49.3955%

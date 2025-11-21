@@ -21,26 +21,39 @@ class ResourceManager(ABC):
                     type.get('runtime'),
                     type.get('reserved-cost'),
                     type.get('slots'),
-                    type.get('ip')
+                    type.get('ip'),
+                    type.get('cores')
                     )
         self.node_resources.append(instance)
         
         # Update cloud
         for type in defined_resources['cloud']:
-            reserved = CloudReservedInstance(
-                type.get('name'),
-                type.get('runtime'), 
-                type.get('reserved-cost'), 
-                ip=type.get('ip')
+            # Only allocate reserved-slots number of IPs to reserved instance
+            reserved_slots = type.get('reserved-slots', 0)
+            all_ips = type.get('ip', [])
+            reserved_ips = all_ips[:reserved_slots] if reserved_slots > 0 else []
+
+            if reserved_ips:
+                reserved = CloudReservedInstance(
+                    type.get('name'),
+                    type.get('runtime'),
+                    type.get('reserved-cost'),
+                    ip=reserved_ips,
+                    cores=type.get('cores')
+                    )
+                self.node_resources.append(reserved)
+
+            # On-demand instances use configured slots, not IPs
+            ondemand_slots = type.get('on-demand-slots', 0)
+            if ondemand_slots > 0:
+                ondemand = CloudOnDemandInstance(
+                    type.get('name'),
+                    type.get('runtime'),
+                    type.get('on-demand-cost'),
+                    slots=ondemand_slots,
+                    cores=type.get('cores')
                 )
-            ondemand = CloudOnDemandInstance(
-                type.get('name'),
-                type.get('runtime'), 
-                type.get('on-demand-cost'),
-                slots=type.get('on-demand-slots')
-            )
-            self.node_resources.append(reserved)
-            self.node_resources.append(ondemand)
+                self.node_resources.append(ondemand)
         
         self.workflows = {} # Maintain budget, deadline and allocated resources information of each workflow
     
