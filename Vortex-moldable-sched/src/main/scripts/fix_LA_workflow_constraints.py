@@ -76,7 +76,7 @@ def fix_workflow(filepath):
 
 def main():
     """Fix all LA sample workflows."""
-    workflow_dir = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA'
+    workflow_dir = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA'
 
     print('=' * 70)
     print('FIXING LA WORKFLOW BUDGET & DEADLINE CONSTRAINTS')

@@ -9,7 +9,7 @@ import sys
 import os
 
 # Add project paths
-sys.path.append('/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main')
+sys.path.append('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main')
 
 def test_imports():
     """Test that all HPO components can be imported"""

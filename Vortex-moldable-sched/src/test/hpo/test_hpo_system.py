@@ -19,7 +19,7 @@ import requests
 from typing import Dict, List
 
 # Add project paths
-sys.path.append('/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main')
+sys.path.append('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main')
 
 # Import HPO components
 from scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
@@ -42,7 +42,7 @@ class HPOSystemTester:
     def load_test_workflow(self) -> Dict:
         """Load test HPO workflow"""
         try:
-            workflow_path = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/test/hpo/test_hpo_workflow.yaml'
+            workflow_path = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/test/hpo/test_hpo_workflow.yaml'
 
             with open(workflow_path, 'r') as f:
                 workflow = yaml.safe_load(f)

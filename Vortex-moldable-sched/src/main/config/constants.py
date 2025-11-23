@@ -1,7 +1,7 @@
 SIMULATE = True
 MOLDABLE = True
 FREE_RESOURCES = True
-TOTAL_WORKFLOWS = 400
+TOTAL_WORKFLOWS = 700
 TOTAL_RESOURCES = 256 # onprem and cloud reserved resources - for resurce utilization calculation
 AVG_WORKFLOW_ITERATIONS = 4
 AVG_TINYDA_ITERATIONS = 7

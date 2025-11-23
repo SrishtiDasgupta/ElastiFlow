@@ -12,7 +12,7 @@ pip install simulus numpy pandas matplotlib seaborn pyyaml redis
 sudo systemctl start redis-server
 
 # 3. Navigate to project directory
-cd /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched
+cd /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched
 ```
 
 ### Step 1: Configure Simulation (Optional)
@@ -198,7 +198,7 @@ python src/main/simulate_main_LA.py
 ### License Stress Test (low capacity)
 
 ```bash
-# Edit /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml
+# Edit /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml
 # Reduce token counts:
 pools:
   ANSYS:
@@ -305,7 +305,7 @@ After running the simulation:
 
 ```bash
 # One-time setup
-cd /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched
+cd /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched
 pip install simulus numpy pandas matplotlib seaborn pyyaml redis
 sudo systemctl start redis-server
 

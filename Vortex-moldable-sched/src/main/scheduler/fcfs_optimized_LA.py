@@ -152,6 +152,11 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
 
+                        # FIX #1: Track initial allocation in scheduler's license_holds
+                        # This ensures both tracking systems (Scheduler and ResourceManager) are synchronized from the start
+                        if license_holds:
+                            self.license_holds[wf_plan['id']] = license_holds
+
                         # Track initial allocation in moldability metrics (BUG FIX #1)
                         instances_added = sum(count for _, count, _ in alloc_resources)
                         cores_added = sum(inst.cores * count for inst, count, _ in alloc_resources)
@@ -476,6 +481,14 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     self.license_holds.get(request['wf-id'], []) + license_holds_new
                 )
 
+                # FIX #2: Synchronize to ResourceManager to prevent desync during scale-up
+                # This ensures ResourceManager knows about new licenses acquired during scale-up
+                self.resource_manager.updateWorkflowLicenses(
+                    request['wf-id'],
+                    self.license_holds[request['wf-id']],
+                    mode='replace'
+                )
+
         else:
             print(f"⏸ No scaling: insufficient resources or licenses")
             # Record scale-up failure (determine reason)
@@ -507,9 +520,14 @@ class FCFS_Optimized_LA(Scheduler_LA):
             (alloc_instances, license_holds)
         """
         # First, get compute allocation (from parent class)
-        # Note: available_runtime not passed - parent class doesn't use it
+        # OLD (BUGGY): available_runtime not passed - parent class didn't use it
+        # alloc_instances = self.checkNewResources(
+        #     resources, current_resources, budget, request, mesh
+        # )
+
+        # NEW (FIXED): Now passing available_runtime for global view deadline checking
         alloc_instances = self.checkNewResources(
-            resources, current_resources, budget, request, mesh
+            resources, current_resources, budget, available_runtime, request, mesh
         )
 
         if not alloc_instances:
@@ -710,6 +728,14 @@ class FCFS_Optimized_LA(Scheduler_LA):
                                 self.license_manager.commit(new_hold_id)
                                 self.license_holds[wf_id].append(new_hold_id)
 
+                                # FIX: Synchronize ResourceManager tracking to prevent license accumulation
+                                # Update ResourceManager to match Scheduler's new hold list
+                                self.resource_manager.updateWorkflowLicenses(
+                                    wf_id,
+                                    self.license_holds[wf_id],
+                                    mode='replace'
+                                )
+
                                 print(f"  ✓ Partial release: {licenses_to_actually_release}/{alloc.amount} licenses ({PARTIAL_RELEASE_FRACTION*100:.0f}%)")
                                 print(f"    Retained {remaining_licenses} licenses as buffer (new hold: {new_hold_id})")
                         else:
@@ -732,9 +758,9 @@ class FCFS_Optimized_LA(Scheduler_LA):
         return actual_licenses_released  # Return actual amount released (BUG FIX #3)
 
     # === INHERITED METHODS FROM PARENT ===
-    # The following methods are inherited from Scheduler_LA and fcfs_optimized:
-    # - checkNewResources() - compute resource checking
-    # - checkCloseness() - runtime similarity check
+    # The following methods are inherited from Scheduler_LA:
+    # - checkNewResources() - sophisticated moldable resource allocation (FIXED in Scheduler_LA)
+    # - checkCloseness() - runtime similarity check (15% tolerance)
 
     def checkCloseness(self, instance: Instance, runtimes_list, mesh) -> bool:
         """
@@ -749,5 +775,14 @@ class FCFS_Optimized_LA(Scheduler_LA):
         closeness = lambda x: math.isclose(runtime, x, rel_tol=0.15)
         return any(map(closeness, runtimes_list))
 
+    # OLD (INCORRECT) COMMENT:
     # checkNewResources() is inherited from parent Scheduler_LA
     # It contains the full moldable logic from fcfs_optimized.py
+    #
+    # NEW (CORRECT) COMMENT:
+    # checkNewResources() NOW inherits the FIXED sophisticated moldability from Scheduler_LA
+    # which includes:
+    # - Runtime feasibility checking (global view)
+    # - Nodes_per_chain optimization
+    # - Speedup threshold checking
+    # - Instance closeness checking

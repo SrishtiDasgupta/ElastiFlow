@@ -26,7 +26,7 @@ FREE_RESOURCES = True
 
 # Total workflows to generate and simulate
 # NOTE: Must match between workflow_generator_LA.py and dispatcher_LA.py
-TOTAL_WORKFLOWS = 400  # Increased for comprehensive testing
+TOTAL_WORKFLOWS = 700  # Increased for comprehensive testing
 
 # Workflow size distribution (mesh sizes)
 MESH_DISTRIBUTION = {
@@ -72,7 +72,7 @@ LICENSE_SOFTWARE_ID = {
     'LSDYNA': 3
 }
 
-# License pool capacities (must match /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml)
+# License pool capacities (must match /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml)
 # UPDATED: Reduced from 16,800 to create meaningful license scarcity
 # Based on 400-workflow test: measured peaks were ANSYS=5,843, ABAQUS=1,894, LSDYNA=6,592
 # Using 1.15× factor for 15% headroom → ~87% peak utilization (high scarcity)
@@ -96,7 +96,7 @@ LICENSE_STRATEGIES = {
 
 # Workflow directories for LA simulation
 WORKFLOWS_DIR_LA = 'sample_workflows_LA'
-WORKFLOW_OUTPUT_DIR_LA = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA'
+WORKFLOW_OUTPUT_DIR_LA = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA'
 
 # ============================================================================
 # MOLDABLE SCHEDULING PARAMETERS (inherited from base)
@@ -134,3 +134,43 @@ DEBUG_MOLDABLE_DECISIONS = True
 
 # Track license utilization metrics
 TRACK_LICENSE_METRICS = True
+
+# ============================================================================
+# DDM-EDF (Deadline-Driven Moldable EDF) PARAMETERS
+# ============================================================================
+
+# ============================================================================
+# DDM-EDF v3: REFINED URGENCY-BASED PARAMETERS
+# ============================================================================
+# Key improvements:
+# - Separate thresholds for scale-up vs scale-down (no conflicts)
+# - Pure time-based slack: slack_ratio = time_remaining / time_elapsed
+# - No estimation dependency, works for dynamic workflows
+# ============================================================================
+
+# SCALE-UP URGENCY THRESHOLDS
+# Trigger intervention when workflow is running out of time
+SCALE_UP_URGENCY_CRITICAL = 0.4    # time_remaining < 40% of time_elapsed → force scale-up
+SCALE_UP_URGENCY_WARNING = 0.8     # time_remaining < 80% of time_elapsed → attempt scale-up
+
+# SCALE-DOWN URGENCY THRESHOLDS
+# Only release resources when workflow has significant excess time
+SCALE_DOWN_SAFE_THRESHOLD = 2.0    # time_remaining > 200% of time_elapsed → allow scale-down
+SCALE_DOWN_EXCESS_THRESHOLD = 3.5  # time_remaining > 350% of time_elapsed → aggressive scale-down + relax guards
+
+# URGENCY BOOST FACTORS
+# Multiply resource allocation aggressiveness based on urgency
+URGENCY_BOOST_CRITICAL = 2.5   # 150% more aggressive for critical workflows
+URGENCY_BOOST_WARNING = 1.8    # 80% more aggressive for warning workflows
+URGENCY_BOOST_NORMAL = 1.0     # Normal allocation (no urgency)
+
+# PREEMPTIVE REALLOCATION
+# Keep disabled - overhead > benefit in license-constrained environments
+PREEMPTIVE_REALLOC_ENABLED = False
+
+# LEGACY PARAMETERS (for backward compatibility - not used in v3)
+DEADLINE_URGENCY_CRITICAL = SCALE_UP_URGENCY_CRITICAL
+DEADLINE_URGENCY_WARNING = SCALE_UP_URGENCY_WARNING
+DEADLINE_URGENCY_SAFE = 1.5
+EXCESS_SLACK_THRESHOLD = SCALE_DOWN_EXCESS_THRESHOLD
+URGENCY_BOOST_SAFE = URGENCY_BOOST_NORMAL

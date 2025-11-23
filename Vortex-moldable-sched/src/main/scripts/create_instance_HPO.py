@@ -197,11 +197,11 @@ def setupInstanceHPO(ssh, instance_role: str, instance_ip: str):
         if instance_role == 'executor':
             # Setup executor instance
             remote_script = '/home/ubuntu/hpo_executor_setup.sh'
-            local_script = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/on_demand_setup_HPO_executor.sh'
+            local_script = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/on_demand_setup_HPO_executor.sh'
         else:  # worker
             # Setup worker instance
             remote_script = '/home/ubuntu/hpo_worker_setup.sh'
-            local_script = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/on_demand_setup_HPO_worker.sh'
+            local_script = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/on_demand_setup_HPO_worker.sh'
 
         # Upload setup script
         sftp.put(local_script, remote_script)

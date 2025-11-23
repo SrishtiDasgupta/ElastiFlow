@@ -46,7 +46,7 @@ ANSWER: YES! Here's the complete flow:
 ┌─────────────────────────────────────────────────────────────┐
 │ SCHEDULER NODE (e.g., 10.19.224.232)                        │
 │ - Runs: fcfs_scheduler_HPO.py                               │
-│ - Has: /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/*.sh files      │
+│ - Has: /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/*.sh files      │
 │ - Has: SSH key: /fsx/Nisarg-HPC.pem                         │
 └─────────────────────┬────────────────────────────────────────┘
                      │
@@ -66,7 +66,7 @@ ANSWER: YES! Here's the complete flow:
 │                                                              │
 │ 1. sftp.put(local_script, remote_script)                    │
 │    Upload: Scheduler → Executor                             │
-│    FROM: /Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/*.sh          │
+│    FROM: /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/*.sh          │
 │    TO:   /home/ubuntu/hpo_executor_setup.sh (on executor)   │
 │                                                              │
 │ 2. ssh.exec_command(f'bash {remote_script}')                │

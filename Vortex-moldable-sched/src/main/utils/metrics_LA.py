@@ -466,6 +466,96 @@ class MetricsLA:
 
         return hardware_cost
 
+    def _infer_scheduler_type(self, file_prefix: str) -> str:
+        """
+        Infer scheduler type from file prefix.
+
+        Checks most specific patterns first to avoid substring collisions.
+        Order matters: 'EDF_Static' must be checked before 'EDF'!
+
+        Returns:
+            'LAMF', 'DDM-EDF', 'EDF-BASELINE', 'FCFS-BASELINE', or 'UNKNOWN'
+        """
+        if not file_prefix:
+            return 'UNKNOWN'
+
+        # Check most specific patterns first (longest match)
+        if 'EDF_Static' in file_prefix:
+            return 'EDF-BASELINE'
+        elif 'LAMF' in file_prefix:
+            return 'LAMF'
+        elif 'Baseline' in file_prefix:
+            return 'FCFS-BASELINE'
+        elif 'EDF' in file_prefix:
+            return 'DDM-EDF'
+        else:
+            return 'UNKNOWN'
+
+    def _assess_moldability_effectiveness(self, scheduler_type: str, net_instances: int,
+                                         net_cores: int, deadline_miss: int, executed_workflows: int):
+        """
+        Assess moldability effectiveness with scheduler-specific heuristics.
+
+        Different schedulers have different moldability goals:
+        - LAMF: Balanced resource utilization (expect near-zero net impact)
+        - DDM-EDF: Deadline adherence through preemptive reallocation (expect scale-down dominance)
+
+        Args:
+            scheduler_type: Detected scheduler type
+            net_instances: Net instance change (added - removed)
+            net_cores: Net core change
+            deadline_miss: Number of deadline misses
+            executed_workflows: Number of completed workflows
+        """
+        if scheduler_type == 'LAMF':
+            # LAMF: Iteration-based moldability expects balanced resource usage
+            scale_ratio = self.scale_up_attempts / self.scale_down_attempts if self.scale_down_attempts > 0 else 1.0
+            failure_rate = self.scale_up_failures / self.scale_up_attempts if self.scale_up_attempts > 0 else 0.0
+
+            if failure_rate > 0.5:
+                print(f'  ⚠ WARNING: High scale-up failure rate ({failure_rate*100:.1f}%) - moldability may be counterproductive')
+            elif abs(net_instances) < 50:
+                print(f'  ✓ LAMF moldability balanced: near-zero net impact ({net_instances:+d} instances)')
+            elif net_instances < -100:
+                print(f'  ⚠ LAMF scale-down dominant: net {net_instances} instances (ratio 1:{1/scale_ratio:.1f})')
+                print(f'     → May indicate insufficient scale-up opportunities or budget constraints')
+            elif net_instances > 100:
+                print(f'  ⚠ LAMF scale-up dominant: net +{net_instances} instances (ratio {scale_ratio:.1f}:1)')
+                print(f'     → Workflows holding onto extra resources (check iteration weighting)')
+            elif self.scale_up_successes > 0:
+                print(f'  ✓ LAMF moldability active: {self.scale_up_successes} successful scale-ups, net {net_instances:+d} instances')
+
+        elif scheduler_type == 'DDM-EDF':
+            # DDM-EDF: Preemptive reallocation EXPECTS scale-down dominance
+            # Success metric = deadline adherence, NOT balanced ratio
+            scale_ratio = self.scale_up_attempts / self.scale_down_attempts if self.scale_down_attempts > 0 else 1.0
+            failure_rate = self.scale_up_failures / self.scale_up_attempts if self.scale_up_attempts > 0 else 0.0
+
+            if failure_rate > 0.5:
+                print(f'  ⚠ WARNING: High scale-up failure rate ({failure_rate*100:.1f}%) - critical workflows not getting resources')
+            elif deadline_miss == 0 and self.scale_down_attempts > 0:
+                print(f'  ✓ DDM-EDF highly effective: 0 deadline misses with preemptive reallocation')
+                print(f'     → {self.scale_down_attempts} scale-downs freed resources from EXCESS workflows')
+                print(f'     → Net {net_instances} instances (scale-down dominance is BY DESIGN)')
+            elif deadline_miss == 0:
+                print(f'  ✓ DDM-EDF effective: 0 deadline misses (urgency-based scaling successful)')
+            elif net_instances < -200 and self.scale_up_attempts < 10:
+                print(f'  ⚠ DDM-EDF: Heavy scale-down ({net_instances} instances) but only {self.scale_up_attempts} scale-ups')
+                print(f'     → Preemptive reallocation active, but critical workflows may need more aggressive scale-up')
+                print(f'     → {deadline_miss} deadline misses suggest urgency thresholds may be too conservative')
+            elif self.scale_up_successes > 0:
+                print(f'  ⚡ DDM-EDF active: {self.scale_up_successes} scale-ups, {self.scale_down_attempts} scale-downs (ratio 1:{1/scale_ratio:.1f})')
+                if deadline_miss > 0:
+                    print(f'     → But {deadline_miss} deadline misses - moldability not fully preventing deadline violations')
+
+        else:
+            # Unknown scheduler - use generic heuristic
+            failure_rate = self.scale_up_failures / self.scale_up_attempts if self.scale_up_attempts > 0 else 0.0
+            if failure_rate > 0.5:
+                print(f'  ⚠ WARNING: High scale-up failure rate ({failure_rate*100:.1f}%)')
+            elif self.scale_up_successes > 0 and self.total_instances_added > 0:
+                print(f'  ✓ Moldability active - {self.scale_up_successes} successful scale-ups')
+
     def computeMetrics(self, file_prefix=''):
         """
         Compute and display all performance metrics.
@@ -629,82 +719,91 @@ class MetricsLA:
                 print(f'  - Wasted Hardware Cost: €{round(wasted_hardware_cost, 2)}')
                 print(f'  - Wasted License Cost: €{round(wasted_license_cost, 2)}')
 
-            # Moldability effectiveness report
-            print(f'\n--- Moldability Effectiveness ---')
-            print(f'Scale-up attempts: {self.scale_up_attempts}')
-            if self.scale_up_attempts > 0:
-                success_rate = round(self.scale_up_successes / self.scale_up_attempts * 100, 1)
-                print(f'  Successes: {self.scale_up_successes} ({success_rate}%)')
-                print(f'  Failures: {self.scale_up_failures}')
-                if self.scale_up_failures > 0:
-                    print(f'    - Insufficient compute: {self.scale_up_failures_by_reason["insufficient_compute"]}')
-                    print(f'    - Insufficient licenses: {self.scale_up_failures_by_reason["insufficient_licenses"]}')
-                    print(f'    - Budget exhausted: {self.scale_up_failures_by_reason["budget_exhausted"]}')
-                    print(f'    - Time exhausted: {self.scale_up_failures_by_reason["time_exhausted"]}')
-                print(f'  Total instances added: {self.total_instances_added}')
-                print(f'  Total cores added: {self.total_cores_added}')
-                print(f'  Total licenses acquired: {self.total_licenses_acquired}')
+            # Detect scheduler type from file prefix
+            scheduler_type = self._infer_scheduler_type(file_prefix)
 
-            print(f'\nScale-down attempts: {self.scale_down_attempts}')
-            if self.scale_down_attempts > 0:
-                success_rate = round(self.scale_down_successes / self.scale_down_attempts * 100, 1)
-                print(f'  Successes: {self.scale_down_successes} ({success_rate}%)')
-                print(f'  Blocked: {self.scale_down_blocked}')
-                if self.scale_down_blocked > 0:
-                    print(f'    - License pool saturated: {self.scale_down_blocked_by_reason["license_pool_saturated"]}')
-                    print(f'    - Late iteration (>3): {self.scale_down_blocked_by_reason["late_iteration"]}')
-                    print(f'    - Time progress (>70%): {self.scale_down_blocked_by_reason["time_progress"]}')
-                    print(f'    - Budget or time progress (>50%): {self.scale_down_blocked_by_reason["budget_or_time_progress"]}')
-                print(f'  Total instances removed: {self.total_instances_removed}')
-                print(f'  Total cores removed: {self.total_cores_removed}')
-                print(f'  Total licenses released: {self.total_licenses_released}')
+            # Moldability effectiveness report (skip for non-moldable baselines)
+            is_baseline = scheduler_type in ['EDF-BASELINE', 'FCFS-BASELINE']
 
-            # Net moldability benefit analysis
-            if self.scale_up_attempts > 0 or self.scale_down_attempts > 0:
-                net_instances = self.total_instances_added - self.total_instances_removed
-                net_cores = self.total_cores_added - self.total_cores_removed
-                net_licenses = self.total_licenses_acquired - self.total_licenses_released
-                print(f'\nNet moldability impact:')
-                print(f'  Net instances: {net_instances:+d}')
-                print(f'  Net cores: {net_cores:+d}')
-                print(f'  Net licenses: {net_licenses:+d}')
-
-                # Assess whether moldability is helping or hurting
+            if is_baseline:
+                print(f'\n--- Moldability Status ---')
+                print(f'Scheduler Type: Non-Moldable Baseline ({scheduler_type})')
+                print(f'Resources allocated once at workflow start (no dynamic scaling)')
+            else:
+                # Moldable schedulers (LAMF, DDM-EDF) - show full moldability report
+                print(f'\n--- Moldability Effectiveness ---')
+                print(f'Scheduler Type: {scheduler_type}')
+                print(f'Scale-up attempts: {self.scale_up_attempts}')
                 if self.scale_up_attempts > 0:
-                    failure_rate = self.scale_up_failures / self.scale_up_attempts
-                    if failure_rate > 0.5:
-                        print(f'  ⚠ WARNING: High scale-up failure rate ({failure_rate*100:.1f}%) - moldability may be counterproductive')
-                    elif self.scale_up_successes > 0 and self.total_instances_added > 0:
-                        print(f'  ✓ Moldability appears effective - {self.scale_up_successes} successful scale-ups')
+                    success_rate = round(self.scale_up_successes / self.scale_up_attempts * 100, 1)
+                    print(f'  Successes: {self.scale_up_successes} ({success_rate}%)')
+                    print(f'  Failures: {self.scale_up_failures}')
+                    if self.scale_up_failures > 0:
+                        print(f'    - Insufficient compute: {self.scale_up_failures_by_reason["insufficient_compute"]}')
+                        print(f'    - Insufficient licenses: {self.scale_up_failures_by_reason["insufficient_licenses"]}')
+                        print(f'    - Budget exhausted: {self.scale_up_failures_by_reason["budget_exhausted"]}')
+                        print(f'    - Time exhausted: {self.scale_up_failures_by_reason["time_exhausted"]}')
+                    print(f'  Total instances added: {self.total_instances_added}')
+                    print(f'  Total cores added: {self.total_cores_added}')
+                    print(f'  Total licenses acquired: {self.total_licenses_acquired}')
 
-            # Analyze missed scale-up opportunities
-            workflows_with_no_scale_ups = 0
-            workflows_with_few_scale_ups = 0  # < 2 attempts
-            deadline_misses_with_no_scale_ups = 0
+                print(f'\nScale-down attempts: {self.scale_down_attempts}')
+                if self.scale_down_attempts > 0:
+                    success_rate = round(self.scale_down_successes / self.scale_down_attempts * 100, 1)
+                    print(f'  Successes: {self.scale_down_successes} ({success_rate}%)')
+                    print(f'  Blocked: {self.scale_down_blocked}')
+                    if self.scale_down_blocked > 0:
+                        print(f'    - License pool saturated: {self.scale_down_blocked_by_reason["license_pool_saturated"]}')
+                        print(f'    - Late iteration (>3): {self.scale_down_blocked_by_reason["late_iteration"]}')
+                        print(f'    - Time progress (>70%): {self.scale_down_blocked_by_reason["time_progress"]}')
+                        print(f'    - Budget or time progress (>50%): {self.scale_down_blocked_by_reason["budget_or_time_progress"]}')
+                    print(f'  Total instances removed: {self.total_instances_removed}')
+                    print(f'  Total cores removed: {self.total_cores_removed}')
+                    print(f'  Total licenses released: {self.total_licenses_released}')
 
-            for wf_id in self.df:
-                wf_data = self.df[wf_id]
-                scale_up_count = self.scale_up_attempts_per_workflow.get(wf_id, 0)
+                # Net moldability benefit analysis
+                if self.scale_up_attempts > 0 or self.scale_down_attempts > 0:
+                    net_instances = self.total_instances_added - self.total_instances_removed
+                    net_cores = self.total_cores_added - self.total_cores_removed
+                    net_licenses = self.total_licenses_acquired - self.total_licenses_released
+                    print(f'\nNet moldability impact:')
+                    print(f'  Net instances: {net_instances:+d}')
+                    print(f'  Net cores: {net_cores:+d}')
+                    print(f'  Net licenses: {net_licenses:+d}')
 
-                if scale_up_count == 0:
-                    workflows_with_no_scale_ups += 1
-                    # Check if this workflow missed deadline
-                    if wf_data.get('complete', False):
-                        if wf_data['finish_time'] > wf_data['deadline']:
-                            deadline_misses_with_no_scale_ups += 1
-                elif scale_up_count < 2:
-                    workflows_with_few_scale_ups += 1
+                    # Assess moldability effectiveness (scheduler-specific)
+                    self._assess_moldability_effectiveness(
+                        scheduler_type, net_instances, net_cores, deadline_miss, executed_workflows
+                    )
 
-            if executed_workflows > 0:
-                print(f'\n--- Scale-Up Opportunity Analysis ---')
-                print(f'Workflows with 0 scale-up attempts: {workflows_with_no_scale_ups} ({workflows_with_no_scale_ups/executed_workflows*100:.1f}%)')
-                print(f'Workflows with <2 scale-up attempts: {workflows_with_few_scale_ups} ({workflows_with_few_scale_ups/executed_workflows*100:.1f}%)')
-                if deadline_misses_with_no_scale_ups > 0:
-                    print(f'⚠ Deadline misses with 0 scale-ups: {deadline_misses_with_no_scale_ups}')
-                    print(f'  → These workflows may have benefited from scale-up attempts')
+                # Analyze missed scale-up opportunities
+                workflows_with_no_scale_ups = 0
+                workflows_with_few_scale_ups = 0  # < 2 attempts
+                deadline_misses_with_no_scale_ups = 0
 
-                avg_scale_ups_per_workflow = self.scale_up_attempts / executed_workflows if executed_workflows > 0 else 0
-                print(f'Average scale-up attempts per workflow: {avg_scale_ups_per_workflow:.2f}')
+                for wf_id in self.df:
+                    wf_data = self.df[wf_id]
+                    scale_up_count = self.scale_up_attempts_per_workflow.get(wf_id, 0)
+
+                    if scale_up_count == 0:
+                        workflows_with_no_scale_ups += 1
+                        # Check if this workflow missed deadline
+                        if wf_data.get('complete', False):
+                            if wf_data['finish_time'] > wf_data['deadline']:
+                                deadline_misses_with_no_scale_ups += 1
+                    elif scale_up_count < 2:
+                        workflows_with_few_scale_ups += 1
+
+                if executed_workflows > 0:
+                    print(f'\n--- Scale-Up Opportunity Analysis ---')
+                    print(f'Workflows with 0 scale-up attempts: {workflows_with_no_scale_ups} ({workflows_with_no_scale_ups/executed_workflows*100:.1f}%)')
+                    print(f'Workflows with <2 scale-up attempts: {workflows_with_few_scale_ups} ({workflows_with_few_scale_ups/executed_workflows*100:.1f}%)')
+                    if deadline_misses_with_no_scale_ups > 0:
+                        print(f'⚠ Deadline misses with 0 scale-ups: {deadline_misses_with_no_scale_ups}')
+                        print(f'  → These workflows may have benefited from scale-up attempts')
+
+                    avg_scale_ups_per_workflow = self.scale_up_attempts / executed_workflows if executed_workflows > 0 else 0
+                    print(f'Average scale-up attempts per workflow: {avg_scale_ups_per_workflow:.2f}')
 
         else:
             print('\n[WARNING] No workflows completed!')

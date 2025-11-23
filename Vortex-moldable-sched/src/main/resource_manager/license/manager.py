@@ -36,7 +36,7 @@ class LicenseManager:
     - Picklable for multiprocessing
     """
 
-    def __init__(self, config_path: str = "/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml"):
+    def __init__(self, config_path: str = "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml"):
         """
         Initialize license manager from YAML config
 

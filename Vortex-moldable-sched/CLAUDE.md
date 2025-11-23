@@ -77,7 +77,7 @@ sudo systemctl start redis-server
 
 ### Core Configuration Files
 - `src/main/config/resources.yaml`: Defines compute resources (on-prem/cloud instances, runtimes, costs)
-- `src/main//Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml`: License pool management (ANSYS, ABAQUS, LSDYNA tokens)
+- `src/main//Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml`: License pool management (ANSYS, ABAQUS, LSDYNA tokens)
 - `src/main/config/ports.yaml`: Service port mappings
 - `src/main/config/constants.py`: Application constants
 

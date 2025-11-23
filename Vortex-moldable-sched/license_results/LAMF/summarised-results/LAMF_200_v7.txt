@@ -1,0 +1,77 @@
+Total workflows: 200
+Executed workflows: 174
+Incomplete workflows: 26
+
+--- Performance Metrics ---
+Average Flowtime: 20860.5022 seconds
+Average Cost: €122.4276
+  - Average Hardware Cost: €32.3833
+  - Average License Cost: €90.0443
+  - License Cost %: 73.55%
+Average Wait Time: 3288.6697 seconds
+
+--- Total Costs Summary ---
+Total Hardware Cost: €5634.69
+Total License Cost (additional): €15667.71
+Total Combined Cost: €21302.39
+License Cost Overhead: 278.06% of hardware cost
+Average Resource Utilization: 29.303%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 16.25%
+  Peak Allocated: 1306/2200 tokens (59.36%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 16.82%
+  Peak Allocated: 4943/6700 tokens (73.78%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 13.32%
+  Peak Allocated: 4248/7600 tokens (55.89%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.13 (0/174 executed)
+Budget miss rate: 0.015 (3/174 executed)
+Overall miss rate: 0.145
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 315.87 hours
+Wasted cost on incomplete workflows: €12413.61
+  - Wasted Hardware Cost: €6051.91
+  - Wasted License Cost: €6361.7
+
+--- Moldability Effectiveness ---
+Scale-up attempts: 362
+  Successes: 358 (98.9%)
+  Failures: 4
+    - Insufficient compute: 0
+    - Insufficient licenses: 1
+    - Budget exhausted: 3
+    - Time exhausted: 0
+  Total instances added: 1074
+  Total cores added: 49200
+  Total licenses acquired: 37304
+
+Scale-down attempts: 329
+  Successes: 316 (96.0%)
+  Blocked: 13
+    - License pool saturated: 0
+    - Late iteration (>3): 3
+    - Time progress (>70%): 2
+    - Budget or time progress (>50%): 8
+  Total instances removed: 1074
+  Total cores removed: 49064
+  Total licenses released: 37304
+
+Net moldability impact:
+  Net instances: +0
+  Net cores: +136
+  Net licenses: +0
+  ✓ Moldability appears effective - 358 successful scale-ups
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 0 (0.0%)
+Workflows with <2 scale-up attempts: 83 (47.7%)
+Average scale-up attempts per workflow: 2.08

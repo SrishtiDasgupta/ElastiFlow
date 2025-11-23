@@ -7,7 +7,7 @@ from .instance import CloudOnDemandInstance, CloudReservedInstance, Instance, On
 
 class ResourceManager(ABC):
 
-    def __init__(self, path_to_resources = '/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/resources.yaml') -> None:
+    def __init__(self, path_to_resources = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/resources.yaml') -> None:
         with open(path_to_resources, 'r') as file:
             defined_resources = yaml.safe_load(file)
 

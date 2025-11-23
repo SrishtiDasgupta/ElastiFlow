@@ -1,0 +1,49 @@
+📊 License usage data saved to EDF_Static_500_license_usage.csv (468 samples)
+
+Total workflows: 500
+Executed workflows: 449
+Incomplete workflows: 51
+
+--- Performance Metrics ---
+Average Flowtime: 36908.3379 seconds
+Average Cost: €106.894
+  - Average Hardware Cost: €25.0266
+  - Average License Cost: €81.8675
+  - License Cost %: 76.59%
+Average Wait Time: 24159.365 seconds
+
+--- Total Costs Summary ---
+Total Hardware Cost: €11236.92
+Total License Cost (additional): €36758.49
+Total Combined Cost: €47995.42
+License Cost Overhead: 327.12% of hardware cost
+Average Resource Utilization: 74.1227%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 27.11%
+  Peak Allocated: 1250/2200 tokens (56.82%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 31.41%
+  Peak Allocated: 4457/6700 tokens (66.52%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 31.6%
+  Peak Allocated: 4840/7600 tokens (63.68%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.102 (0/449 executed)
+Budget miss rate: 0.01 (5/449 executed)
+Overall miss rate: 0.112
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 704.45 hours
+Wasted cost on incomplete workflows: €19537.21
+  - Wasted Hardware Cost: €8780.51
+  - Wasted License Cost: €10756.7
+
+--- Moldability Status ---
+Scheduler Type: Non-Moldable Baseline (EDF-BASELINE)
+Resources allocated once at workflow start (no dynamic scaling)

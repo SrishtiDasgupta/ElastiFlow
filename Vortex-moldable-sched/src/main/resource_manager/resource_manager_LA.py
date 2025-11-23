@@ -20,7 +20,7 @@ class ResourceManager_LA(ResourceManager):
     Maintains license holds for each workflow and coordinates dual-resource lifecycle.
     """
 
-    def __init__(self, path_to_resources='/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/config/resources.yaml'):
+    def __init__(self, path_to_resources='/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/resources.yaml'):
         super().__init__(path_to_resources)
 
         # Initialize license manager
@@ -74,13 +74,14 @@ class ResourceManager_LA(ResourceManager):
         """
         return self.workflows.get(id, None)
 
-    def updateWorkflowLicenses(self, id, new_license_holds):
+    def updateWorkflowLicenses(self, id, new_license_holds, mode='append'):
         """
-        Add new license holds to a workflow
+        Update license holds for a workflow
 
         Args:
             id: Workflow ID
-            new_license_holds: List of new hold IDs to add
+            new_license_holds: List of hold IDs to add or replace with
+            mode: 'append' (add to existing) or 'replace' (overwrite existing)
         """
         if id not in self.workflows:
             return
@@ -90,8 +91,13 @@ class ResourceManager_LA(ResourceManager):
         # Handle both LA and legacy workflow formats
         if len(wf) == 7:
             # LA format - update license_holds
-            current_holds = wf[6] or []
-            wf[6] = current_holds + new_license_holds
+            if mode == 'replace':
+                # Replace existing holds entirely (for partial release sync)
+                wf[6] = new_license_holds
+            else:
+                # Append mode (default behavior)
+                current_holds = wf[6] or []
+                wf[6] = current_holds + new_license_holds
             self.workflows[id] = tuple(wf)
 
             # Update quick-access dict

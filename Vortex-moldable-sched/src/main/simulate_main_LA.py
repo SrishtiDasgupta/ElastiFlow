@@ -1,14 +1,21 @@
 
 """
-SimPy Simulation Entry Point for LAMF (License-Aware Moldable FCFS)
+SimPy Simulation Entry Point for License-Aware Schedulers
 
-Runs LAMF scheduler in simulation mode using Simulus library.
+Runs license-aware schedulers in simulation mode using Simulus library.
 All workflows require licenses (ANSYS, ABAQUS, or LSDYNA).
+
+Supported schedulers:
+  - LAMF: License-Aware Moldable FCFS
+  - DDM-EDF: Deadline-Driven Moldable EDF
+  - EDF-LA Baseline: Static EDF (no moldability)
 """
 
 import simulus
 #from scheduler.fcfs_optimized_LA import FCFS_Optimized_LA
-from scheduler.fcfs_scheduler_LA import FCFS_Scheduler_LA
+#from scheduler.edf_optimized_LA import EDF_Optimized_LA
+#from scheduler.fcfs_scheduler_LA import FCFS_Scheduler_LA
+from scheduler.edf_scheduler_LA import EDF_Scheduler_LA
 from wf_queue.redis_queue import Redis_Queue
 from scripts.dispatcher_LA import dispatcher_LA
 from config.constants_LA import (
@@ -19,10 +26,32 @@ from config.constants_LA import (
     MOLDABLE
 )
 
+# ============================================================================
+# SCHEDULER SELECTION: Comment/Uncomment to select scheduler
+# ============================================================================
+
+# Option 1: LAMF (License-Aware Moldable FCFS)
+#SCHEDULER_NAME = 'LAMF'
+#SCHEDULER_DESC = 'License-Aware Moldable FCFS'
+
+# Option 2: EDF-LAMF (EDF-ordered LAMF - Iteration-based moldability)
+SCHEDULER_NAME = 'EDF-LAMF'
+SCHEDULER_DESC = 'EDF-ordered LAMF: EDF priority queue + LAMF iteration-based moldability'
+
+# Option 3: EDF-LA Baseline (Static EDF without moldability)
+#SCHEDULER_NAME = 'EDF-LA-Baseline'
+#SCHEDULER_DESC = 'Static EDF with License Awareness (No Moldability)'
+
+# Option 4: FCFS-LA Baseline (Static FCFS without moldability)
+# SCHEDULER_NAME = 'FCFS-LA-Baseline'
+# SCHEDULER_DESC = 'License-Aware FCFS (No Moldability)'
+
+# ============================================================================
+
 print('=' * 70)
-print('LAMF SIMULATION MODE')
+print(f'{SCHEDULER_NAME} SIMULATION MODE')
 print('=' * 70)
-print('Scheduler: License-Aware Moldable FCFS (LAMF)')
+print(f'Scheduler: {SCHEDULER_DESC}')
 print('Mode: SimPy Simulation')
 print(f'Workflows: {TOTAL_WORKFLOWS}')
 print('License Requirement: ALL workflows need licenses (ANSYS/ABAQUS/LSDYNA)')
@@ -40,7 +69,11 @@ queue = Redis_Queue(queue_name='wf-queue')
 finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
 resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
 
-# Create LAMF scheduler with cost-based sorting (MOLDABLE)
+# ============================================================================
+# SCHEDULER INSTANTIATION: Comment/Uncomment to match selection above
+# ============================================================================
+
+# Option 1: LAMF scheduler (MOLDABLE)
 """ sched = FCFS_Optimized_LA(
     queue,
     finish_queue,
@@ -48,13 +81,29 @@ resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
     sort_key='cost_per_iteration'
 ) """
 
-#Create BASELINE scheduler with cost-based sorting (STATIC - NO MOLDABILITY)
-sched = FCFS_Scheduler_LA(
+# Option 2: EDF-LAMF scheduler (EDF priority + LAMF iteration-based moldability)
+""" sched = EDF_Optimized_LA(
+    queue,
+    finish_queue,
+    resource_request_queue,
+    sort_key='cost_per_iteration'
+) """
+
+# Option 3: EDF-LA Baseline scheduler (STATIC EDF - NO MOLDABILITY)
+sched = EDF_Scheduler_LA(
     queue,
     finish_queue,
     resource_request_queue,
     sort_key='cost_per_iteration'
 )
+
+# Option 4: FCFS-LA Baseline scheduler (STATIC FCFS - NO MOLDABILITY)
+""" sched = FCFS_Scheduler_LA(
+    queue,
+    finish_queue,
+    resource_request_queue,
+    sort_key='cost_per_iteration'
+) """
 
 print('Initializing Simulus simulators...')
 
@@ -73,9 +122,9 @@ print('Creating simulation processes...')
 sim_dispatcher.process(dispatcher_LA, sim_dispatcher, 'wf_mb')
 print('  [✓] Dispatcher process (loads license-aware workflows)')
 
-# P2: LAMF scheduler reads wf_mb at regular intervals, allocates compute + licenses
-sim_sched.process(sched.run, sim_sched, wf_mb, resource_request_mb, name='lamf_sched')
-print('  [✓] LAMF scheduler process (dual-resource allocation)')
+# P2: Scheduler reads wf_mb at regular intervals, allocates compute + licenses
+sim_sched.process(sched.run, sim_sched, wf_mb, resource_request_mb, name=f'{SCHEDULER_NAME.lower()}_sched')
+print(f'  [✓] {SCHEDULER_NAME} scheduler process (dual-resource allocation)')
 
 # P3: Scheduler reads completed_jobs_mb and frees compute + licenses
 sim_sched.process(sched.processJobCompletion, sim_sched, completed_jobs_mb, name='job_completion_sched')
@@ -83,7 +132,7 @@ print('  [✓] Completion processor (releases compute + licenses)')
 
 print('')
 print('=' * 70)
-print('STARTING LAMF SIMULATION')
+print(f'STARTING {SCHEDULER_NAME} SIMULATION')
 print('=' * 70)
 print('')
 
@@ -100,4 +149,7 @@ print('  - License utilization per pool (ANSYS/ABAQUS/LSDYNA)')
 print('  - Dual-resource allocation efficiency')
 print('  - Moldable scale-up/scale-down events')
 print('  - Cost and deadline compliance')
+if SCHEDULER_NAME == 'DDM-EDF':
+    print('  - Deadline urgency distribution (CRITICAL/WARNING/SAFE/EXCESS)')
+    print('  - Preemptive reallocation events')
 print('=' * 70)

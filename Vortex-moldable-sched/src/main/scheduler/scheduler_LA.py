@@ -6,15 +6,19 @@ Integrates with the existing license manager for dual-resource (compute + licens
 """
 
 from abc import ABC, abstractmethod
+import math
 import time
 from typing import List, Tuple, Optional
 
-from config.constants import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT
+from config.constants import (
+    AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME,
+    RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, COLD_START_TIME, DEADLINE_BUFFER
+)
 from executor import executeWorklow, processNewResources
 from scripts.speedup import getRuntime
 from utils.metrics_LA import MetricsLA as Metrics
 from utils.resource import getEstimate
-from resource_manager.instance import Instance, OnPremInstance
+from resource_manager.instance import Instance, OnPremInstance, CloudOnDemandInstance
 from resource_manager.license.manager import LicenseManager
 from resource_manager.license.exceptions import InsufficientTokens, LicenseError
 from utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
@@ -280,11 +284,12 @@ class Scheduler_LA(ABC):
                     except Exception as e:
                         print(f"  ⚠ Error tracking final release for {wf_id}: {e}")
 
-                # Release compute resources
+                # Release compute resources (includes license release via returnResources)
                 self.resource_manager.returnResources(wf_id)
 
-                # Release licenses (NEW)
-                self.releaseLicensesForWorkflow(wf_id)
+                # FIX #3: Removed redundant releaseLicensesForWorkflow() call
+                # returnResources() already releases licenses (resource_manager_LA.py:154-161)
+                # Calling releaseLicensesForWorkflow() here would attempt to release the same licenses twice
 
                 self.metrics.updateDataframe(
                     wf_id,
@@ -309,14 +314,19 @@ class Scheduler_LA(ABC):
             return
 
         # LA workflows always return 7-value tuples
-        instances, budget, _, start_time, mesh, software_id, license_holds = \
+        instances, budget, deadline, start_time, mesh, software_id, license_holds = \
             self.resource_manager.getWorkflow(request['wf-id'])
 
         free_resources = self.resource_manager.getResources()
         used_budget = self.metrics.computeCost(request['wf-id'], getTime(sim))
         available_budget = max(0, budget - used_budget) / max((AVG_WORKFLOW_ITERATIONS - request['iteration']), 1)
 
-        alloc_instances = self.checkNewResources(free_resources, instances, available_budget, request, mesh)
+        # OLD (BUGGY): available_runtime not calculated or passed
+        # alloc_instances = self.checkNewResources(free_resources, instances, available_budget, request, mesh)
+
+        # NEW (FIXED): Calculate available_runtime for global view deadline checking
+        available_runtime = max(0, deadline - DEADLINE_BUFFER - getTime(sim))
+        alloc_instances = self.checkNewResources(free_resources, instances, available_budget, available_runtime, request, mesh)
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
 
         self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
@@ -434,42 +444,209 @@ class Scheduler_LA(ABC):
 
         return (currently_acquired, acquired_instances)
 
-    def checkNewResources(self, resources: List[Instance], current_resources: List[tuple[Instance, int, List]], budget: float, request, mesh) -> List[tuple[Instance, int]]:
-        """
-        Check new resource availability for moldable scaling
+    # =========================================================================
+    # OLD (BUGGY) checkNewResources - COMMENTED OUT FOR COMPARISON
+    # =========================================================================
+    # This was the original simple resource allocation that was missing:
+    # - Runtime feasibility checking (global view of deadline constraints)
+    # - Sophisticated moldability (nodes_per_chain optimization)
+    # - Speedup threshold checking
+    # - Instance closeness checking for heterogeneous resources
+    #
+    # To revert to OLD behavior for comparison:
+    # 1. Uncomment lines below (old checkNewResources)
+    # 2. Comment out new checkNewResources (lines ~485-620)
+    # 3. Update signature in child classes to remove available_runtime parameter
+    # =========================================================================
+    # def checkNewResources(self, resources: List[Instance], current_resources: List[tuple[Instance, int, List]], budget: float, request, mesh) -> List[tuple[Instance, int]]:
+    #     """
+    #     Check new resource availability for moldable scaling
+    #
+    #     Same as base scheduler (override in child classes for license checks)
+    #     """
+    #     if budget < MIN_INSTANCE_COST:
+    #         return []
+    #
+    #     # 1. If on-prem is already allocated, allocate possible on-prem instances
+    #     instance = current_resources[0][0]
+    #     if isinstance(instance, OnPremInstance):
+    #         cost_per_iteration = instance.cost_per_second * getRuntime(1, mesh, instance.name)
+    #         instance_cost = getEstimate(cost_per_iteration, request['tinyda-iterations'])
+    #         to_be_used = min(instance.getFreeSlots(), request['count'], int(budget / instance_cost))
+    #         return [(instance, to_be_used)]
+    #
+    #     acquired_count = 0
+    #     acquired_instances = []
+    #
+    #     # 2. Allocate possible reserved/on-demand if not case 1
+    #     instances = list(filter(lambda x: not isinstance(x, OnPremInstance), resources))
+    #     for instance in instances:
+    #         cost_per_iteration = instance.cost_per_second * getRuntime(1, mesh, instance.name)
+    #         instance_cost = getEstimate(cost_per_iteration, request['tinyda-iterations'], 1)
+    #         to_be_used = min(request['count']-acquired_count, instance.getFreeSlots(), int(budget/instance_cost))
+    #
+    #         if to_be_used:
+    #             acquired_count += to_be_used
+    #             budget -= to_be_used * instance_cost
+    #             acquired_instances.append((instance, to_be_used))
+    #
+    #             if acquired_count == request['count'] or budget < MIN_INSTANCE_COST:
+    #                 return acquired_instances
+    #
+    #     return acquired_instances
 
-        Same as base scheduler (override in child classes for license checks)
-        """
-        if budget < MIN_INSTANCE_COST:
-            return []
+    # =========================================================================
+    # NEW (FIXED) checkNewResources - SOPHISTICATED MOLDABILITY
+    # =========================================================================
+    # This is the corrected version with the "global view" from PLAIN fcfs_optimized.py
+    # Adds the missing runtime feasibility check and moldability optimization.
+    # =========================================================================
 
+    def checkNewResources(self, resources: List[Instance], current_resources: List[tuple[Instance, int, List]],
+                          budget: float, available_runtime: float, request, mesh) -> List[tuple[Instance, int]]:
+        """
+        Advanced moldable resource allocation (3-tier strategy from PLAIN fcfs_optimized)
+
+        FIXED: Added missing "global view" of resource constraints:
+        - Runtime feasibility: if speedup_runtime * iterations < available_runtime
+        - Nodes_per_chain moldability optimization
+        - Speedup threshold checking (SPEEDUP_THRESHOLD = 1.4)
+        - Instance closeness checking (15% tolerance)
+
+        Tier 1: Moldable on-prem allocation (optimize nodes_per_chain)
+        Tier 2: Moldable cloud allocation with instance closeness
+        Tier 3: Fallback to any available instances with speedup check
+        """
         # 1. If on-prem is already allocated, allocate possible on-prem instances
         instance = current_resources[0][0]
         if isinstance(instance, OnPremInstance):
-            cost_per_iteration = instance.cost_per_second * getRuntime(1, mesh, instance.name)
-            instance_cost = getEstimate(cost_per_iteration, request['tinyda-iterations'])
-            to_be_used = min(instance.getFreeSlots(), request['count'], int(budget / instance_cost))
+            free_slots = instance.getFreeSlots()
+            to_be_used = 0
+            # At least 1 node per chain/moldability
+            if free_slots >= request['count']:
+                nodes_per_chain = request['chains'] - request['count'] + free_slots // request['chains']
+                while nodes_per_chain > 0:
+                    speedup_runtime = getRuntime(nodes_per_chain, mesh, instance.name)
+                    cost_per_node_iteration = instance.cost_per_second * speedup_runtime
+                    total_cost = getEstimate(cost_per_node_iteration, request['tinyda-iterations'], 1, nodes_per_chain * request['chains'])
+                    # If there is budget, and runtime is within limits, allocate
+                    if total_cost < budget and getRuntime(nodes_per_chain-1, mesh, instance.name) / speedup_runtime > SPEEDUP_THRESHOLD:
+                        # GLOBAL VIEW: Check if can complete within deadline (THIS WAS MISSING!)
+                        if speedup_runtime * request['tinyda-iterations'] < available_runtime:
+                            to_be_used = (nodes_per_chain * request['chains']) - (request['chains'] - request['count'])
+                            print(f'Moldable onprem with {nodes_per_chain} nodes per chain')
+                            break
+                        else: return []  # Cannot meet deadline - reject allocation
+                    else:
+                        nodes_per_chain -= 1
             return [(instance, to_be_used)]
-
-        acquired_count = 0
-        acquired_instances = []
 
         # 2. Allocate possible reserved/on-demand if not case 1
         instances = list(filter(lambda x: not isinstance(x, OnPremInstance), resources))
-        for instance in instances:
-            cost_per_iteration = instance.cost_per_second * getRuntime(1, mesh, instance.name)
-            instance_cost = getEstimate(cost_per_iteration, request['tinyda-iterations'], 1)
-            to_be_used = min(request['count']-acquired_count, instance.getFreeSlots(), int(budget/instance_cost))
+        # We consider 3 cases:
+        # 1. Instances of the same type (res/on-dem)
+        # 2. Instances with almost the same runtime (res/on-dem)
+        # 3. Any idle instances if speedup makes sense
+        cur_instances = set()
+        cur_instance_runtimes = []
+        for inst_tuple in current_resources:
+            cur_instances.add(inst_tuple[0].name)
+            cur_instance_runtimes.append(getRuntime(1, mesh, inst_tuple[0].name))
+        free_slots = 0
+        instances_to_be_used = []  # [instObj, count]
+        ondemandFlag = False
+        for inst in instances:
+            free_nodes = inst.getFreeSlots()
+            if free_nodes and (inst.name in cur_instances or self.checkCloseness(inst, cur_instance_runtimes, mesh)):
+                free_slots += free_nodes
+                instances_to_be_used.append((inst, free_nodes))
+                if isinstance(inst, CloudOnDemandInstance): ondemandFlag = True
 
-            if to_be_used:
-                acquired_count += to_be_used
-                budget -= to_be_used * instance_cost
-                acquired_instances.append((instance, to_be_used))
+        to_be_used, nodes_per_chain = 0, 0
+        if free_slots:
+            print(f'Going into moldable cloud with {free_slots}')
+            nodes_per_chain = min((request['chains'] - request['count'] + free_slots) // request['chains'], 4)
+            while nodes_per_chain > 0:
+                speedup_runtime = getRuntime(nodes_per_chain, mesh, instances_to_be_used[-1][0].name)  # slowest instance
+                cost_per_node_iteration = instances_to_be_used[0][0].cost_per_second * speedup_runtime  # max cost
+                total_cost = getEstimate(cost_per_node_iteration, request['tinyda-iterations'], 1, nodes_per_chain * request['chains'])
+                if ondemandFlag:
+                    total_cost += COLD_START_TIME * instances_to_be_used[0][0].cost_per_second * nodes_per_chain * request['chains']
+                # If there is budget, and speedup is substantial, allocate nodes
+                if total_cost < budget and getRuntime(nodes_per_chain-1, mesh, instances_to_be_used[-1][0].name) / speedup_runtime > SPEEDUP_THRESHOLD:
+                    # GLOBAL VIEW: Check if can complete within deadline (THIS WAS MISSING!)
+                    if speedup_runtime * request['tinyda-iterations'] < available_runtime:
+                        to_be_used = (nodes_per_chain * request['chains']) - (request['chains'] - request['count'])
+                        print(f'Alloted moldable cloud with {nodes_per_chain} nodes per chain')
+                        break
+                    else:
+                        print('Not enough runtime for moldable cloud')
+                        return []  # Cannot meet deadline - reject allocation
+                else:
+                    print(f'Not enough budget for moldable cloud with {nodes_per_chain}. Total cost: {total_cost}, budget: {budget}')
+                    nodes_per_chain -= 1
 
-                if acquired_count == request['count'] or budget < MIN_INSTANCE_COST:
-                    return acquired_instances
+        # Extract last n to_be_used nodes from instances_to_be_used - cheaper
+        acquired_instances = []
+        while to_be_used > 0:
+            cur_node, cur_count = instances_to_be_used.pop()
+            count = min(cur_count, to_be_used)
+            acquired_instances.append((cur_node, count))
+            cur_count -= count
+            if cur_count > 0: instances_to_be_used.append((cur_node, cur_count))
+            to_be_used -= count
 
+        # If moldabiliy couldn't be handled, take at least available instances till budget allows
+        # 3. Allocate any reserved/on-demand if we have budget and if speedup makes sense
+        if not acquired_instances:  # account for existing resources
+            max_cur_runtime = max(cur_instance_runtimes)
+            cost_per_node_iteration = current_resources[-1][0].cost_per_second * max_cur_runtime
+            budget -= getEstimate(cost_per_node_iteration, request['tinyda-iterations'], 1, request['chains'] - request['count'])
+
+            node_count = request['count'] if request['count'] > 0 else request['chains'] + request['count']
+            current_node_count = request['chains'] - request['count']
+            addedColdStartCost = False
+
+            for inst in instances:
+                if budget < MIN_INSTANCE_COST or node_count == 0: break
+                free_nodes = inst.getFreeSlots()
+                if not free_nodes: continue
+                to_be_used = 1
+                speedup_runtime = getRuntime(1, mesh, inst.name)
+                if speedup_runtime > max_cur_runtime * 1.2:
+                    if free_nodes > 1:
+                        to_be_used = 2  # get 2 nodes
+                        speedup_runtime = getRuntime(2, mesh, inst.name)
+                    else: continue
+                total_cost = inst.cost_per_second * speedup_runtime * request['tinyda-iterations'] * to_be_used
+                if isinstance(inst, CloudOnDemandInstance) or addedColdStartCost:
+                    total_cost += COLD_START_TIME * inst.cost_per_second
+                    if not addedColdStartCost:
+                        total_cost += COLD_START_TIME * current_node_count * inst.cost_per_second
+                if budget - total_cost > 0:
+                    budget -= total_cost
+                    addedColdStartCost = True
+                else: continue
+                acquired_instances.append((inst, to_be_used))
+                current_node_count += to_be_used
+                node_count -= 1
+            else: print(f'moldable cloud free alloc with {current_node_count} for {request["chains"]}')
+
+        # 4. Cannot allocate anything
         return acquired_instances
+
+    def checkCloseness(self, instance: Instance, runtimes_list, mesh) -> bool:
+        """
+        Check if instance runtime is within 15% of existing runtimes
+
+        Allows minor heterogeneity for SeisSol workloads (CPU-bound, tolerates straggling)
+        """
+        runtime = getRuntime(1, mesh, instance.name)
+        if isinstance(instance, CloudOnDemandInstance):
+            runtime += COLD_START_TIME
+
+        closeness = lambda x: math.isclose(runtime, x, rel_tol=0.15)
+        return any(map(closeness, runtimes_list))
 
     def purgeWorkflow(self, wf_plan, sim) -> bool:
         """

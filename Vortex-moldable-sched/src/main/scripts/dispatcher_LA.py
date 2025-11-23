@@ -54,7 +54,7 @@ def delayGenerationFromSubmitTimes(workflows):
 
     Returns: List of delays (in seconds) between consecutive workflow submissions
     """
-    data = pd.read_csv('/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv', sep="\t")
+    data = pd.read_csv('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv', sep="\t")
     data['submit times'] = pd.to_datetime(data['submit times'])
     data['submit_time_only'] = data['submit times'].dt.time
 
@@ -221,7 +221,7 @@ def dispatcher_LA(sim, wf_mb):
     print(f'[{sim.now:8.1f}s] All workflows dispatched, waiting for completion...')
     sim.sleep(150000)  # Wait for workflows to finish
     print(f'[{sim.now:8.1f}s] Sending END signal')
-    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/intermediate/Vortex-mid/Vortex-moldable-sched/src/main")))
+    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main")))
 
 
 if __name__ == "__main__":
