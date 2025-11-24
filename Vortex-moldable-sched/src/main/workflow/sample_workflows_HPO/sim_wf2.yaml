@@ -1,0 +1,38 @@
+api: 4.7.0
+id: hpo-sim-wf2-convnext-medium
+
+constraints:
+  budget: 40.00
+  deadline: 5400
+  chains: 4                     # More parallel trials
+  tinydaIterations: 8           # Medium epochs
+
+config:
+  mesh: convnext_large          # Slower, heavier model
+  workflowIterations: 4         # 4 optimization rounds
+
+vars:
+  - id: input_config
+    value: {
+      "learning_rate": 0.001,
+      "momentum": 0.95,
+      "batch_size": 32,
+      "epochs": 8,
+      "next_trials": 3,
+      "model": "convnext_large"
+    }
+
+actions:
+  - type: for
+    input: input_config
+    enumerator: i
+    yieldToInput: output_config
+    actions:
+      - type: execute
+        service: /fsx/Vortex/service/run_hpo.py
+        inputs:
+          - id: config
+            var: i
+        outputs:
+          - id: config_out
+            var: output_config

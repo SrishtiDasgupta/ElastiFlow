@@ -1,0 +1,36 @@
+actions:
+- actions:
+  - inputs:
+    - id: tinyda_input
+      var: i
+    outputs:
+    - id: tinyda_output
+      var: output_coh
+    service: scripts/simulate-tinyda-seissol.py
+    type: execute
+  enumerator: i
+  input: input_coh
+  type: for
+  yieldToInput: output_coh
+api: 4.7.0
+config:
+  mesh: 750
+  software_id: 3
+  workflowConfig:
+  - chains: 2
+    tinydaIterations: 4
+  - chains: 2
+    tinydaIterations: 3
+  - chains: 3
+    tinydaIterations: 1
+  workflowIterations: 3
+constraints:
+  budget: 98.1671155759394
+  chains: 2
+  deadline: 31227.629281747228
+  license_pool: LSDYNA
+  tinydaIterations: 4
+id: lamf-test-107c896d-ee0f-4ca2-89f1-19c67b8002a2
+vars:
+- id: input_coh
+  value: '3'

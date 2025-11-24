@@ -1,0 +1,40 @@
+api: 4.7.0
+id: hpo-sim-wf1-vgg19-small
+
+constraints:
+  budget: 15.00
+  deadline: 3600
+  chains: 2                     # Small parallel trials
+  tinydaIterations: 4           # Few epochs
+
+config:
+  mesh: vgg19                   # Fastest model
+  workflowIterations: 3         # 3 optimization rounds
+
+vars:
+  - id: input_config
+    value: {
+      "learning_rate": 0.01,
+      "momentum": 0.9,
+      "batch_size": 64,
+      "epochs": 4,
+      "next_trials": 2,
+      "model": "vgg19"
+    }
+
+actions:
+  - type: for
+    input: input_config
+    enumerator: i
+    yieldToInput: output_config
+    actions:
+      - type: execute
+        service: /fsx/Vortex/service/run_hpo.py
+        inputs:
+          - id: config
+            var: i
+        outputs:
+          - id: config_out
+            var: output_config
+
+

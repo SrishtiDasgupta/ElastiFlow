@@ -1,0 +1,44 @@
+api: 4.7.0
+id: test-hpo-dedicated-executor-001
+
+# HPO Workflow with Dedicated Executor Architecture
+# - Executor runs on dedicated lightweight instance (doesn't participate in training)
+# - Workers are separate homogeneous instances (no GPU straggling)
+# - Service script (run_hpo.py) routes to PlclRunnerHPO or CloudRunnerHPO based on hosts
+# - Ray cluster runs on WORKERS only, not on executor
+
+constraints:
+  budget: 25.50
+  deadline: 7200
+  chains: 3                     # Number of trials/samples
+  tinydaIterations: 6           # Number of epochs per trial
+
+config:
+  mesh: vgg19                   # Model: vgg19/convnext_large/wide_resnet101_2
+  workflowIterations: 4         # Max HPO optimization rounds
+
+vars:
+  - id: input_config
+    value: {
+      "learning_rate": 0.01,
+      "momentum": 0.9,
+      "batch_size": 64,
+      "epochs": 6,
+      "next_trials": 3,
+      "model": "vgg19"
+    }
+
+actions:
+  - type: for
+    input: input_config
+    enumerator: i
+    yieldToInput: output_config
+    actions:
+      - type: execute
+        service: /path/to/Vortex/service/run_hpo.py
+        inputs:
+          - id: config
+            var: i
+        outputs:
+          - id: config_out
+            var: output_config

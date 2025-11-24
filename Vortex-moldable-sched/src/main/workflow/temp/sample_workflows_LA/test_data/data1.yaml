@@ -1,0 +1,29 @@
+api: 4.7.0
+id: seissol-ansys-large-wf2
+constraints:
+  budget: 308.46
+  deadline: 50600
+  chains: 6
+  tinydaIterations: 20
+  license_pool: ANSYS
+config:
+  mesh: 1000
+  workflowIterations: 5
+  software_id: 1
+vars:
+- id: input_coh
+  value: 3
+actions:
+- type: for
+  input: input_coh
+  enumerator: i
+  yieldToInput: output_coh
+  actions:
+  - type: execute
+    service: ../../service/simulate-tinyda-seissol.py
+    inputs:
+    - id: tinyda_input
+      var: i
+    outputs:
+    - id: tinyda_output
+      var: output_coh

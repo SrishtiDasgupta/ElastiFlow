@@ -1,0 +1,37 @@
+scheduler: 10.19.224.232
+scheduler: 10.19.224.232
+
+user-request-port: 8080
+workflow-complete-port: 8082
+resource-request-port: 8084
+executor-incoming-port: 8089
+
+fsx-cost: 8.38e-05
+
+# 148 instances of 48 cores
+on-prem:
+  - name: on-prem
+    ip: [10.19.212.212] # Slurm head node IP
+    slots: 2 # 148 instances
+    cores: 8 # Only for readability
+    runtime: 540 
+    reserved-cost: 0.90 # per second cost for 48 cores # 1.46
+
+cloud:
+  - name: g4dn.2xlarge 
+    ip: [10.19.201.97, 10.19.219.238]
+    cores: 8
+    runtime: 540
+    reserved-slots: 2
+    on-demand-slots: 2
+    on-demand-cost: 0.798 # 7.7252
+    reserved-cost: 0.503 # 3.631
+
+  - name: g5.2xlarge 
+    ip: [10.19.201.98, 10.19.219.239]
+    cores: 8
+    runtime: 265
+    reserved-slots: 2
+    on-demand-slots: 2
+    on-demand-cost: 1.28 # 7.7252
+    reserved-cost: 0.80 # 3.631

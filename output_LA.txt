@@ -1,0 +1,144 @@
+======================================================================
+LAMF SIMULATION MODE
+======================================================================
+Scheduler: License-Aware Moldable FCFS (LAMF)
+Mode: SimPy Simulation
+Workflows: 400
+License Requirement: ALL workflows need licenses (ANSYS/ABAQUS/LSDYNA)
+
+License Distribution:
+  - ANSYS   :  33.0% (capacity: 16800 tokens)
+  - ABAQUS  :  33.0% (capacity: 16800 tokens)
+  - LSDYNA  :  34.0% (capacity: 16800 tokens)
+
+Settings: SIMULATE=True, MOLDABLE=True
+======================================================================
+
+Initializing Simulus simulators...
+Creating simulation processes...
+  [✓] Dispatcher process (loads license-aware workflows)
+  [✓] LAMF scheduler process (dual-resource allocation)
+  [✓] Completion processor (releases compute + licenses)
+
+======================================================================
+STARTING LAMF SIMULATION
+======================================================================
+
+Starting LAMF dispatcher for 400 workflows at 0...
+All workflows require licenses (ANSYS/ABAQUS/LSDYNA)
+
+Temporal Scaling Configuration (Solution 4):
+  - Compression factor: 0.5 (10.0-hour window)
+  - Submission jitter: 2 minutes
+  - Arrival rate multiplier: 2.0×
+
+Starting LAMF (License-Aware Moldable FCFS) Scheduler...
+Scheduler started listening to completed jobs...
+[     1.0s] Dispatching workflow 0...
+  [✓] Loaded lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e (license: ANSYS)
+[DEBUG allocateResourcesWithLicenses] wf_id=lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e, software_id=1, license_pool=ANSYS
+[DEBUG] Total cores for allocation: 240
+[DEBUG] Licenses needed: 237 tokens from ANSYS pool
+[DEBUG] Pool status: {'total': 16800, 'allocated': 0, 'held': 0, 'available': 16800, 'reserved_floor': 0}
+[DEBUG] Attempting to hold 237 licenses...
+[DEBUG] License hold successful: b94784d9-7637-4dc5-b2ad-06741e779271
+[DEBUG] Allocating compute resources...
+[DEBUG] Committing license hold...
+✓ Allocated 237 licenses from pool 'ANSYS' (hold: b94784d9-7637-4dc5-b2ad-06741e779271)
+[DEBUG] Returning: ips=True, alloc_resources=1, license_holds=[b94784d9-7637-4dc5-b2ad-06741e779271]
+✓ lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e allocated: {'on-prem': {'on-prem': (5, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+  with 1 license hold(s)
+Executing workflow lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e at 30
+lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e Workflow iteration 0 started at 1763585921.695992
+[    32.7s] Dispatching workflow 1...
+  [✓] Loaded lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008 (license: ANSYS)
+[DEBUG allocateResourcesWithLicenses] wf_id=lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008, software_id=1, license_pool=ANSYS
+[DEBUG] Total cores for allocation: 144
+[DEBUG] Licenses needed: 141 tokens from ANSYS pool
+[DEBUG] Pool status: {'total': 16800, 'allocated': 237, 'held': 0, 'available': 16563, 'reserved_floor': 0}
+[DEBUG] Attempting to hold 141 licenses...
+[DEBUG] License hold successful: e7ce4a04-5778-49e5-97cc-716000b80fae
+[DEBUG] Allocating compute resources...
+[DEBUG] Committing license hold...
+✓ Allocated 141 licenses from pool 'ANSYS' (hold: e7ce4a04-5778-49e5-97cc-716000b80fae)
+[DEBUG] Returning: ips=True, alloc_resources=1, license_holds=[e7ce4a04-5778-49e5-97cc-716000b80fae]
+✓ lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008 allocated: {'on-prem': {'on-prem': (3, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+  with 1 license hold(s)
+Executing workflow lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008 at 60
+lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008 Workflow iteration 0 started at 1763585921.745889
+[DEBUG] lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e: iteration 1/5
+[DEBUG] lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e: Continuing to next iteration
+New resource request: lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e requesting 1 resources for iteration 2
+
+🔍 [DIAGNOSTIC] processFreeRequestWithLicenses called:
+  wf-id: lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e, iteration: 1
+  current instances: 5, chains: 6, tinyda-iterations: 8
+  deadline: 14109.4s, current time: 390.0s
+  available_time (after OPTIM factor 0.5): 6769.7s
+  runtime_per_model: 113.7s
+  [chains_per_node=3] runtime=2729.1s vs available_time=6769.7s
+  ✓ Can complete with fewer resources: min_needed=2 vs cur_count=5
+⬇ Scaling down: freeing 3 instances (guards passed)
+Scheduler freeing {'on-prem': {'on-prem': (3, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}} for lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e
+⏱ Resource request overhead: 0.000s
+lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e Workflow iteration 1 started at 1763585921.791734
+[  1205.7s] Dispatching workflow 2...
+  [✓] Loaded lamf-test-312a25ed-966e-4a84-89af-21712bfc7175 (license: ANSYS)
+[  1219.2s] Dispatching workflow 3...
+  [✓] Loaded lamf-test-6d60a076-8aec-42f5-ae5c-3923b3793c72 (license: ANSYS)
+[DEBUG allocateResourcesWithLicenses] wf_id=lamf-test-312a25ed-966e-4a84-89af-21712bfc7175, software_id=1, license_pool=ANSYS
+[DEBUG] Total cores for allocation: 192
+[DEBUG] Licenses needed: 189 tokens from ANSYS pool
+[DEBUG] Pool status: {'total': 16800, 'allocated': 378, 'held': 0, 'available': 16422, 'reserved_floor': 0}
+[DEBUG] Attempting to hold 189 licenses...
+[DEBUG] License hold successful: 824e519a-68e2-4bdb-a8c3-465a304a10ea
+[DEBUG] Allocating compute resources...
+[DEBUG] Committing license hold...
+✓ Allocated 189 licenses from pool 'ANSYS' (hold: 824e519a-68e2-4bdb-a8c3-465a304a10ea)
+[DEBUG] Returning: ips=True, alloc_resources=1, license_holds=[824e519a-68e2-4bdb-a8c3-465a304a10ea]
+✓ lamf-test-312a25ed-966e-4a84-89af-21712bfc7175 allocated: {'on-prem': {'on-prem': (4, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+  with 1 license hold(s)
+Executing workflow lamf-test-312a25ed-966e-4a84-89af-21712bfc7175 at 1230
+lamf-test-312a25ed-966e-4a84-89af-21712bfc7175 Workflow iteration 0 started at 1763585921.8400562
+[DEBUG allocateResourcesWithLicenses] wf_id=lamf-test-6d60a076-8aec-42f5-ae5c-3923b3793c72, software_id=1, license_pool=ANSYS
+[DEBUG] Total cores for allocation: 240
+[DEBUG] Licenses needed: 237 tokens from ANSYS pool
+[DEBUG] Pool status: {'total': 16800, 'allocated': 567, 'held': 0, 'available': 16233, 'reserved_floor': 0}
+[DEBUG] Attempting to hold 237 licenses...
+[DEBUG] License hold successful: 320555d9-9262-4a2e-abef-550d15a8352b
+[DEBUG] Allocating compute resources...
+[DEBUG] Committing license hold...
+✓ Allocated 237 licenses from pool 'ANSYS' (hold: 320555d9-9262-4a2e-abef-550d15a8352b)
+[DEBUG] Returning: ips=True, alloc_resources=1, license_holds=[320555d9-9262-4a2e-abef-550d15a8352b]
+✓ lamf-test-6d60a076-8aec-42f5-ae5c-3923b3793c72 allocated: {'on-prem': {'on-prem': (5, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+  with 1 license hold(s)
+Executing workflow lamf-test-6d60a076-8aec-42f5-ae5c-3923b3793c72 at 1260
+lamf-test-6d60a076-8aec-42f5-ae5c-3923b3793c72 Workflow iteration 0 started at 1763585921.88589
+[DEBUG] lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008: iteration 1/6
+[DEBUG] lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008: Continuing to next iteration
+Free resource request: lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008 requesting to free 1 resources for iteration 2
+
+🔍 [DIAGNOSTIC] processFreeRequestWithLicenses called:
+  wf-id: lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008, iteration: 1
+  current instances: 3, chains: 2, tinyda-iterations: 5
+  deadline: 127518.0s, current time: 3540.0s
+  available_time (after OPTIM factor 0.5): 61899.0s
+  runtime_per_model: 495.2s
+  [chains_per_node=3] runtime=7428.1s vs available_time=61899.0s
+  ✓ Can complete with fewer resources: min_needed=1 vs cur_count=3
+⬇ Scaling down: freeing 2 instances (guards passed)
+Scheduler freeing {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}} for lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008
+⏱ Resource request overhead: 0.000s
+lamf-test-fdbe52b3-5ac4-4817-bbd7-3ee39ada2008 Workflow iteration 1 started at 1763585921.931956
+[DEBUG] lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e: iteration 2/5
+[DEBUG] lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e: Continuing to next iteration
+New resource request: lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e requesting 3 resources for iteration 3
+
+🔍 [DIAGNOSTIC] processFreeRequestWithLicenses called:
+  wf-id: lamf-test-ce4837ee-c9b5-4728-816b-793fbe63012e, iteration: 2
+  current instances: 2, chains: 5, tinyda-iterations: 5
+  deadline: 14109.4s, current time: 3840.0s
+  available_time (after OPTIM factor 0.6): 6053.6s
+  runtime_per_model: 113.7s
+  [chains_per_node=3] runtime=1705.7s vs available_time=6053.6s
+  ✓ Can complete with fewer resources: min_needed=2 vs cur_count=2

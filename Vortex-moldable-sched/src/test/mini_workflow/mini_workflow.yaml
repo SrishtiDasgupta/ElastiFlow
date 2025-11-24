@@ -1,0 +1,23 @@
+api: 4.7.0
+
+environment:
+  - slots: 2
+
+vars:
+  - id: input_val
+    value: 10
+ 
+actions:
+  - type: for
+    input: input_val
+    enumerator: i
+    yieldToInput: output_val   # feed into for-each action's input
+    actions:
+      - type: execute
+        service: countdown
+        inputs:
+          - id: input
+            var: i
+        outputs:
+          - id: output
+            var: output_val

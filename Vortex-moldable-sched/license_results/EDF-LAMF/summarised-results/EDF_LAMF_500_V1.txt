@@ -1,0 +1,78 @@
+📊 License usage data saved to EDF_500_license_usage.csv (468 samples)
+
+Total workflows: 500
+Executed workflows: 450
+Incomplete workflows: 50
+
+--- Performance Metrics ---
+Average Flowtime: 42550.2453 seconds
+Average Cost: €106.0552
+  - Average Hardware Cost: €25.8355
+  - Average License Cost: €80.2197
+  - License Cost %: 75.64%
+Average Wait Time: 25208.544 seconds
+
+--- Total Costs Summary ---
+Total Hardware Cost: €11625.96
+Total License Cost (additional): €36098.88
+Total Combined Cost: €47724.83
+License Cost Overhead: 310.5% of hardware cost
+Average Resource Utilization: 77.2379%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 27.5%
+  Peak Allocated: 1251/2200 tokens (56.86%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 38.84%
+  Peak Allocated: 5132/6700 tokens (76.6%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 37.99%
+  Peak Allocated: 5552/7600 tokens (73.05%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.1 (0/450 executed)
+Budget miss rate: 0.018 (9/450 executed)
+Overall miss rate: 0.118
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 691.17 hours
+Wasted cost on incomplete workflows: €19239.23
+  - Wasted Hardware Cost: €8420.01
+  - Wasted License Cost: €10819.22
+
+--- Moldability Effectiveness ---
+Scheduler Type: DDM-EDF
+Scale-up attempts: 7
+  Successes: 7 (100.0%)
+  Failures: 0
+  Total instances added: 26
+  Total cores added: 1248
+  Total licenses acquired: 1099
+
+Scale-down attempts: 132
+  Successes: 115 (87.1%)
+  Blocked: 17
+    - License pool saturated: 3
+    - Late iteration (>3): 4
+    - Time progress (>70%): 1
+    - Budget or time progress (>50%): 9
+  Total instances removed: 429
+  Total cores removed: 20312
+  Total licenses released: 7699
+
+Net moldability impact:
+  Net instances: -403
+  Net cores: -19064
+  Net licenses: -6600
+  ✓ DDM-EDF highly effective: 0 deadline misses with preemptive reallocation
+     → 132 scale-downs freed resources from EXCESS workflows
+     → Net -403 instances (scale-down dominance is BY DESIGN)
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 493 (109.6%)
+Workflows with <2 scale-up attempts: 7 (1.6%)
+Average scale-up attempts per workflow: 0.02

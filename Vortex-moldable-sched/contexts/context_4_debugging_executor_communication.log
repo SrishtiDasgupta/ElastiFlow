@@ -1,0 +1,446 @@
+================================================================================
+SESSION 4: DEBUGGING EXECUTOR COMMUNICATION & FIXING SETUP ISSUES
+================================================================================
+
+DATE: 2025-10-04
+CONTEXT: Fixing AWS instance creation issues, setup script errors, and debugging
+workflow communication between scheduler and executor
+
+================================================================================
+INITIAL PROBLEMS IDENTIFIED
+================================================================================
+
+1. **AWS Authentication Failure**
+   - Error: "AWS was not able to validate the provided access credentials"
+   - Cause: Scheduler trying to create cloud executor for on-prem workflows
+
+2. **Bash Syntax Error in Setup Scripts**
+   - Error: "unexpected EOF while looking for matching `"'"
+   - Location: on_demand_setup_HPO_executor.sh line 12
+   - Malformed quote nesting in restart configuration command
+
+3. **Disk Space Full on Executor**
+   - Error: "[Errno 28] No space left on device"
+   - Cause: 40 GB root volume insufficient for packages + datasets
+   - /dev/root completely full during pip installations
+
+4. **Missing Python Dependencies**
+   - Error: "ModuleNotFoundError: No module named 'boto3'"
+   - Cause: executor_HPO.py needs boto3, paramiko, redis, PyYAML, pandas
+   - Setup script didn't explicitly install these packages
+
+5. **Communication Black Hole**
+   - Scheduler reports: "Data sent successfully!"
+   - Executor: Listening on port 8089
+   - Problem: Workflow not being received/processed by executor
+   - No visibility into what's happening after scheduler sends workflow
+
+================================================================================
+UNDERSTANDING: INSTANCE CREATION FLOW
+================================================================================
+
+User's Key Question: "The .sh scripts must exist on the scheduler node?"
+
+ANSWER: YES! Here's the complete flow:
+
+┌─────────────────────────────────────────────────────────────┐
+│ SCHEDULER NODE (e.g., 10.19.224.232)                        │
+│ - Runs: fcfs_scheduler_HPO.py                               │
+│ - Has: /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/*.sh files      │
+│ - Has: SSH key: /fsx/Nisarg-HPC.pem                         │
+└─────────────────────┬────────────────────────────────────────┘
+                     │
+                     │ 1. Boto3: ec2.create_instances()
+                     │ 2. AWS creates fresh EC2 instance
+                     ↓
+┌─────────────────────────────────────────────────────────────┐
+│ NEW EXECUTOR NODE (e.g., 10.19.203.161) - FRESH/EMPTY!     │
+│ - Initially: Just base AMI, no Vortex code                  │
+│ - Waits for: SSH to become available                        │
+└─────────────────────┬────────────────────────────────────────┘
+                     │
+                     │ 3. SSH ready
+                     ↓
+┌─────────────────────────────────────────────────────────────┐
+│ setupInstanceHPO(ssh, instance_role, instance_ip)           │
+│                                                              │
+│ 1. sftp.put(local_script, remote_script)                    │
+│    Upload: Scheduler → Executor                             │
+│    FROM: /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/*.sh          │
+│    TO:   /home/ubuntu/hpo_executor_setup.sh (on executor)   │
+│                                                              │
+│ 2. ssh.exec_command(f'bash {remote_script}')                │
+│    Execute: ON EXECUTOR (not scheduler!)                    │
+│    - Mounts FSx                                             │
+│    - Installs packages                                      │
+│    - Copies Vortex code                                     │
+│    - Starts executor_HPO.py                                 │
+└─────────────────────────────────────────────────────────────┘
+
+Key Insight: Setup scripts MUST exist on scheduler, are uploaded via SFTP,
+then executed remotely on the fresh executor instance via SSH.
+
+================================================================================
+FIX 1: EXECUTOR SELECTION LOGIC (CRITICAL!)
+================================================================================
+
+Problem: Scheduler ALWAYS tried to create cloud executor, even for on-prem workflows
+
+Root Cause (fcfs_scheduler_HPO.py line 287):
+```python
+def sendWorkflowForExecutionHPO(self, wf_plan, ips, sim, deadline):
+    # ALWAYS creates cloud executor (WRONG!)
+    executor_ip = createExecutorInstance('g4dn.2xlarge', sim)
+```
+
+This caused:
+- On-prem workflows → Try to create AWS instance → Auth failure
+- Unnecessary cloud executor creation
+- Wrong executor IP used
+
+SOLUTION: Route based on worker allocation
+```python
+def sendWorkflowForExecutionHPO(self, wf_plan, ips, sim, deadline):
+    # Check if on-prem workers allocated
+    if 'on-prem' in ips and len(ips['on-prem'][1]) > 0:
+        # Use on-prem executor (pre-started manually)
+        executor_ip = ips['on-prem'][1][0]  # Head node IP
+        print(f"Using on-prem executor at {executor_ip}")
+    else:
+        # Create dedicated cloud executor
+        executor_ip = createExecutorInstance('g4dn.2xlarge', sim)
+        print(f"Created cloud executor at {executor_ip}")
+```
+
+Files Modified:
+- src/main/scheduler/fcfs_scheduler_HPO.py (lines 280-321)
+- src/main/scheduler/fcfs_optimized_HPO.py (lines 507-549)
+
+Result: On-prem workflows use on-prem executor, cloud workflows create cloud executor
+
+================================================================================
+FIX 2: BASH SYNTAX ERROR IN SETUP SCRIPTS
+================================================================================
+
+Problem: Line 12 in both setup scripts had malformed quote nesting
+
+BEFORE (BROKEN):
+```bash
+sudo bash -c 'echo "\$nrconf{restart} = '\''a'\''; > /etc/needrestart/conf.d/99-restart.conf'
+```
+
+Error: `unexpected EOF while looking for matching quote`
+
+AFTER (FIXED):
+```bash
+sudo mkdir -p /etc/needrestart/conf.d/
+echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
+```
+
+Why This Works:
+- No nested quotes in bash -c
+- Uses pipe to tee instead of shell redirection
+- mkdir -p ensures directory exists first
+
+Files Modified:
+- src/main/scripts/on_demand_setup_HPO_executor.sh (lines 11-13)
+- src/main/scripts/on_demand_setup_HPO_worker.sh (lines 11-13)
+
+================================================================================
+FIX 3: PYTHON DEPENDENCIES FOR EXECUTOR
+================================================================================
+
+Problem: executor_HPO.py imports boto3, paramiko, redis, PyYAML, pandas
+But setup script relied on instance_setup_hpo.sh which may not install these
+
+SOLUTION: Explicitly install executor dependencies
+
+Added to on_demand_setup_HPO_executor.sh (lines 52-59):
+```bash
+# Install Python dependencies for executor
+echo "Installing Python dependencies for HPO Executor..."
+pip3 install --upgrade pip >> ~/setup.out 2>&1
+
+# Install required packages (executor doesn't need PyTorch/Ray, just control plane)
+pip3 install boto3 paramiko redis PyYAML pandas >> ~/setup.out 2>&1
+
+echo "Python dependencies installed"
+```
+
+Executor Dependencies (minimal set):
+- boto3      - AWS SDK for instance management
+- paramiko   - SSH client for remote commands
+- redis      - Queue system for workflow coordination
+- PyYAML     - YAML parsing for workflow definitions
+- pandas     - Metrics collection
+
+Worker Dependencies (full ML stack):
+- torch torchvision  - PyTorch ML framework
+- ray               - Distributed computing for HPO
+- boto3 paramiko    - AWS/SSH utilities
+- PyYAML pandas     - Data handling
+- scikit-learn      - ML utilities
+
+Added to on_demand_setup_HPO_worker.sh (lines 53-60):
+```bash
+# Install/verify Python dependencies for HPO worker
+pip3 install torch torchvision ray boto3 paramiko PyYAML pandas scikit-learn >> ~/setup.out 2>&1
+```
+
+================================================================================
+FIX 4: DISK SPACE ISSUE (40 GB → 64 GB)
+================================================================================
+
+Problem: /dev/root full during package installation
+- PyTorch: ~5 GB
+- CUDA libraries: ~3 GB
+- Other packages: ~5 GB
+- Datasets: ~1 GB
+- Total: 40 GB insufficient
+
+SOLUTION: Add BlockDeviceMappings to increase EBS volume
+
+Added to create_instance_HPO.py (lines 77-88):
+```python
+instances = ec2.create_instances(
+    ImageId='ami-04542995864e26699',
+    BlockDeviceMappings=[
+        {
+            'DeviceName': '/dev/sda1',  # Root device for Ubuntu AMIs
+            'Ebs': {
+                'VolumeSize': 64,  # Increase from 40 GB to 64 GB
+                'VolumeType': 'gp3',  # General Purpose SSD v3 (faster)
+                'DeleteOnTermination': True,  # Cleanup on termination
+                'Iops': 3000,  # Base IOPS for gp3
+                'Throughput': 125  # Base throughput MiB/s for gp3
+            }
+        }
+    ],
+    # ... rest of parameters
+)
+```
+
+New Disk Layout (64 GB):
+- System packages:        ~5 GB
+- Python ML packages:    ~15 GB
+- CIFAR-10 dataset:      ~0.2 GB
+- Vortex codebase:       ~0.5 GB
+- Logs/temp files:       ~5 GB
+- FREE SPACE:           ~35 GB ✓
+
+Why gp3 instead of gp2:
+- Lower cost per GB
+- Better baseline performance (3000 IOPS vs 100 IOPS for gp2)
+- Configurable IOPS and throughput
+
+================================================================================
+DEBUGGING: EXECUTOR COMMUNICATION FLOW
+================================================================================
+
+Current Situation:
+1. Scheduler: "Data sent successfully!" ✓
+2. Executor: Listening on port 8089 ✓
+3. Problem: Workflow not being received/processed
+
+Communication Flow:
+
+┌──────────────────────────────────────────────────────────────┐
+│ SCHEDULER (fcfs_scheduler_HPO.py)                            │
+│ Line 320: sendRequest(executor_ip, 8089, request)            │
+└────────────────┬─────────────────────────────────────────────┘
+                │
+                │ HTTP POST to http://{executor_ip}:8089
+                │ Content-Type: application/json
+                │ Body: {
+                │   "initial-alloc": True,
+                │   "wf-plan": {...},
+                │   "hosts": {...},
+                │   "executor-ip": "...",
+                │   "deadline": ...
+                │ }
+                ↓
+┌──────────────────────────────────────────────────────────────┐
+│ EXECUTOR HTTP SERVER (server/server.py)                      │
+│ - Port 8089, RequestHandler.do_POST()                        │
+│ - Receives JSON, converts to dict                            │
+│ - Pushes to Redis queue                                      │
+└────────────────┬─────────────────────────────────────────────┘
+                │
+                │ queue.push(str(data))
+                ↓
+┌──────────────────────────────────────────────────────────────┐
+│ EXECUTOR QUEUE LISTENER (executor_HPO.py)                    │
+│ - processQueueData() in infinite loop                        │
+│ - Peeks queue, spawns thread for each workflow               │
+│ - Thread: executeWorkflowHPO()                               │
+└────────────────┬─────────────────────────────────────────────┘
+                │
+                │ Creates Steep_Workflow, calls workflow.execute()
+                ↓
+┌──────────────────────────────────────────────────────────────┐
+│ STEEP WORKFLOW ENGINE (workflow/steep_workflow.py)           │
+│ - Parses YAML actions                                        │
+│ - Calls service script: run_hpo.py                           │
+└────────────────┬─────────────────────────────────────────────┘
+                │
+                │ subprocess.run([python, run_hpo.py, ...])
+                ↓
+┌──────────────────────────────────────────────────────────────┐
+│ SERVICE SCRIPT (service/run_hpo.py)                          │
+│ - Routes to PlclRunnerHPO (on-prem) or CloudRunnerHPO        │
+│ - Sets up Ray cluster on workers                             │
+│ - Runs HPO training                                          │
+└──────────────────────────────────────────────────────────────┘
+
+Potential Issues to Check:
+
+1. **Redis Queue Not Running**
+   - Check: `sudo systemctl status redis-server`
+   - Executor needs Redis to receive workflows
+
+2. **Queue Name Mismatch**
+   - Executor listens on queue: 'resource-request-queue'
+   - Scheduler sends to: Check what port/queue it uses
+
+3. **Server Handler Issue**
+   - server.py expects YAML format (line 14)
+   - sendRequest() sends JSON format (line 22)
+   - FORMAT MISMATCH! ← LIKELY ISSUE
+
+4. **Executor Not Reading Queue**
+   - processQueueData() in infinite loop
+   - Check if thread is blocked
+
+5. **Port Mismatch**
+   - Scheduler sends to port 8089
+   - Executor listens on: Need to verify
+
+================================================================================
+DIAGNOSTIC COMMANDS
+================================================================================
+
+On Executor Node:
+```bash
+# Check executor process
+ps aux | grep executor_HPO.py
+
+# Check logs
+tail -100 ~/executor.out
+
+# Check for errors
+grep -i "error\|exception\|traceback" ~/executor.out
+
+# Check port listening
+netstat -tuln | grep 8089
+
+# Check Redis
+sudo systemctl status redis-server
+redis-cli ping
+
+# Check if workflow received
+grep -i "workflow\|initial-alloc\|wf-plan" ~/executor.out
+
+# Check Python imports
+python3 -c "import boto3, paramiko, redis, yaml, pandas; print('OK')"
+```
+
+On Scheduler Node:
+```bash
+# Check what was sent
+grep -A10 "Data sent successfully" <scheduler_log>
+
+# Check executor IP used
+grep "executor" <scheduler_log>
+
+# Test connection
+curl -v http://{executor_ip}:8089
+```
+
+================================================================================
+NEXT STEPS TO DEBUG COMMUNICATION
+================================================================================
+
+1. **Add Debug Logging to Executor**
+   - Print when HTTP request received
+   - Print queue operations
+   - Print workflow processing
+
+2. **Add Debug Logging to Scheduler**
+   - Print full request being sent
+   - Print executor IP used
+   - Print response received
+
+3. **Verify Request Format**
+   - Check if JSON vs YAML issue
+   - Verify content-type headers
+
+4. **Check Queue Flow**
+   - Verify queue name consistency
+   - Check queue.push() succeeds
+   - Check queue.peek() retrieves data
+
+5. **Test Simple Request**
+   - Send minimal test workflow
+   - Use curl to test executor endpoint
+   - Verify end-to-end flow
+
+================================================================================
+FILES MODIFIED IN THIS SESSION
+================================================================================
+
+1. ✅ src/main/scheduler/fcfs_scheduler_HPO.py
+   - Fixed sendWorkflowForExecutionHPO() to route executor correctly
+   - Lines 280-321
+
+2. ✅ src/main/scheduler/fcfs_optimized_HPO.py
+   - Fixed sendWorkflowForExecutionHPO() to route executor correctly
+   - Lines 507-549
+
+3. ✅ src/main/scripts/on_demand_setup_HPO_executor.sh
+   - Fixed bash syntax error (line 12-13)
+   - Added Python dependency installation (lines 52-59)
+
+4. ✅ src/main/scripts/on_demand_setup_HPO_worker.sh
+   - Fixed bash syntax error (line 12-13)
+   - Added Python dependency verification (lines 53-60)
+
+5. ✅ src/main/scripts/create_instance_HPO.py
+   - Added BlockDeviceMappings for 64 GB volume (lines 77-88)
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+✅ On-prem workflows use on-prem executor (no AWS instance creation)
+✅ Cloud workflows create dedicated cloud executor
+✅ Bash syntax errors fixed in setup scripts
+✅ Executor dependencies explicitly installed (boto3, paramiko, redis, etc.)
+✅ Worker dependencies verified (torch, ray, etc.)
+✅ EBS volume increased to 64 GB (gp3)
+⏳ Workflow communication debugging in progress
+⏳ Need to verify queue/server integration
+⏳ Need to add debug logging
+
+================================================================================
+KNOWN REMAINING ISSUES
+================================================================================
+
+1. **Communication Black Hole**
+   - Scheduler sends successfully
+   - Executor listening
+   - Workflow not being processed
+   - Need to trace queue flow
+
+2. **Potential Format Mismatch**
+   - sendRequest() uses JSON
+   - server.py expects YAML
+   - Need to verify compatibility
+
+3. **Queue Configuration**
+   - Verify queue names match
+   - Verify Redis connectivity
+   - Check queue operations
+
+================================================================================
+END OF SESSION 4 DOCUMENTATION
+================================================================================

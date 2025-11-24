@@ -1,0 +1,43 @@
+
+Total workflows: 400
+Executed workflows: 262
+Incomplete workflows: 138
+
+--- Performance Metrics ---
+Average Flowtime: 34235.9867 seconds
+Average Cost: $38.6751
+Average Wait Time: 17040.4004 seconds
+Average Resource Utilization: 54.9604%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 20.21%
+  Peak Allocated: 1278/2200 tokens (58.09%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 20.04%
+  Peak Allocated: 4749/6700 tokens (70.88%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 22.88%
+  Peak Allocated: 4688/7600 tokens (61.68%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.345 (0/262 executed)
+Budget miss rate: 0.0175 (7/262 executed)
+Overall miss rate: 0.3625
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 305.84 hours
+Wasted cost on incomplete workflows: $5433.97
+
+--- Moldability Effectiveness ---
+Scale-up attempts: 0
+
+Scale-down attempts: 0
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 400 (152.7%)
+Workflows with <2 scale-up attempts: 0 (0.0%)
+Average scale-up attempts per workflow: 0.00

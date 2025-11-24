@@ -1,0 +1,54 @@
+
+Total workflows: 700
+Executed workflows: 391
+Incomplete workflows: 309
+
+--- Performance Metrics ---
+Average Flowtime: 58807.7518 seconds
+Average Cost: €150.8134
+  - Average Hardware Cost: €37.122
+  - Average License Cost: €113.6915
+  - License Cost %: 75.39%
+Average Wait Time: 40923.2033 seconds
+
+--- Total Costs Summary ---
+Total Hardware Cost: €14514.69
+Total License Cost (additional): €44453.36
+Total Combined Cost: €58968.05
+License Cost Overhead: 306.26% of hardware cost
+Average Resource Utilization: 88.1859%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 32.56%
+  Peak Allocated: 1309/2200 tokens (59.5%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 36.95%
+  Peak Allocated: 4243/6700 tokens (63.33%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 33.4%
+  Peak Allocated: 4672/7600 tokens (61.47%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.4414 (0/391 executed)
+Budget miss rate: 0.0086 (6/391 executed)
+Overall miss rate: 0.45
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 550.97 hours
+Wasted cost on incomplete workflows: €17318.25
+  - Wasted Hardware Cost: €8006.87
+  - Wasted License Cost: €9311.39
+
+--- Moldability Effectiveness ---
+Scale-up attempts: 0
+
+Scale-down attempts: 0
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 700 (179.0%)
+Workflows with <2 scale-up attempts: 0 (0.0%)
+Average scale-up attempts per workflow: 0.00
