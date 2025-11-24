@@ -1,0 +1,81 @@
+📊 License usage data saved to EDF_700_license_usage.csv (468 samples)
+
+Total workflows: 700
+Executed workflows: 486
+Incomplete workflows: 214
+
+--- Performance Metrics ---
+Average Flowtime: 44852.3478 seconds
+Average Cost: €96.4827
+  - Average Hardware Cost: €23.06
+  - Average License Cost: €73.4226
+  - License Cost %: 76.1%
+Average Wait Time: 32391.1529 seconds
+
+--- Total Costs Summary ---
+Total Hardware Cost: €11207.18
+Total License Cost (additional): €35683.4
+Total Combined Cost: €46890.58
+License Cost Overhead: 318.4% of hardware cost
+Average Resource Utilization: 92.183%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 32.32%
+  Peak Allocated: 1345/2200 tokens (61.14%)
+  Samples: 156
+ANSYS:
+  Average Utilization: 40.73%
+  Peak Allocated: 5051/6700 tokens (75.39%)
+  Samples: 156
+LSDYNA:
+  Average Utilization: 39.18%
+  Peak Allocated: 4888/7600 tokens (64.32%)
+  Samples: 156
+
+--- Constraint Violations ---
+Deadline miss rate: 0.3071 (1/486 executed)
+Budget miss rate: 0.0114 (8/486 executed)
+Overall miss rate: 0.3186
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 1007.55 hours
+Wasted cost on incomplete workflows: €29702.19
+  - Wasted Hardware Cost: €11524.65
+  - Wasted License Cost: €18177.53
+
+--- Moldability Effectiveness ---
+Scheduler Type: DDM-EDF
+Scale-up attempts: 345
+  Successes: 326 (94.5%)
+  Failures: 19
+    - Insufficient compute: 9
+    - Insufficient licenses: 8
+    - Budget exhausted: 2
+    - Time exhausted: 0
+  Total instances added: 535
+  Total cores added: 25536
+  Total licenses acquired: 17594
+
+Scale-down attempts: 66
+  Successes: 51 (77.3%)
+  Blocked: 15
+    - License pool saturated: 3
+    - Late iteration (>3): 3
+    - Time progress (>70%): 0
+    - Budget or time progress (>50%): 3
+  Total instances removed: 193
+  Total cores removed: 9000
+  Total licenses released: 3633
+
+Net moldability impact:
+  Net instances: +342
+  Net cores: +16536
+  Net licenses: +13961
+  ⚡ DDM-EDF active: 326 scale-ups, 66 scale-downs (ratio 1:0.2)
+     → But 1 deadline misses - moldability not fully preventing deadline violations
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 506 (104.1%)
+Workflows with <2 scale-up attempts: 102 (21.0%)
+Average scale-up attempts per workflow: 0.71

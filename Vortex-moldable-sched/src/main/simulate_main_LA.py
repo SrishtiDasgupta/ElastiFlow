@@ -14,8 +14,9 @@ Supported schedulers:
 import simulus
 #from scheduler.fcfs_optimized_LA import FCFS_Optimized_LA
 #from scheduler.edf_optimized_LA import EDF_Optimized_LA
+from scheduler.edf_hsm_LA import EDF_HSM_LA
 #from scheduler.fcfs_scheduler_LA import FCFS_Scheduler_LA
-from scheduler.edf_scheduler_LA import EDF_Scheduler_LA
+#from scheduler.edf_scheduler_LA import EDF_Scheduler_LA
 from wf_queue.redis_queue import Redis_Queue
 from scripts.dispatcher_LA import dispatcher_LA
 from config.constants_LA import (
@@ -34,9 +35,9 @@ from config.constants_LA import (
 #SCHEDULER_NAME = 'LAMF'
 #SCHEDULER_DESC = 'License-Aware Moldable FCFS'
 
-# Option 2: EDF-LAMF (EDF-ordered LAMF - Iteration-based moldability)
-SCHEDULER_NAME = 'EDF-LAMF'
-SCHEDULER_DESC = 'EDF-ordered LAMF: EDF priority queue + LAMF iteration-based moldability'
+# Option 2: HSM (Hybrid Static-Moldable)
+SCHEDULER_NAME = 'EDF-HSM'
+SCHEDULER_DESC = 'Hybrid Static-Moldable: Static iteration 0, Moldable iterations 1-5'
 
 # Option 3: EDF-LA Baseline (Static EDF without moldability)
 #SCHEDULER_NAME = 'EDF-LA-Baseline'
@@ -81,21 +82,21 @@ resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
     sort_key='cost_per_iteration'
 ) """
 
-# Option 2: EDF-LAMF scheduler (EDF priority + LAMF iteration-based moldability)
-""" sched = EDF_Optimized_LA(
-    queue,
-    finish_queue,
-    resource_request_queue,
-    sort_key='cost_per_iteration'
-) """
-
-# Option 3: EDF-LA Baseline scheduler (STATIC EDF - NO MOLDABILITY)
-sched = EDF_Scheduler_LA(
+# Option 2: HSM scheduler (Hybrid Static-Moldable: Static iter 0, Moldable iters 1-5)
+sched = EDF_HSM_LA(
     queue,
     finish_queue,
     resource_request_queue,
     sort_key='cost_per_iteration'
 )
+
+# Option 3: EDF-LA Baseline scheduler (STATIC EDF - NO MOLDABILITY)
+""" sched = EDF_Scheduler_LA(
+    queue,
+    finish_queue,
+    resource_request_queue,
+    sort_key='cost_per_iteration'
+) """
 
 # Option 4: FCFS-LA Baseline scheduler (STATIC FCFS - NO MOLDABILITY)
 """ sched = FCFS_Scheduler_LA(

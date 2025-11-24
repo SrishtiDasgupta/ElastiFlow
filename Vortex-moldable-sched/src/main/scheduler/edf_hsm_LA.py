@@ -1,17 +1,23 @@
 """
-EDF_Optimized_LA: Deadline-Driven Moldable EDF with License Awareness
+EDF_HSM_LA: Hybrid Static-Moldable EDF with License Awareness
 
-This scheduler combines:
-1. EDF (Earliest Deadline First) queue ordering
-2. Sophisticated moldability from FCFS_Optimized_LA
-3. Deadline-urgency-based scaling decisions
-4. Preemptive resource reallocation
-5. License-aware resource management
+This scheduler combines static and moldable approaches:
 
-Key innovations:
-- Deadline slack calculation for urgency-based scaling
-- Preemptive scale-down of workflows with excess slack
-- Resource reallocation to deadline-critical workflows
+ITERATION 0 (Static Phase):
+- Fixed resource allocation at workflow start
+- No dynamic scaling during iteration 0
+- Provides "deadline insurance" with upfront commitment
+
+ITERATIONS 1-5 (Moldable Phase):
+- Full EDF-LAMF moldability (deadline-driven triggers)
+- Urgency-based scaling (CRITICAL/WARNING/EARLY/MID-ITERATION triggers)
+- Graduated boost factors (1.2× → 2.0×)
+- Smart scale-down guards (license pool, late iteration, deadline proximity)
+
+Key innovation:
+- Best of both worlds: Static's deadline protection + Moldable's cost efficiency
+- 40% budget allocated to iteration 0, remaining 60% for iterations 1-5
+- Progressive OPTIM factors: 0.6 (iter 0) → 1.0 (iter 5)
 """
 
 import heapq
@@ -37,15 +43,15 @@ from utils.resource_LA import getConstraintsFromWorkflow, getEstimate
 from scheduler.scheduler_LA import Scheduler_LA
 
 
-class EDF_Optimized_LA(Scheduler_LA):
+class EDF_HSM_LA(Scheduler_LA):
     """
-    Deadline-Driven Moldable EDF Scheduler with License Awareness
+    Hybrid Static-Moldable EDF Scheduler with License Awareness
 
-    Extends Scheduler_LA with:
+    Combines static allocation (iteration 0) with moldable scaling (iterations 1-5):
     - EDF queue ordering (deadline-based priority)
-    - Advanced moldability from FCFS_Optimized_LA
-    - Deadline urgency-based scaling
-    - Preemptive resource reallocation
+    - Static baseline allocation in iteration 0 (no scaling)
+    - Full EDF-LAMF moldability in iterations 1-5
+    - License-aware guards and urgency-based triggers
     """
 
     def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost_per_iteration'):
@@ -75,12 +81,13 @@ class EDF_Optimized_LA(Scheduler_LA):
         """
         Main scheduler loop with EDF ordering
         """
-        print(f'Starting EDF-ordered LAMF scheduler...')
+        print(f'Starting HSM (Hybrid Static-Moldable) scheduler...')
+        print(f'  - Iteration 0: STATIC allocation (no scaling)')
+        print(f'  - Iterations 1-5: MOLDABLE (EDF-LAMF triggers + guards)')
         print(f'  - EDF heap ordering: Deadline-based priority queue')
-        print(f'  - LAMF moldability: Iteration-based progress triggers')
         print(f'  - Iteration weighting: BFACTOR/DFACTOR {list(OPTIM_FCFS_DFACTOR.values())}')
-        print(f'  - Progress triggers: time_progress vs budget_progress')
-        print(f'  - License-aware guards: Pool saturation, late iteration, time/budget progress')
+        print(f'  - Deadline triggers: CRITICAL (<30%), WARNING (<50%), EARLY (3%), MID-ITERATION')
+        print(f'  - License-aware guards: Pool saturation, late iteration, deadline proximity')
 
         # Start resource utilization monitoring (including license pools)
         if sim:
@@ -122,7 +129,7 @@ class EDF_Optimized_LA(Scheduler_LA):
                     print(f"  Final simulated time: {getTime(sim):.1f}s")
                     print(f"{'='*70}\n")
                     from config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(file_prefix=f'EDF_{TOTAL_WORKFLOWS}_')
+                    self.metrics.computeMetrics(file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_')
                     break
                 elif idle_loop_count == 1:
                     print(f"\n[INFO] No active workflows detected. Waiting for termination (idle_count={idle_loop_count}/10)...")
@@ -178,7 +185,7 @@ class EDF_Optimized_LA(Scheduler_LA):
                     self.popWorkflow(self.workflow_heap)
                     removeElement(wf_mb, self.queue)
                     from config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(file_prefix=f'EDF_{TOTAL_WORKFLOWS}_')
+                    self.metrics.computeMetrics(file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_')
                     break
 
                 # Skip rejected workflows
@@ -633,13 +640,15 @@ class EDF_Optimized_LA(Scheduler_LA):
 
     def processFreeRequestWithLicenses(self, sim, wf_mb, request):
         """
-        EDF-ordered LAMF: Iteration-based moldability with EDF queue ordering
+        HSM: Hybrid Static-Moldable resource allocation
 
-        This is the core LAMF algorithm combined with EDF priority:
-        1. EDF heap ordering for deadline-based priority (from DDM-EDF)
-        2. Iteration-weighted budget/deadline constraints (from LAMF)
-        3. Progress-based triggers for scale-up (from LAMF)
-        4. License-aware scale-down guards (from LAMF)
+        Iteration 0: STATIC (no scaling, resources committed at start)
+        Iterations 1-5: MOLDABLE (full EDF-LAMF logic):
+        1. EDF heap ordering for deadline-based priority
+        2. Iteration-weighted budget/deadline constraints (OPTIM factors)
+        3. Deadline-first triggers (CRITICAL/WARNING/EARLY/MID-ITERATION)
+        4. Urgency-based boost factors (1.2× → 2.0×)
+        5. Smart scale-down guards (license pool, late iteration, deadline proximity)
         """
         # LA workflows always return 7-value tuples
         instances, budget, deadline, start_time, mesh, software_id, license_holds = \
@@ -650,6 +659,15 @@ class EDF_Optimized_LA(Scheduler_LA):
 
         # Iteration-weighted constraints (from LAMF)
         ind = request['iteration']
+
+        # === HSM: STATIC ITERATION-0 PHASE ===
+        if ind == 0:
+            print(f"\n📌 [HSM ITERATION-0] {request['wf-id']} in static phase")
+            print(f"  → Resources committed at workflow start (no scaling in iteration 0)")
+            print(f"  → Will begin moldable scaling in iteration 1")
+            return  # Skip all moldable logic - iteration 0 is static
+
+        # === HSM: MOLDABLE PHASE (Iterations 1-5) ===
         available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
 
         cur_instance: Instance = instances[-1][0]
@@ -659,8 +677,8 @@ class EDF_Optimized_LA(Scheduler_LA):
             cur_count = sum(inst_tuple[1] for inst_tuple in instances)
 
         # === DIAGNOSTIC LOGGING ===
-        print(f"\n🔍 [EDF-LAMF] processFreeRequestWithLicenses called:")
-        print(f"  wf-id: {request['wf-id']}, iteration: {ind}")
+        print(f"\n🔍 [HSM MOLDABLE-PHASE] processFreeRequestWithLicenses called:")
+        print(f"  wf-id: {request['wf-id']}, iteration: {ind} (MOLDABLE)")
         print(f"  current instances: {cur_count}, chains: {request['chains']}, tinyda-iterations: {request['tinyda-iterations']}")
         print(f"  deadline: {deadline:.1f}s, current time: {getTime(sim):.1f}s")
         print(f"  available_time (after OPTIM factor {OPTIM_FCFS_DFACTOR[ind]}): {available_time:.1f}s")

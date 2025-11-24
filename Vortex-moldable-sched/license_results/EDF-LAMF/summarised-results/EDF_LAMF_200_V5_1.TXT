@@ -1,0 +1,82 @@
+📊 License usage data saved to EDF_200_license_usage.csv (465 samples)
+
+Total workflows: 200
+Executed workflows: 187
+Incomplete workflows: 13
+
+--- Performance Metrics ---
+Average Flowtime: 23273.2618 seconds
+Average Cost: €143.6764
+  - Average Hardware Cost: €43.9381
+  - Average License Cost: €99.7383
+  - License Cost %: 69.42%
+Average Wait Time: 3913.6043 seconds
+
+--- Total Costs Summary ---
+Total Hardware Cost: €8216.43
+Total License Cost (additional): €18651.06
+Total Combined Cost: €26867.49
+License Cost Overhead: 227.0% of hardware cost
+Average Resource Utilization: 34.29%
+
+--- License Utilization by Pool ---
+ABAQUS:
+  Average Utilization: 16.91%
+  Peak Allocated: 1220/2200 tokens (55.45%)
+  Samples: 155
+ANSYS:
+  Average Utilization: 17.98%
+  Peak Allocated: 3920/6700 tokens (58.51%)
+  Samples: 155
+LSDYNA:
+  Average Utilization: 14.55%
+  Peak Allocated: 4088/7600 tokens (53.79%)
+  Samples: 155
+
+--- Constraint Violations ---
+Deadline miss rate: 0.065 (0/187 executed)
+Budget miss rate: 0.045 (9/187 executed)
+Overall miss rate: 0.11
+
+--- Incomplete Workflow Costs ---
+Time spent on incomplete workflows: 286.15 hours
+Wasted cost on incomplete workflows: €8803.57
+  - Wasted Hardware Cost: €3995.33
+  - Wasted License Cost: €4808.24
+
+--- Moldability Effectiveness ---
+Scheduler Type: DDM-EDF
+Scale-up attempts: 101
+  Successes: 85 (84.2%)
+  Failures: 16
+    - Insufficient compute: 1
+    - Insufficient licenses: 1
+    - Budget exhausted: 14
+    - Time exhausted: 0
+  Total instances added: 290
+  Total cores added: 13032
+  Total licenses acquired: 10624
+
+Scale-down attempts: 72
+  Successes: 49 (68.1%)
+  Blocked: 23
+    - License pool saturated: 0
+    - Late iteration (>3): 11
+    - Time progress (>70%): 0
+    - Budget or time progress (>50%): 9
+  Total instances removed: 180
+  Total cores removed: 8336
+  Total licenses released: 3197
+
+Net moldability impact:
+  Net instances: +110
+  Net cores: +4696
+  Net licenses: +7427
+  ✓ DDM-EDF highly effective: 0 deadline misses with preemptive reallocation
+     → 72 scale-downs freed resources from EXCESS workflows
+     → Net 110 instances (scale-down dominance is BY DESIGN)
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 144 (77.0%)
+Workflows with <2 scale-up attempts: 26 (13.9%)
+Average scale-up attempts per workflow: 0.54

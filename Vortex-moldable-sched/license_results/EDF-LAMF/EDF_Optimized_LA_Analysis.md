@@ -1185,7 +1185,470 @@ python src/main/simulate_main_LA.py
 
 ---
 
-## 17. CONCLUSIONS
+## 17. EDF-LAMF v5.1 - DEADLINE-FIRST IMPROVEMENTS
+
+**Date**: November 2025
+**Motivation**: Original EDF-LAMF v4 showed 16% deadline miss rate at 400 workflows vs 7.25% static baseline (121% worse). Since EDF-LAMF is a deadline-driven algorithm, improving deadline performance is critical.
+
+### 17.1 Problem Statement
+
+**v4 Performance Issues:**
+- 400 workflows: 358/400 completions (89.5%), **16.0% deadline miss rate**
+- 300 workflows: 300/300 completions (100%), **13.0% deadline miss rate**
+- Static baseline: 7.25% (400wf), 7.7% (300wf) deadline miss rate
+- **Gap**: v4 was 121% worse than static baseline at scale
+
+**User's Goal**: *"EDF-LAMF need not perform the very best for all number of workflows or for all metrics. It would be good if we can additionally improve the deadline miss rate, since this is a deadline improvement algo"*
+
+### 17.2 v5 Implementation: 4 Deadline-Driven Triggers
+
+**Location**: `edf_optimized_LA.py:680-716`
+
+Added four proactive triggers with **direct deadline monitoring** (not just progress-based):
+
+```python
+# Calculate deadline urgency for direct deadline monitoring
+time_remaining = deadline - getTime(sim)
+total_time = deadline - start_time
+deadline_urgency = time_remaining / total_time if total_time > 0 else 0.0
+
+urgency_mode = 'NORMAL'
+
+# TRIGGER 1: CRITICAL (< 30% time remaining)
+if deadline_urgency < 0.30:
+    print(f"  🚨 DEADLINE CRITICAL: only {time_remaining:.1f}s ({deadline_urgency*100:.1f}%) remaining")
+    skip_scale_down = True
+    force_scale_up_attempt = True
+    urgency_mode = 'CRITICAL'
+
+# TRIGGER 2: WARNING (< 50% time remaining + falling behind)
+elif deadline_urgency < 0.50 and time_progress > budget_progress + 0.03:
+    print(f"  ⚠️ DEADLINE WARNING: {deadline_urgency*100:.1f}% time left...")
+    skip_scale_down = True
+    force_scale_up_attempt = True
+    urgency_mode = 'WARNING'
+
+# TRIGGER 3: EARLY falling-behind detection (3% threshold, reduced from 5%)
+elif time_progress > budget_progress + 0.03:
+    print(f"  ⚡ EARLY SCALE-UP: time {time_progress*100:.1f}% > budget {budget_progress*100:.1f}% + 3%")
+    skip_scale_down = True
+    force_scale_up_attempt = True
+
+# TRIGGER 4: MID-ITERATION proactive scale-up (iteration 2, 40% time)
+elif ind >= 2 and time_progress > 0.40:
+    print(f"  ⚡ MID-ITERATION SCALE-UP: iteration {ind}, time {time_progress*100:.1f}% elapsed")
+    skip_scale_down = True
+    force_scale_up_attempt = True
+```
+
+**Design rationale:**
+- **Direct deadline awareness**: Uses `deadline_urgency` ratio instead of just budget/time progress
+- **Graduated triggers**: CRITICAL → WARNING → EARLY → MID-ITERATION
+- **Earlier intervention**: Triggers at 50% time (vs previous 70% time-based guards)
+
+### 17.3 v5 Implementation: Graduated Boost Factors
+
+**Location**: `edf_optimized_LA.py:819-837`
+
+Added **urgency-aware budget boost** for scale-up requests:
+
+```python
+# DEADLINE-AWARE GRADUATED BOOST (EDF-LAMF v5):
+if urgency_mode == 'CRITICAL':
+    SCALE_UP_BOOST_FACTOR = 2.0  # 100% boost for critical workflows
+    print(f"  💪 CRITICAL BOOST: 2.0× budget allocation (deadline emergency)")
+elif urgency_mode == 'WARNING':
+    SCALE_UP_BOOST_FACTOR = 1.5  # 50% boost for warning workflows
+    print(f"  💪 WARNING BOOST: 1.5× budget allocation (deadline approaching)")
+elif force_scale_up_attempt:
+    SCALE_UP_BOOST_FACTOR = 1.2  # 20% boost for regular scale-ups
+    print(f"  💪 SCALE-UP BOOST: 1.2× budget allocation")
+else:
+    SCALE_UP_BOOST_FACTOR = 1.0  # Normal allocation
+
+if force_scale_up_attempt:
+    available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind] * SCALE_UP_BOOST_FACTOR
+```
+
+**Boost progression:**
+- **CRITICAL**: 2.0× (workflows with <30% time remaining)
+- **WARNING**: 1.5× (workflows with <50% time + falling behind)
+- **Regular**: 1.2× (workflows falling behind on progress)
+- **Normal**: 1.0× (no urgency detected)
+
+### 17.4 v5 Implementation: Deadline-Protective Scale-Down Guards
+
+**Location**: `edf_optimized_LA.py:735-792`
+
+Strengthened guards to prevent scale-downs that hurt deadline performance:
+
+```python
+# === DEADLINE-PROTECTIVE SCALE-DOWN GUARDS (EDF-LAMF v5) ===
+should_scale_down = True
+blocked_reason = None
+
+# GUARD 1: License pool saturation (>80% utilization)
+if should_scale_down and pool_utilization > 0.80:
+    should_scale_down = False
+    blocked_reason = 'license_pool_saturated'
+
+# GUARD 2: Earlier iteration cutoff (iteration 2 vs 3)
+if should_scale_down and ind > 2:  # Changed from ind > 3
+    should_scale_down = False
+    blocked_reason = 'late_iteration'
+
+# GUARD 3: Deadline proximity (NEW - don't scale down if <50% time remaining)
+if should_scale_down:
+    deadline_urgency_check = time_remaining / total_time
+    if deadline_urgency_check < 0.50:  # Less than 50% time remaining
+        should_scale_down = False
+        blocked_reason = 'deadline_proximity'
+
+# GUARD 4: Time progress (70% threshold unchanged)
+if should_scale_down and time_progress > 0.70:
+    should_scale_down = False
+    blocked_reason = 'time_progress'
+
+# GUARD 5: Budget/time progress (more conservative: 40% vs 50%)
+if should_scale_down:
+    if budget_progress > 0.40 or time_progress > 0.40:  # Changed from 0.50
+        should_scale_down = False
+        blocked_reason = 'budget_or_time_progress'
+
+# GUARD 6: Minimum instance protection (NEW)
+if should_scale_down and cur_count <= 2:
+    should_scale_down = False
+    blocked_reason = 'min_instance_limit'
+```
+
+**Guard improvements:**
+- **NEW Guard 3**: Block scale-down when <50% time remaining (direct deadline protection)
+- **NEW Guard 6**: Never scale below 2 instances (minimum viable allocation)
+- **Tighter Guard 2**: Block scale-down earlier (iteration 2 vs 3)
+- **Tighter Guard 5**: Block at 40% progress (vs 50%, more conservative)
+
+### 17.5 Critical Bug Discovery and v5.1 Fix
+
+**Problem**: v5 testing revealed **triggers fired but scale-ups were cancelled**
+
+**v5 Test Results (400 workflows):**
+- Deadline miss rate: **11.75%** (improved from 16%, but still worse than 7.25% baseline)
+- Scale-up attempts: **Only 6 attempts**
+- Trigger fires: **~138 times** (CRITICAL: 8, EARLY: 124, MID: 6)
+- Success rate: **4.3%** (96% of triggers cancelled!)
+
+**Root Cause** (`edf_optimized_LA.py:858-886`):
+
+```python
+# OLD v5 CODE (BUG):
+if request['count'] is None:
+    request['count'] = min_needed_count - cur_count
+    if request['count'] <= 0:
+        print(f"  → No resource adjustment needed")
+        return  # ← This cancelled 96% of scale-ups!
+```
+
+**Analysis**: When trigger fired (workflow falling behind), code checked if workflow already had minimum needed resources. If yes, it returned early without requesting more. **But a workflow that's falling behind needs MORE than minimum to catch up!**
+
+**v5.1 Fix**:
+
+```python
+# === v5.1 FIX: Force additional resources when triggers fire ===
+if request['count'] is None:
+    if force_scale_up_attempt:
+        # Request ADDITIONAL instances beyond current allocation
+        # Scale by urgency: CRITICAL (50%), WARNING (40%), Regular (30%)
+        if urgency_mode == 'CRITICAL':
+            scale_up_percentage = 0.50  # 50% more resources
+            print(f"  🚨 CRITICAL SCALE-UP: requesting 50% more resources")
+        elif urgency_mode == 'WARNING':
+            scale_up_percentage = 0.40  # 40% more resources
+            print(f"  ⚠️ WARNING SCALE-UP: requesting 40% more resources")
+        else:
+            scale_up_percentage = 0.30  # 30% more resources
+            print(f"  ⚡ FORCED SCALE-UP: requesting 30% more resources")
+
+        additional_instances = max(1, int(cur_count * scale_up_percentage))
+        request['count'] = additional_instances
+        print(f"  💪 Requesting +{additional_instances} instances (current: {cur_count} → target: {cur_count + additional_instances})")
+    else:
+        # Normal case: only request if we need more to reach minimum
+        request['count'] = min_needed_count - cur_count
+        if request['count'] <= 0:
+            print(f"  → No resource adjustment needed")
+            return
+```
+
+**Fix rationale:**
+- When triggers fire, **always request additional resources** (never return early)
+- Additional resources scaled by urgency: 30% → 40% → 50%
+- Ensures falling-behind workflows get help to catch up on deadline
+
+### 17.6 Performance Results
+
+#### v4 → v5 → v5.1 Progression
+
+**At 400 workflows:**
+
+| Version | Completions | Deadline Miss | Scale-Ups | Notes |
+|---------|-------------|---------------|-----------|-------|
+| **v4** | 358/400 (89.5%) | **16.0%** | ~14 | Original version |
+| **v5** | 353/400 (88.25%) | **11.75%** | **6** | Triggers added but broken |
+| **v5.1** | 354/400 (88.5%) | **11.5%** | **189** | Fix applied ✓ |
+| **Static baseline** | - | **7.25%** | - | Target to beat |
+
+**Improvement**: v5.1 vs v4 = **-28.1% deadline miss rate**
+
+**At 300 workflows:**
+
+| Version | Completions | Deadline Miss | Scale-Ups | Notes |
+|---------|-------------|---------------|-----------|-------|
+| **v4** | 300/300 (100%) | **13.0%** | ~20 | Original version |
+| **v5** | 263/300 (87.7%) | **12.33%** | 23 | Triggers added but broken |
+| **v5.1** | 273/300 (91.0%) | **9.0%** | **144** | Fix applied ✓ |
+| **Static baseline** | - | **7.7%** | - | Target to beat |
+
+**Improvement**: v5.1 vs v4 = **-30.8% deadline miss rate**
+
+#### v5.1 Scale-Up Effectiveness
+
+**300 workflows:**
+- Scale-up attempts: 144 (86.8% success rate)
+- Average: 0.53 scale-ups per workflow
+- Total cost: €34,571
+
+**400 workflows:**
+- Scale-up attempts: 189 (91.0% success rate)
+- Average: 0.53 scale-ups per workflow
+- Total cost: €40,161
+
+**Comparison to v5:**
+- 300wf: 23 → 144 scale-ups (**6.3× increase**)
+- 400wf: 6 → 189 scale-ups (**31× increase**)
+- Proves v5.1 fix worked: triggers now produce actual scale-ups
+
+#### Gap to Static Baseline
+
+Despite v5.1 improvements, deadline miss rate still does NOT beat static baseline:
+
+- **400wf**: 11.5% vs 7.25% baseline (**+58.6% worse**)
+- **300wf**: 9.0% vs 7.7% baseline (**+16.9% worse**)
+
+**Why the gap exists:**
+1. **Reactive vs Proactive**: All triggers are reactive (wait for falling behind). Static baseline allocates upfront, preventing delays.
+2. **Scale-Up Latency**: By the time CRITICAL trigger fires (<30% time), workflow may be too far behind. Resource acquisition adds further delay.
+3. **Insufficient Boost**: 2.0× boost might not be enough for critical workflows to catch up.
+4. **Guard Over-Protection**: 6 scale-down guards may prevent necessary resource reallocation to starving workflows.
+
+### 17.7 Further Tuning Options (Not Implemented)
+
+Four potential tuning approaches were evaluated but **NOT implemented** due to significant risks:
+
+#### Option 1: Earlier/More Aggressive Triggers
+
+**Proposed changes:**
+- CRITICAL threshold: 30% → 40% time remaining
+- WARNING threshold: 50% → 60% time remaining
+- Add PROACTIVE trigger at iteration 0-1 for tight deadlines
+
+**Negative effects:**
+
+❌ **Over-reaction to normal variation**
+- Workflows on track get unnecessary scale-ups
+- Wastes resources on false alarms
+- Example: 55% time with 50% progress (on track) triggers WARNING
+
+❌ **Resource thrashing**
+- Frequent triggers → constant scale-up/down cycles
+- Each cycle has overhead (acquisition latency, migration)
+- System instability
+
+❌ **License pool exhaustion**
+- Many workflows trigger simultaneously → saturate pool
+- Creates artificial scarcity, starves other workflows
+- Cascading failures
+
+❌ **Budget burn rate**
+- Proactive early triggers burn budget before knowing if help is needed
+- Wasted budget can't be recovered
+- Later iterations starved of budget
+
+❌ **Reduced moldability benefits**
+- Defeats cost-saving purpose of moldable scheduling
+- Loses adaptability advantage
+
+---
+
+#### Option 2: Stronger Boost Factors
+
+**Proposed changes:**
+- CRITICAL: 2.0× → 3.0× or 4.0×
+- WARNING: 1.5× → 2.5×
+
+**Negative effects:**
+
+❌ **Catastrophic budget depletion**
+- 4× boost = 400% of iteration budget
+- Single iteration consumes entire workflow budget
+- Subsequent iterations forced to minimum (1 instance)
+- **Could make deadline miss WORSE** by starving later iterations
+
+❌ **License deadlock risk**
+- Requesting 3-4× resources blocks on license pool
+- Workflow waits indefinitely for unavailable licenses
+- Other workflows holding licenses can't proceed
+- System-wide gridlock
+
+❌ **Unfair resource distribution**
+- One CRITICAL workflow taking 4× resources starves 3 other workflows
+- Those 3 might miss deadlines because of the greedy one
+- **Overall system deadline miss rate could increase**
+
+❌ **Diminishing returns**
+- Doubling resources doesn't double speedup (Amdahl's law)
+- 4× resources might only give 2× speedup
+- Extremely wasteful cost-per-completion ratio
+
+❌ **Iteration budget formula breakdown**
+- `OPTIM_FCFS_BFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}`
+- Designed to distribute budget across iterations
+- 4× boost at iteration 2 violates tuned distribution
+- Could break assumptions elsewhere in code
+
+---
+
+#### Option 3: Relax Scale-Down Guards
+
+**Proposed changes:**
+- License saturation: 80% → 85%
+- Budget progress block: 40% → 50%
+- Iteration cutoff: 2 → 3
+
+**Negative effects:**
+
+❌ **Late-stage scale-downs hurt completion**
+- Scaling down at iteration 3 (vs 2) = fewer resources for final iterations
+- Final iterations often most critical for deadline
+- Workflow at 95% progress scales down, then misses deadline in last 5%
+
+❌ **License pool yo-yo effect**
+- 85% saturation (vs 80%) creates tight operating margin
+- Small demand fluctuations cause rapid scale-up/down cycles
+- System oscillates between saturation and under-utilization
+- Thrashing overhead reduces efficiency
+
+❌ **Budget exhaustion from delayed scale-downs**
+- Blocking scale-downs until 50% budget (vs 40%) = holding expensive resources longer
+- Workflows that could run efficiently on fewer instances waste budget
+- When they finally scale down, budget already depleted
+- Late iterations forced to minimum instances
+
+❌ **Reduced cost efficiency**
+- More relaxed guards = workflows hold more instances for longer
+- Total cost increases even if deadline miss rate improves
+- Could violate cost constraints
+
+❌ **Cascading deadline misses**
+- Workflow A holds instances (guards block scale-down)
+- Workflow B can't scale-up (licenses held by A)
+- B misses deadline
+- A scales down, but too late to help B
+- Guards protecting A actually hurt overall system
+
+---
+
+#### Option 4: Hybrid Approach
+
+**Proposed changes:**
+- If `deadline_urgency < 0.60` at iteration 0: allocate aggressively (like static)
+- Otherwise: use conservative LAMF approach
+
+**Negative effects:**
+
+❌ **Algorithm complexity and unpredictability**
+- Two completely different code paths
+- Hard to reason about, debug, tune
+- User confusion: "Is this EDF-LAMF or static?"
+
+❌ **Deadline estimation accuracy dependency**
+- Relies on accurate user-provided deadlines
+- Padded deadlines → wastes resources with static approach
+- Optimistic deadlines → hybrid doesn't help
+- Creates incentive to game the system
+
+❌ **Fairness issues**
+- Tight deadlines get VIP treatment (static allocation)
+- Comfortable deadlines get economy service (moldable)
+- Should all workflows be treated equally?
+
+❌ **Loss of moldability benefits**
+- If 50% of workflows have `urgency < 0.60`, they all use static
+- Defeats purpose of moldable scheduling
+- Might as well use static scheduler for everything
+
+❌ **Two-phase commit complexity**
+- Static allocation commits all resources upfront
+- What if licenses unavailable? Workflow blocked at iteration 0
+- Moldable approach starts with available resources, adapts later
+- Hybrid loses resilience advantage
+
+❌ **Parameter tuning nightmare**
+- Must tune parameters for TWO algorithms
+- Changes to one path could break the other
+- 60% cutoff becomes arbitrary
+- Double the maintenance cost
+
+❌ **Testing and validation burden**
+- Must test both code paths thoroughly
+- Edge cases at boundary (urgency ≈ 0.60)
+- Regressions could affect either path
+- Double the testing effort
+
+---
+
+### 17.8 Risk vs Reward Assessment
+
+| Tuning Option | Potential Gain | Risk Level | Main Danger |
+|---------------|----------------|------------|-------------|
+| Earlier triggers | +2-3% deadline improvement | **🟡 Medium** | Over-reaction, thrashing |
+| Stronger boosts | +5-8% deadline improvement | **🔴 High** | Budget depletion, unfairness |
+| Relax guards | +1-2% deadline improvement | **🟡 Medium** | Increased cost, cascading failures |
+| Hybrid approach | +3-5% deadline improvement | **🟠 Medium-High** | Complexity, unpredictability |
+
+### 17.9 Decision: v5.1 as Final Stable Version
+
+**Rationale for NOT pursuing further tuning:**
+
+1. **v5.1 achieves significant improvement over v4**:
+   - 28.1% reduction in deadline miss rate (400wf: 16% → 11.5%)
+   - 30.8% reduction in deadline miss rate (300wf: 13% → 9.0%)
+   - Stable, predictable behavior
+   - Maintains moldability cost benefits
+
+2. **Static baseline has inherent advantages**:
+   - No adaptation overhead
+   - No trigger latency
+   - No scale-up waiting time
+   - Resources allocated upfront (prevents delays)
+
+3. **EDF-LAMF's value proposition is different**:
+   - **Cost efficiency**: Pay only for what you use (moldability)
+   - **Adaptability**: Handle varying workloads dynamically
+   - **Fairness**: Deadline-aware prioritization (EDF ordering)
+   - **License awareness**: Sophisticated dual-resource management
+   - Not necessarily "beat static on deadline miss rate at all costs"
+
+4. **Risk of breaking what works**:
+   - v5.1 is stable, predictable, significantly better than v4
+   - Aggressive tuning introduces instability, unpredictability
+   - Regression risk is real (could make things worse)
+   - Additional complexity increases maintenance burden
+
+**Conclusion**: v5.1 represents the **optimal balance** between deadline performance improvement and system stability. Further tuning carries disproportionate risk for marginal gains.
+
+---
+
+## 18. CONCLUSIONS
 
 The **EDF_Optimized_LA scheduler** represents a sophisticated research-grade scheduler for **multi-resource constrained scientific workflows**. It successfully integrates:
 
