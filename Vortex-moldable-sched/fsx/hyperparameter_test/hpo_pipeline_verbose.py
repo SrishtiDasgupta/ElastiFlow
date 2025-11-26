@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 from datetime import datetime
+import torch
 
 from ray.train.torch import TorchTrainer
 from ray.train import ScalingConfig, RunConfig
@@ -160,7 +161,7 @@ class TunePipeline:
         try:
             # Initialize Ray
             logger.info("Initializing Ray...")
-            ray.init(ignore_reinit_error=True)
+            ray.init(address="auto", ignore_reinit_error=True)
             logger.info(f"Ray cluster info: {ray.cluster_resources()}")
 
             best_metric = cohesion or 0.0
@@ -387,7 +388,7 @@ def refine_space(best_config):
 def get_default_config():
     """Return a default configuration for testing"""
     return {
-        "epoch": 12,
+        "epoch": 3,
         "learning_rate": 0.01,
         "momentum": 0.9,
         "hidden": 10,
@@ -414,6 +415,7 @@ if __name__ == "__main__":
         logger.info(f"Command line args: {args}")
 
         # Get configuration
+
         if args.test:
             logger.info("Using default test configuration...")
             request = get_default_config()
@@ -500,7 +502,3 @@ if __name__ == "__main__":
         import traceback
         logger.error(f"Full traceback:\n{traceback.format_exc()}")
         sys.exit(1)
-
-                                                                                                                                                                      513,0-1       Bot
-
-
