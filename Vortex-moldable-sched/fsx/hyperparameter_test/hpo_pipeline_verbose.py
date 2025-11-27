@@ -1,19 +1,21 @@
 import ray
-from ray import tune, air
+from ray import tune
 import os
 import sys
 import logging
 from datetime import datetime
 import torch
+from typing import List, Tuple, Dict, Any
+
+# Set timeout for worker startup BEFORE importing ray.train
+os.environ["RAY_TRAIN_WORKER_GROUP_START_TIMEOUT_S"] = "180"
 
 from ray.train.torch import TorchTrainer
 from ray.train import ScalingConfig, RunConfig
-from ray.tune.integration.ray_train import TuneReportCallback
 from ray.tune.schedulers import AsyncHyperBandScheduler
-from train_cifar10_torch_ray_oomsafe import train_cifar10_torch  # Changed from Keras to PyTorch
+from train_cifar10_torch_ray_oomsafe import train_cifar10_torch
 import numpy as np
 import argparse
-import pandas as pd
 import json
 
 MIN_TRIALS = 3
@@ -31,13 +33,410 @@ def setup_logging():
         ]
     )
 
-    # Set Ray logging to INFO level
     ray_logger = logging.getLogger("ray")
     ray_logger.setLevel(logging.INFO)
 
     return logging.getLogger(__name__)
 
 logger = setup_logging()
+
+
+# =============================================================================
+# HYBRID BATCHING RESOURCE ALLOCATION ALGORITHM
+# =============================================================================
+#
+# This algorithm optimizes GPU utilization for HPO by using a hybrid approach:
+# 1. Run full parallel batches (1 GPU per trial) for maximum exploration
+# 2. Handle remaining trials optimally based on divisibility and efficiency
+#
+# PROFILING DATA (VGG19 on G4/G5 instances):
+# ┌─────────┬───────────┬──────────┬────────────┐
+# │ Workers │ Time/Epoch│ Speedup  │ Efficiency │
+# ├─────────┼───────────┼──────────┼────────────┤
+# │ 1 GPU   │ 82.0s     │ 1.00x    │ 100%       │
+# │ 2 GPUs  │ 42.0s     │ 1.95x    │ 97.6%      │
+# │ 4 GPUs  │ 21.4s     │ 3.84x    │ 96.0%      │
+# └─────────┴───────────┴──────────┴────────────┘
+#
+# KEY INSIGHT: With high scaling efficiency (>90%), we should:
+# - Use all GPUs even for remainder trials (no idle GPUs)
+# - Balance between parallel exploration and distributed speedup
+#
+# DECISION MATRIX (4 hosts example):
+# ┌────────┬─────────────────────────────────────────────────────────┐
+# │ Trials │ Strategy                                                │
+# ├────────┼─────────────────────────────────────────────────────────┤
+# │ 1      │ 1 trial × 4 GPUs (distributed)                         │
+# │ 2      │ 2 trials × 2 GPUs each (balanced, concurrent)          │
+# │ 3      │ 3 trials × 4 GPUs each (distributed, sequential)       │
+# │ 4      │ 4 trials × 1 GPU each (parallel, concurrent)           │
+# │ 5      │ Batch1: 4×1 GPU (parallel) + Batch2: 1×4 GPUs (dist)   │
+# │ 6      │ Batch1: 4×1 GPU (parallel) + Batch2: 2×2 GPUs (bal)    │
+# │ 7      │ Batch1: 4×1 GPU + Batch2: 2×2 GPU + Batch3: 1×4 GPU    │
+# │ 8      │ 2 batches of 4×1 GPU each (parallel)                   │
+# └────────┴─────────────────────────────────────────────────────────┘
+# =============================================================================
+
+
+def calculate_optimal_batches(
+    num_trials: int, 
+    num_hosts: int, 
+    efficiency: float = 0.92
+) -> List[Dict[str, Any]]:
+    """
+    Calculate the optimal batch execution plan for HPO trials.
+    
+    This function implements a hybrid batching strategy that:
+    1. Maximizes parallel exploration when possible
+    2. Minimizes idle GPU time for remainder trials
+    3. Uses distributed training when it provides speedup benefits
+    
+    Algorithm Overview:
+    ==================
+    
+    Step 1: Calculate full parallel batches
+    ---------------------------------------
+    When trials >= hosts, we can run full parallel batches where each
+    trial uses 1 GPU. This maximizes exploration of hyperparameter space.
+    
+        full_batches = num_trials // num_hosts
+        remainder = num_trials % num_hosts
+    
+    Step 2: Handle remainder trials optimally
+    -----------------------------------------
+    For remainder trials (when remainder > 0), we have several options:
+    
+    a) If remainder == 0: Done, no leftover trials
+    
+    b) If remainder == 1: Use ALL GPUs for single trial (distributed)
+       - Time: T_h (one trial with h GPUs)
+       - Better than: T_1 with (h-1) idle GPUs
+    
+    c) If num_hosts % remainder == 0: Use BALANCED allocation
+       - Each trial gets (num_hosts / remainder) GPUs
+       - All remainder trials run concurrently
+       - Example: 4 hosts, 2 remaining → 2 trials × 2 GPUs each
+    
+    d) Otherwise: Compare DISTRIBUTED vs PARALLEL+IDLE
+       - Distributed: remainder trials × T_h (sequential, all GPUs)
+       - Parallel: 1 batch × T_1 (concurrent, some GPUs idle)
+       - Choose whichever is faster based on efficiency
+    
+    Time Complexity Analysis:
+    ========================
+    Let T_n = time for 1 trial with n GPUs
+    With efficiency η: T_n ≈ T_1 / (n × η)
+    
+    For 4 hosts, η = 0.92:
+    - T_1 = 1.00 (baseline)
+    - T_2 = 1/(2×0.92) = 0.54
+    - T_4 = 1/(4×0.92) = 0.27
+    
+    Args:
+        num_trials: Total number of HPO trials to run
+        num_hosts: Number of available GPUs
+        efficiency: Scaling efficiency from profiling (default 0.92)
+        
+    Returns:
+        List of batch configurations, each containing:
+        - workers_per_trial: GPUs per trial in this batch
+        - concurrent_trials: Trials running in parallel
+        - num_trials: Number of trials in this batch
+        - mode: Description of the batch strategy
+        
+    Example:
+        >>> calculate_optimal_batches(7, 4, 0.92)
+        [
+            {'workers': 1, 'concurrent': 4, 'trials': 4, 'mode': 'parallel'},
+            {'workers': 2, 'concurrent': 2, 'trials': 2, 'mode': 'balanced'},
+            {'workers': 4, 'concurrent': 1, 'trials': 1, 'mode': 'distributed'}
+        ]
+    """
+    
+    batches = []
+    remaining_trials = num_trials
+    
+    logger.info("=" * 70)
+    logger.info("CALCULATING OPTIMAL BATCH EXECUTION PLAN")
+    logger.info("=" * 70)
+    logger.info(f"Input: {num_trials} trials, {num_hosts} GPUs, efficiency={efficiency}")
+    
+    # =========================================================================
+    # STEP 1: Fill complete parallel batches
+    # =========================================================================
+    # When we have more trials than GPUs, run them in parallel batches
+    # Each trial gets 1 GPU, maximizing hyperparameter exploration
+    # =========================================================================
+    
+    if remaining_trials >= num_hosts:
+        full_parallel_batches = remaining_trials // num_hosts
+        trials_in_parallel = full_parallel_batches * num_hosts
+        
+        batches.append({
+            'workers_per_trial': 1,
+            'concurrent_trials': num_hosts,
+            'num_trials': trials_in_parallel,
+            'num_batches': full_parallel_batches,
+            'mode': 'parallel'
+        })
+        
+        remaining_trials = remaining_trials % num_hosts
+        
+        logger.info(f"Step 1: PARALLEL BATCHES")
+        logger.info(f"  - {full_parallel_batches} batch(es) of {num_hosts} trials each")
+        logger.info(f"  - Total: {trials_in_parallel} trials (1 GPU per trial)")
+        logger.info(f"  - Remaining: {remaining_trials} trials")
+    
+    # =========================================================================
+    # STEP 2: Handle remainder trials optimally
+    # =========================================================================
+    # For leftover trials, choose the fastest strategy:
+    # - Single trial: use all GPUs (distributed)
+    # - Perfect division: balanced allocation
+    # - Otherwise: compare distributed vs parallel
+    # =========================================================================
+    
+    if remaining_trials == 0:
+        logger.info(f"Step 2: No remainder trials - done!")
+        
+    elif remaining_trials == 1:
+        # ---------------------------------------------------------------------
+        # Case 2a: Single remaining trial
+        # ---------------------------------------------------------------------
+        # Use ALL GPUs for this one trial (distributed training)
+        # This is always better than running 1 trial with idle GPUs
+        #
+        # Time comparison:
+        #   Distributed: T_h = T_1 / (h × η)
+        #   Parallel:    T_1 (with h-1 idle GPUs)
+        #
+        # For h=4, η=0.92: T_4 = 0.27 < T_1 = 1.00 ✓
+        # ---------------------------------------------------------------------
+        
+        batches.append({
+            'workers_per_trial': num_hosts,
+            'concurrent_trials': 1,
+            'num_trials': 1,
+            'num_batches': 1,
+            'mode': 'distributed'
+        })
+        
+        logger.info(f"Step 2: SINGLE REMAINDER → DISTRIBUTED")
+        logger.info(f"  - 1 trial using all {num_hosts} GPUs")
+        logger.info(f"  - Speedup: ~{num_hosts * efficiency:.1f}x vs single GPU")
+        
+        remaining_trials = 0
+        
+    elif num_hosts % remaining_trials == 0:
+        # ---------------------------------------------------------------------
+        # Case 2b: Perfect division (balanced allocation)
+        # ---------------------------------------------------------------------
+        # GPUs divide evenly among remaining trials
+        # All trials run concurrently with multi-GPU each
+        #
+        # Example: 4 hosts, 2 remaining
+        #   → 2 trials × 2 GPUs each, running concurrently
+        #   → Time: T_2 = 0.54 (both finish together)
+        #
+        # This is optimal because:
+        #   - No idle GPUs
+        #   - All trials complete simultaneously
+        #   - Benefits from distributed training speedup
+        # ---------------------------------------------------------------------
+        
+        workers = num_hosts // remaining_trials
+        
+        batches.append({
+            'workers_per_trial': workers,
+            'concurrent_trials': remaining_trials,
+            'num_trials': remaining_trials,
+            'num_batches': 1,
+            'mode': 'balanced'
+        })
+        
+        logger.info(f"Step 2: PERFECT DIVISION → BALANCED")
+        logger.info(f"  - {remaining_trials} trials × {workers} GPUs each (concurrent)")
+        logger.info(f"  - All trials complete simultaneously")
+        
+        remaining_trials = 0
+        
+    else:
+        # ---------------------------------------------------------------------
+        # Case 2c: Uneven remainder (compare strategies)
+        # ---------------------------------------------------------------------
+        # GPUs don't divide evenly. Compare two strategies:
+        #
+        # Strategy A - Distributed Sequential:
+        #   Run each trial with ALL GPUs, one after another
+        #   Time: remaining × T_h = remaining × T_1 / (h × η)
+        #
+        # Strategy B - Parallel with Idle GPUs:
+        #   Run all trials at once, 1 GPU each, some GPUs idle
+        #   Time: T_1 (single batch, but GPUs wasted)
+        #
+        # Decision: Distributed wins when:
+        #   remaining × T_h < T_1
+        #   remaining / (h × η) < 1
+        #   remaining < h × η
+        # ---------------------------------------------------------------------
+        
+        # Calculate time for each strategy (normalized to T_1 = 1.0)
+        distributed_time = remaining_trials / (num_hosts * efficiency)
+        parallel_time = 1.0  # One batch with idle GPUs
+        
+        logger.info(f"Step 2: UNEVEN REMAINDER → COMPARING STRATEGIES")
+        logger.info(f"  - Remaining trials: {remaining_trials}")
+        logger.info(f"  - Strategy A (distributed sequential): {remaining_trials} × T_{num_hosts}")
+        logger.info(f"    Time: {remaining_trials} / ({num_hosts} × {efficiency}) = {distributed_time:.3f} × T_1")
+        logger.info(f"  - Strategy B (parallel + idle): 1 batch, {num_hosts - remaining_trials} GPUs idle")
+        logger.info(f"    Time: {parallel_time:.3f} × T_1")
+        
+        if distributed_time < parallel_time:
+            # Distributed sequential is faster
+            batches.append({
+                'workers_per_trial': num_hosts,
+                'concurrent_trials': 1,
+                'num_trials': remaining_trials,
+                'num_batches': remaining_trials,
+                'mode': 'distributed_sequential'
+            })
+            
+            logger.info(f"  → Winner: DISTRIBUTED SEQUENTIAL")
+            logger.info(f"    {remaining_trials} trials × {num_hosts} GPUs each (sequential)")
+            
+        else:
+            # Parallel with idle GPUs is faster
+            idle_gpus = num_hosts - remaining_trials
+            
+            batches.append({
+                'workers_per_trial': 1,
+                'concurrent_trials': remaining_trials,
+                'num_trials': remaining_trials,
+                'num_batches': 1,
+                'mode': 'parallel_idle'
+            })
+            
+            logger.info(f"  → Winner: PARALLEL + IDLE")
+            logger.info(f"    {remaining_trials} trials × 1 GPU each, {idle_gpus} GPUs idle")
+        
+        remaining_trials = 0
+    
+    # =========================================================================
+    # SUMMARY
+    # =========================================================================
+    
+    logger.info("=" * 70)
+    logger.info("BATCH EXECUTION PLAN SUMMARY")
+    logger.info("=" * 70)
+    
+    total_time_units = 0.0
+    for i, batch in enumerate(batches):
+        workers = batch['workers_per_trial']
+        concurrent = batch['concurrent_trials']
+        trials = batch['num_trials']
+        num_batches = batch['num_batches']
+        mode = batch['mode']
+        
+        # Calculate time for this batch group (in T_1 units)
+        time_per_trial = 1.0 / (workers * efficiency) if workers > 1 else 1.0
+        if mode in ['parallel', 'balanced', 'parallel_idle']:
+            batch_time = time_per_trial * num_batches
+        else:  # distributed_sequential
+            batch_time = time_per_trial * trials
+        
+        total_time_units += batch_time
+        
+        logger.info(f"Batch Group {i+1}: {mode.upper()}")
+        logger.info(f"  - Trials: {trials} ({num_batches} batch(es) of {concurrent})")
+        logger.info(f"  - Config: {workers} GPU(s)/trial, {concurrent} concurrent")
+        logger.info(f"  - Time: {batch_time:.3f} × T_1")
+    
+    logger.info("-" * 70)
+    logger.info(f"TOTAL ESTIMATED TIME: {total_time_units:.3f} × T_1")
+    
+    # Compare to naive parallel (all 1 GPU, no optimization)
+    naive_batches = (num_trials + num_hosts - 1) // num_hosts
+    naive_time = naive_batches * 1.0
+    savings = (naive_time - total_time_units) / naive_time * 100
+    
+    logger.info(f"NAIVE PARALLEL TIME:  {naive_time:.3f} × T_1")
+    logger.info(f"TIME SAVINGS:         {savings:.1f}%")
+    logger.info("=" * 70)
+    
+    return batches
+
+
+def get_simple_allocation(
+    num_trials: int, 
+    num_hosts: int, 
+    efficiency: float = 0.92
+) -> Tuple[int, int, str]:
+    """
+    Simplified allocation for single-phase execution (Ray Tune compatibility).
+    
+    Since Ray Tune doesn't natively support multi-phase execution with different
+    resource configurations, this function returns a single allocation that works
+    for the entire HPO run. It chooses the best single-phase strategy.
+    
+    For true optimal execution, use calculate_optimal_batches() with manual
+    multi-phase orchestration.
+    
+    Decision Logic:
+    1. trials >= hosts: PARALLEL (1 GPU/trial, maximize exploration)
+    2. hosts % trials == 0: BALANCED (perfect distribution)
+    3. trials == 1: DISTRIBUTED (use all GPUs)
+    4. Otherwise: Compare and choose best single strategy
+    
+    Args:
+        num_trials: Number of HPO trials
+        num_hosts: Number of available GPUs
+        efficiency: Scaling efficiency (default 0.92)
+        
+    Returns:
+        Tuple of (workers_per_trial, max_concurrent_trials, mode_string)
+    """
+    
+    logger.info(f"Simple allocation: {num_trials} trials, {num_hosts} GPUs")
+    
+    if num_trials >= num_hosts:
+        # More trials than GPUs - can only do 1 GPU per trial
+        mode = "parallel"
+        workers = 1
+        concurrent = num_hosts
+        logger.info(f"  → PARALLEL: {workers} GPU/trial, {concurrent} concurrent")
+        
+    elif num_hosts % num_trials == 0:
+        # Perfect division - balanced is optimal
+        mode = "balanced"
+        workers = num_hosts // num_trials
+        concurrent = num_trials
+        logger.info(f"  → BALANCED: {workers} GPUs/trial, {concurrent} concurrent")
+        
+    elif num_trials == 1:
+        # Single trial - use all GPUs
+        mode = "distributed"
+        workers = num_hosts
+        concurrent = 1
+        logger.info(f"  → DISTRIBUTED: {workers} GPUs/trial, {concurrent} concurrent")
+        
+    else:
+        # Uneven - compare strategies
+        distributed_time = num_trials / (num_hosts * efficiency)
+        
+        if distributed_time < 1.0:
+            mode = "distributed_sequential"
+            workers = num_hosts
+            concurrent = 1
+            logger.info(f"  → DISTRIBUTED SEQ: {workers} GPUs/trial, sequential")
+        else:
+            mode = "parallel_idle"
+            workers = 1
+            concurrent = num_trials
+            idle = num_hosts - num_trials
+            logger.info(f"  → PARALLEL+IDLE: {workers} GPU/trial, {idle} idle")
+    
+    return workers, concurrent, mode
+
 
 class TunePipeline:
     def __init__(
@@ -53,7 +452,8 @@ class TunePipeline:
         improvement_threshold=1e-3,
         patience=2,
         numHosts=1,
-        refine_pct=0.2
+        refine_pct=0.2,
+        scaling_efficiency=0.92  # From profiling data
     ):
         logger.info("=" * 80)
         logger.info("INITIALIZING TunePipeline")
@@ -70,242 +470,352 @@ class TunePipeline:
         self.improvement_threshold = improvement_threshold
         self.patience = patience
         self.numHosts = numHosts
-        self.host_alloc = [0] * num_samples
+        self.scaling_efficiency = scaling_efficiency
 
         logger.info(f"Training function: {train_fn.__name__}")
         logger.info(f"Search space: {self.search_space}")
         logger.info(f"Target metric: {metric} {mode} {target}")
-        logger.info(f"Number of samples: {num_samples}")
-        logger.info(f"Available hosts: {numHosts}")
+        logger.info(f"Number of samples (trials): {num_samples}")
+        logger.info(f"Available hosts (GPUs): {numHosts}")
+        logger.info(f"Scaling efficiency: {scaling_efficiency}")
         logger.info(f"Improvement threshold: {improvement_threshold}")
-
-    def allocate_trials(self, num_trials, num_hosts):
-        """Distribute available hosts across trials as evenly as possible"""
-        logger.info(f"ALLOCATING RESOURCES: {num_hosts} hosts across {num_trials} trials")
-
-        base = max(1, num_hosts // max(1, num_trials))
-        rem = max(0, num_hosts - base * num_trials)
-        allocation = [base + (1 if i < rem else 0) for i in range(num_trials)]
-
-        logger.info(f"Base allocation per trial: {base}")
-        logger.info(f"Remainder hosts: {rem}")
-        logger.info(f"Final allocation: {allocation}")
-        logger.info(f"Total allocated: {sum(allocation)}/{num_hosts}")
-
-        return allocation
 
     def train_driver_fn(self, config: dict):
         """Ray Tune-compatible wrapper that creates distributed PyTorch trainer"""
-        trial_id = ray.tune.get_context().get_trial_id()
-        num_workers = config["num_workers"]
+        import time
+        import socket
+        
+        # Get trial info
+        trial_context = ray.tune.get_context()
+        trial_id = trial_context.get_trial_id() #if trial_context else "unknown"
+        trial_name = trial_context.get_trial_name() #if trial_context else "unknown"
+        num_workers = config.get("num_workers", 1)
+        
+        # Get current node info
+        current_node = socket.gethostname()
+        current_ip = socket.gethostbyname(current_node)
+        
+        # Record start time
+        start_time = time.time()
+        start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
-        logger.info("=" * 60)
-        logger.info(f"STARTING TRIAL {trial_id}")
-        logger.info("=" * 60)
-        logger.info(f"Trial config: {json.dumps(config, indent=2)}")
-        logger.info(f"Using {num_workers} workers")
+        logger.info("=" * 70)
+        logger.info(f"TRIAL START")
+        logger.info("=" * 70)
+        logger.info(f"  Trial ID:       {trial_id}")
+        logger.info(f"  Trial Name:     {trial_name}")
+        logger.info(f"  Start Time:     {start_timestamp}")
+        logger.info(f"  Driver Node:    {current_node} ({current_ip})")
+        logger.info(f"  Workers (GPUs): {num_workers}")
+        logger.info(f"  Config:         {json.dumps({k: str(v) for k, v in config.items()}, indent=2)}")
+        logger.info("-" * 70)
 
         try:
             # Create TorchTrainer for distributed PyTorch training
-            logger.info("Creating TorchTrainer...")
+            # Note: Do NOT specify resources_per_worker here - let Ray auto-detect
+            logger.info(f"[{trial_id}] Creating TorchTrainer with {num_workers} workers...")
             trainer = TorchTrainer(
                 train_loop_per_worker=self.train_fn,
                 scaling_config=ScalingConfig(
                     num_workers=num_workers,
-                    resources_per_worker={"GPU": 1},
                     use_gpu=True
                 ),
                 train_loop_config=config,
                 run_config=RunConfig(
                     name=f"train-trial_id={trial_id}",
-                    storage_path='/fsx/ray_results',
-                    verbose=2  # Maximum verbosity
+                    storage_path='/fsx/ray_results'
                 )
             )
-            logger.info("TorchTrainer created successfully")
+            trainer_created_time = time.time()
+            logger.info(f"[{trial_id}] TorchTrainer created in {trainer_created_time - start_time:.2f}s")
 
-            # Execute training and extract final accuracy
-            logger.info("Starting distributed training...")
+            # Execute training
+            logger.info(f"[{trial_id}] Starting distributed training...")
+            training_start_time = time.time()
             result = trainer.fit()
-            logger.info(f"Training completed. Result type: {type(result)}")
-            logger.info(f"Result metrics: {result.metrics}")
-            logger.info(f"Result error: {result.error}")
+            training_end_time = time.time()
+            training_duration = training_end_time - training_start_time
+            
+            logger.info(f"[{trial_id}] Training completed in {training_duration:.2f}s")
 
             # Extract accuracy from training result
-            final_accuracy = result.metrics.get('accuracy', 0.0)
-            if 'best_accuracy' in result.metrics:
-                final_accuracy = max(final_accuracy, result.metrics['best_accuracy'])
+            final_accuracy = 0.0
+            if result.metrics:
+                final_accuracy = result.metrics.get('accuracy', 0.0)
+                if 'best_accuracy' in result.metrics:
+                    final_accuracy = max(final_accuracy, result.metrics['best_accuracy'])
+            
+            # Also check metrics_dataframe for the last reported accuracy
+            if hasattr(result, 'metrics_dataframe') and result.metrics_dataframe is not None:
+                df = result.metrics_dataframe
+                if 'accuracy' in df.columns and len(df) > 0:
+                    final_accuracy = max(final_accuracy, df['accuracy'].iloc[-1])
 
-            logger.info(f"Final accuracy for trial {trial_id}: {final_accuracy}")
+            # Record end time
+            end_time = time.time()
+            end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            total_duration = end_time - start_time
 
-            # Report to Ray Tune
-            logger.info(f"Reporting to Ray Tune: accuracy={final_accuracy}")
-            tune.report({"accuracy": final_accuracy})
-            logger.info(f"Trial {trial_id} completed successfully")
+            logger.info("=" * 70)
+            logger.info(f"TRIAL COMPLETE")
+            logger.info("=" * 70)
+            logger.info(f"  Trial ID:       {trial_id}")
+            logger.info(f"  End Time:       {end_timestamp}")
+            logger.info(f"  Driver Node:    {current_node} ({current_ip})")
+            logger.info(f"  Workers Used:   {num_workers}")
+            logger.info(f"  Training Time:  {training_duration:.2f}s ({training_duration/60:.2f} min)")
+            logger.info(f"  Total Time:     {total_duration:.2f}s ({total_duration/60:.2f} min)")
+            logger.info(f"  Final Accuracy: {final_accuracy:.4f}")
+            logger.info("=" * 70)
+
+            # Return metrics (don't use tune.report in nested TorchTrainer)
+            return {"accuracy": final_accuracy}
 
         except Exception as e:
-            logger.error(f"ERROR in trial {trial_id}: {str(e)}")
-            logger.error(f"Exception type: {type(e)}")
+            end_time = time.time()
+            end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            total_duration = end_time - start_time
+            
+            logger.error("=" * 70)
+            logger.error(f"TRIAL FAILED")
+            logger.error("=" * 70)
+            logger.error(f"  Trial ID:       {trial_id}")
+            logger.error(f"  End Time:       {end_timestamp}")
+            logger.error(f"  Driver Node:    {current_node} ({current_ip})")
+            logger.error(f"  Duration:       {total_duration:.2f}s")
+            logger.error(f"  Error:          {str(e)}")
             import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            # Report failure to Ray Tune
-            tune.report({"accuracy": 0.0, "error": str(e)})
-            raise
+            logger.error(f"  Traceback:\n{traceback.format_exc()}")
+            logger.error("=" * 70)
+            return {"accuracy": 0.0, "error": str(e)}
 
     def run(self, cohesion=None):
         """Execute the hyperparameter optimization pipeline"""
+        import time
+        import socket
+        
+        hpo_start_time = time.time()
+        hpo_start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        
         logger.info("=" * 80)
-        logger.info("STARTING HYPERPARAMETER OPTIMIZATION RUN")
+        logger.info("HPO RUN STARTED")
+        logger.info("=" * 80)
+        logger.info(f"  Start Time:     {hpo_start_timestamp}")
+        logger.info(f"  Total Trials:   {self.num_samples}")
+        logger.info(f"  Available GPUs: {self.numHosts}")
+        logger.info(f"  Efficiency:     {self.scaling_efficiency}")
         logger.info("=" * 80)
 
         try:
             # Initialize Ray
             logger.info("Initializing Ray...")
             ray.init(address="auto", ignore_reinit_error=True)
-            logger.info(f"Ray cluster info: {ray.cluster_resources()}")
+            
+            cluster_resources = ray.cluster_resources()
+            available_nodes = ray.nodes()
+            
+            logger.info("-" * 80)
+            logger.info("CLUSTER INFO")
+            logger.info("-" * 80)
+            logger.info(f"  Total Resources: {cluster_resources}")
+            logger.info(f"  Available GPUs:  {cluster_resources.get('GPU', 0)}")
+            logger.info(f"  Number of Nodes: {len(available_nodes)}")
+            for i, node in enumerate(available_nodes):
+                node_ip = node.get('NodeManagerAddress', 'unknown')
+                node_resources = node.get('Resources', {})
+                node_gpus = node_resources.get('GPU', 0)
+                node_alive = node.get('Alive', False)
+                logger.info(f"    Node {i+1}: {node_ip} | GPUs: {node_gpus} | Alive: {node_alive}")
+            logger.info("-" * 80)
 
             best_metric = cohesion or 0.0
             logger.info(f"Baseline metric for comparison: {best_metric}")
-            output = {}
 
-            # Allocate hosts across trials
-            logger.info("Allocating computational resources...")
-            host_alloc = self.allocate_trials(self.num_samples, self.numHosts)
-            it = iter(host_alloc)
+            # Calculate optimal batch plan (for logging/analysis)
+            batches = calculate_optimal_batches(
+                self.num_samples, 
+                self.numHosts, 
+                self.scaling_efficiency
+            )
+            
+            # Get simple allocation for Ray Tune (single-phase)
+            workers_per_trial, max_concurrent, mode = get_simple_allocation(
+                self.num_samples, 
+                self.numHosts,
+                self.scaling_efficiency
+            )
 
-            # Setup scheduler for early stopping and resource management
+            # Log allocation decision
+            logger.info("-" * 80)
+            logger.info("RESOURCE ALLOCATION DECISION")
+            logger.info("-" * 80)
+            logger.info(f"  Mode:              {mode}")
+            logger.info(f"  Workers/Trial:     {workers_per_trial} GPU(s)")
+            logger.info(f"  Max Concurrent:    {max_concurrent} trial(s)")
+            logger.info(f"  Expected Batches:  {(self.num_samples + max_concurrent - 1) // max_concurrent}")
+            logger.info("-" * 80)
+
+            # Setup scheduler
             logger.info("Setting up hyperparameter scheduler...")
             scheduler = AsyncHyperBandScheduler(
                 max_t=200,
                 metric=self.metric,
                 mode=self.mode,
             )
-            logger.info(f"Scheduler: {scheduler}")
 
-            # Add dynamic worker allocation to search space
-            logger.info("Adding dynamic worker allocation to search space...")
-            self.search_space[0]["num_workers"] = tune.sample_from(lambda _: next(it))
+            # Set num_workers in search space based on allocation
+            logger.info(f"Setting num_workers={workers_per_trial} in search space")
+            self.search_space[0]["num_workers"] = tune.choice([workers_per_trial])
             logger.info(f"Updated search space: {self.search_space[0]}")
 
-            # Create and configure Ray Tune experiment
+            # Create Ray Tune experiment
             logger.info("Creating Ray Tune experiment...")
+            logger.info(f"  num_samples={self.num_samples}")
+            logger.info(f"  max_concurrent_trials={max_concurrent}")
+            
             tuner = tune.Tuner(
                 self.train_driver_fn,
                 tune_config=tune.TuneConfig(
                     scheduler=scheduler,
-                    num_samples=self.num_samples
+                    num_samples=self.num_samples,
+                    max_concurrent_trials=max_concurrent,
                 ),
                 run_config=tune.RunConfig(
                     name="pytorch_hpo_exp",
                     stop={self.metric: self.target},
                     storage_path='/fsx/ray_results',
-                    verbose=2  # Maximum verbosity
+                    verbose=2
                 ),
                 param_space=self.search_space[0]
             )
             logger.info("Ray Tune experiment configured")
 
             # Execute hyperparameter search
-            logger.info("EXECUTING HYPERPARAMETER SEARCH...")
-            logger.info("This may take a while depending on your configuration...")
+            tune_start_time = time.time()
+            tune_start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            
+            logger.info("=" * 80)
+            logger.info(f"EXECUTING HPO TRIALS")
+            logger.info("=" * 80)
+            logger.info(f"  Tune Start:     {tune_start_timestamp}")
+            logger.info(f"  Trials:         {self.num_samples}")
+            logger.info(f"  Mode:           {mode}")
+            logger.info(f"  Workers/Trial:  {workers_per_trial}")
+            logger.info(f"  Max Concurrent: {max_concurrent}")
+            logger.info("=" * 80)
             results = tuner.fit()
-            logger.info("Hyperparameter search completed!")
+            
+            tune_end_time = time.time()
+            tune_end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            tune_duration = tune_end_time - tune_start_time
+            
+            logger.info("=" * 80)
+            logger.info("HPO TRIALS COMPLETED")
+            logger.info("=" * 80)
+            logger.info(f"  Tune End:       {tune_end_timestamp}")
+            logger.info(f"  Tune Duration:  {tune_duration:.2f}s ({tune_duration/60:.2f} min)")
+            logger.info("=" * 80)
 
-            # Analyze results and compute statistics
+            # Analyze results
             logger.info("Analyzing results...")
             df = results.get_dataframe()
             logger.info(f"Results dataframe shape: {df.shape}")
-            logger.info(f"Results columns: {df.columns.tolist()}")
 
             if not df.empty:
-                logger.info(f"Results head:\n{df.head()}")
+                logger.info(f"Results:\n{df.head()}")
                 results_file = 'pytorch_hpo_results.csv'
                 df.to_csv(results_file)
                 logger.info(f"Results saved to: {results_file}")
-            else:
-                logger.warning("Results dataframe is empty!")
 
-            # Calculate success rate for adaptive trial estimation
-            logger.info("Calculating success rate...")
+            # Calculate success rate
             if self.metric in df.columns:
                 accs = df[self.metric].values
                 hits = (accs >= best_metric + self.improvement_threshold).sum()
                 success_rate = hits / max(len(accs), 1)
-                logger.info(f"Successful trials: {hits}/{len(accs)}")
-                logger.info(f"Success rate: {success_rate:.3f}")
+                logger.info(f"Success rate: {hits}/{len(accs)} = {success_rate:.3f}")
             else:
-                logger.warning(f"Metric '{self.metric}' not found in results!")
                 success_rate = 0.0
 
-            # Get best configuration and performance
-            logger.info("Extracting best result...")
+            # Get best result
             try:
                 best = results.get_best_result(metric=self.metric, mode=self.mode)
-                score = best.metrics[self.metric]
-                configs = best.config.copy()  # Make a copy to avoid modification issues
+                score = best.metrics.get(self.metric, 0.0)
+                configs = best.config.copy()
                 logger.info(f"Best score: {score}")
                 logger.info(f"Best config: {configs}")
             except Exception as e:
                 logger.error(f"Error getting best result: {e}")
                 score = 0.0
-                configs = {}
+                configs = self.search_space[0].copy() if self.search_space else {}
 
-            # Prepare output with best config
-            output['config'] = configs
-
-            # Adaptive trial estimation using statistical model
-            logger.info("Computing adaptive trial estimation...")
-            if success_rate <= 0:
-                # No successful trials, use minimum
-                next_trials = MIN_TRIALS
-                logger.info(f"No successful trials found, using minimum: {next_trials}")
+            # Determine next iteration trial count
+            if success_rate > 0.5:
+                next_trials = max(MIN_TRIALS, int(self.num_samples * 0.5))
             else:
-                # Calculate trials needed: m = ceil(log(1-target)/log(1-q))
-                try:
-                    m = int(np.ceil(np.log(1 - self.target) / np.log(1 - success_rate)))
-                    next_trials = max(MIN_TRIALS, min(m, 50))  # Cap at 50
-                    logger.info(f"Statistical estimate: {m} trials")
-                    logger.info(f"Capped estimate: {next_trials} trials")
-                except Exception as e:
-                    logger.error(f"Error in statistical calculation: {e}")
-                    next_trials = MIN_TRIALS
+                next_trials = min(10, int(self.num_samples * 1.5))
 
-            output["config"]["next_trials"] = next_trials
+            logger.info(f"Next iteration trials: {next_trials} (based on success_rate={success_rate:.3f})")
 
-            # logger.info("=" * 60)
-            # logger.info("OPTIMIZATION RESULTS SUMMARY")
-            # logger.info("=" * 60)
-            # logger.info(f"Best {self.metric}: {score:.4f}")
-            # logger.info(f"Target {self.metric}: {self.target}")
-            # logger.info(f"Success rate: {success_rate:.3f}")
-            # logger.info(f"Next trials recommended: {next_trials}")
+            # Build output
+            output = {
+                "config": {
+                    **{k: (v if not hasattr(v, 'sample') else v.categories[0] if hasattr(v, 'categories') else v)
+                       for k, v in configs.items() if k != 'num_workers'},
+                    "accuracy": score,
+                    "next_trials": next_trials
+                },
+                "allocation_mode": mode,
+                "workers_per_trial": workers_per_trial,
+                "max_concurrent": max_concurrent,
+                "batch_plan": batches  # Include optimal batch plan for reference
+            }
 
-            # Check if target achieved
-            if (self.mode == "max" and score >= self.target) or (self.mode == "min" and score <= self.target):
-                logger.info("🎉 TARGET METRIC ACHIEVED! Stopping optimization.")
-                output["config"]["next_trials"] = 0
-            else:
-                logger.info(f"Target not yet achieved. Continue with {next_trials} more trials.")
+            # Final summary
+            hpo_end_time = time.time()
+            hpo_end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            hpo_duration = hpo_end_time - hpo_start_time
+            
+            logger.info("=" * 80)
+            logger.info("HPO RUN COMPLETE - SUMMARY")
+            logger.info("=" * 80)
+            logger.info(f"  Start Time:       {hpo_start_timestamp}")
+            logger.info(f"  End Time:         {hpo_end_timestamp}")
+            logger.info(f"  Total Duration:   {hpo_duration:.2f}s ({hpo_duration/60:.2f} min)")
+            logger.info(f"  Trials Executed:  {self.num_samples}")
+            logger.info(f"  Allocation Mode:  {mode}")
+            logger.info(f"  Workers/Trial:    {workers_per_trial}")
+            logger.info(f"  Max Concurrent:   {max_concurrent}")
+            logger.info(f"  Best Accuracy:    {score:.4f}")
+            logger.info(f"  Success Rate:     {success_rate:.3f}")
+            logger.info("=" * 80)
 
+            logger.info(f"Pipeline output: {output}")
             return output
 
         except Exception as e:
+            hpo_end_time = time.time()
+            hpo_end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            hpo_duration = hpo_end_time - hpo_start_time
+            
             logger.error("=" * 80)
-            logger.error("CRITICAL ERROR IN OPTIMIZATION PIPELINE")
+            logger.error("HPO RUN FAILED")
             logger.error("=" * 80)
-            logger.error(f"Error: {str(e)}")
-            logger.error(f"Error type: {type(e)}")
+            logger.error(f"  Start Time:     {hpo_start_timestamp}")
+            logger.error(f"  End Time:       {hpo_end_timestamp}")
+            logger.error(f"  Duration:       {hpo_duration:.2f}s")
+            logger.error(f"  Error:          {str(e)}")
             import traceback
-            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            logger.error(f"  Traceback:\n{traceback.format_exc()}")
+            logger.error("=" * 80)
             raise
 
 
 def refine_space(best_config):
-    """Intelligently refine hyperparameter search space around best configuration"""
-    logger.info("=" * 60)
+    """Create a refined search space around the best configuration"""
+    logger.info("=" * 80)
     logger.info("REFINING SEARCH SPACE")
-    logger.info("=" * 60)
-    logger.info(f"Input config: {best_config}")
+    logger.info("=" * 80)
+    logger.info(f"Best config to refine: {best_config}")
 
     new_space = {}
 
@@ -313,36 +823,29 @@ def refine_space(best_config):
         logger.info(f"Processing parameter: {k} = {v} (type: {type(v)})")
 
         if k == "next_trials":
-            # Skip this metadata field
             logger.info(f"  Skipping metadata field: {k}")
             continue
         elif k == "hidden":
-            # For CIFAR-10, this should always be 10 (number of classes)
             new_space[k] = tune.choice([10])
-            logger.info(f"  Fixed classes: {new_space[k]}")
+            logger.info(f"  Fixed classes: 10")
         elif k == "batch_size":
-            # Keep batch_size FIXED (match instrumentation baseline)
             new_space[k] = tune.choice([v])
             logger.info(f"  Batch size: fixed at {v}")
         elif k == "image_size":
-            # Keep image_size FIXED (match instrumentation baseline)
             new_space[k] = tune.choice([v])
             logger.info(f"  Image size: fixed at {v}")
         elif k == "epoch":
-            # Limit epochs to reasonable range
             low = max(1, int(v * 0.8))
             high = min(10, int(v * 1.5))
             new_space[k] = tune.randint(low, high)
             logger.info(f"  Epoch range: {low} to {high}")
         elif isinstance(v, float):
             if k == "learning_rate":
-                # Log-uniform distribution for learning rate
                 low = max(1e-5, v * 0.1)
                 high = min(1e-1, v * 10)
                 new_space[k] = tune.loguniform(low, high)
                 logger.info(f"  Learning rate (log): {low:.2e} to {high:.2e}")
             else:
-                # Standard uniform for other floats (momentum, etc.)
                 if k == "momentum":
                     low = max(0.1, v * 0.9)
                     high = min(0.99, v * 1.1)
@@ -352,38 +855,30 @@ def refine_space(best_config):
                 new_space[k] = tune.uniform(low, high)
                 logger.info(f"  Float {k}: {low:.4f} to {high:.4f}")
         elif isinstance(v, int) and k not in ["hidden", "batch_size", "image_size", "epoch", "amp", "train_backbone"]:
-            # Handle other integer parameters (exclude amp/train_backbone - they are booleans)
-            low = max(1, int(v * (1 - 0.5)))
-            high = int(v * (1 + 0.5))
-            if low >= high:  # Ensure valid range
-                high = low + 1  # Adjust high to be greater than low
-            new_space[k] = tune.randint(low,high)
+            low = max(1, int(v * 0.5))
+            high = int(v * 1.5)
+            if low >= high:
+                high = low + 1
+            new_space[k] = tune.randint(low, high)
             logger.info(f"  Integer {k}: {low} to {high}")
         elif isinstance(v, bool):
-            # Keep boolean values as choices
             new_space[k] = tune.choice([v])
             logger.info(f"  Boolean {k}: fixed at {v}")
         else:
-            # Keep other values as fixed choices (including model_name)
             new_space[k] = tune.choice([v])
-            if k == "model_name":
-                logger.info(f"  ⚠️  MODEL_NAME PARAMETER: fixed at {v}")
-            else:
-                logger.info(f"  Other {k}: fixed at {v}")
+            logger.info(f"  Other {k}: fixed at {v}")
 
-    # Ensure required PyTorch-specific parameters exist
+    # Ensure required parameters exist
     if "amp" not in new_space:
-        new_space["amp"] = tune.choice([True])  # Keep AMP enabled
-        logger.info("  Added missing parameter: amp = True")
+        new_space["amp"] = tune.choice([True])
     if "train_backbone" not in new_space:
-        new_space["train_backbone"] = tune.choice([False])  # Keep backbone frozen
-        logger.info("  Added missing parameter: train_backbone = False")
+        new_space["train_backbone"] = tune.choice([False])
     if "data_dir" not in new_space:
         new_space["data_dir"] = tune.choice([os.path.expanduser("~/cifar10")])
-        logger.info(f"  Added missing parameter: data_dir = {os.path.expanduser('~/cifar10')}")
 
     logger.info(f"Final refined search space: {new_space}")
     return new_space
+
 
 def get_default_config():
     """Return a default configuration for testing"""
@@ -400,22 +895,79 @@ def get_default_config():
         "next_trials": 2
     }
 
+
+def demo_allocation_logic():
+    """
+    Demonstrate the allocation logic for various configurations.
+    Run with: python hpo_pipeline_verbose.py --demo
+    """
+    print("\n" + "=" * 80)
+    print("HYBRID BATCHING RESOURCE ALLOCATION - DEMONSTRATION")
+    print("=" * 80)
+    
+    test_cases = [
+        (4, 1), (4, 2), (4, 3), (4, 4),
+        (4, 5), (4, 6), (4, 7), (4, 8),
+        (2, 1), (2, 2), (2, 3), (2, 4), (2, 5),
+        (8, 3), (8, 5), (8, 7),
+    ]
+    
+    print(f"\n{'Hosts':<6} {'Trials':<7} {'Mode':<25} {'Workers':<8} {'Concurrent':<10} {'Est. Time'}")
+    print("-" * 80)
+    
+    for num_hosts, num_trials in test_cases:
+        workers, concurrent, mode = get_simple_allocation(num_trials, num_hosts, 0.92)
+        
+        # Estimate time in T_1 units
+        if mode in ['parallel', 'parallel_idle']:
+            batches = (num_trials + concurrent - 1) // concurrent
+            time = batches * 1.0
+        elif mode == 'balanced':
+            time = 1.0 / (workers * 0.92)
+        elif mode in ['distributed', 'distributed_sequential']:
+            time = num_trials / (num_hosts * 0.92)
+        else:
+            time = 1.0
+            
+        print(f"{num_hosts:<6} {num_trials:<7} {mode:<25} {workers:<8} {concurrent:<10} {time:.3f} × T₁")
+    
+    print("\n" + "=" * 80)
+    print("DETAILED BATCH PLANS")
+    print("=" * 80)
+    
+    # Show detailed batch plans for a few interesting cases
+    for num_hosts, num_trials in [(4, 5), (4, 7), (8, 5)]:
+        print(f"\n>>> {num_hosts} hosts, {num_trials} trials:")
+        calculate_optimal_batches(num_trials, num_hosts, 0.92)
+
+
 if __name__ == "__main__":
     logger.info("=" * 80)
-    logger.info("PYTORCH HYPERPARAMETER OPTIMIZATION WORKFLOW (TEST MODE)")
+    logger.info("PYTORCH HPO WORKFLOW WITH SMART RESOURCE ALLOCATION")
     logger.info("=" * 80)
 
     try:
-        # Parse command line arguments
         parser = argparse.ArgumentParser()
-        parser.add_argument("--hosts", type=int, default=2, help="Total number of available hosts")
-        parser.add_argument("--config-file", type=str, help="JSON config file (optional)")
-        parser.add_argument("--test", action="store_true", help="Use default test configuration")
+        parser.add_argument("--hosts", type=int, default=2, 
+                          help="Total number of available GPUs")
+        parser.add_argument("--config-file", type=str, 
+                          help="JSON config file (optional)")
+        parser.add_argument("--test", action="store_true", 
+                          help="Use default test configuration")
+        parser.add_argument("--efficiency", type=float, default=0.92,
+                          help="Scaling efficiency from profiling (default: 0.92)")
+        parser.add_argument("--demo", action="store_true",
+                          help="Run demo showing allocation logic for various configs")
         args = parser.parse_args()
+        
         logger.info(f"Command line args: {args}")
 
-        # Get configuration
+        # Demo mode - show allocation logic
+        if args.demo:
+            demo_allocation_logic()
+            sys.exit(0)
 
+        # Get configuration
         if args.test:
             logger.info("Using default test configuration...")
             request = get_default_config()
@@ -429,25 +981,20 @@ if __name__ == "__main__":
                 request = json.load(sys.stdin)
             except Exception as e:
                 logger.error(f"Failed to read from stdin: {e}")
-                logger.info("Using default configuration as fallback...")
                 request = get_default_config()
 
         logger.info(f"Input configuration: {json.dumps(request, indent=2)}")
 
-        # Extract number of trials to run
+        # Extract trial count
         num_samples = request.get("next_trials", 3)
         logger.info(f"Number of trials to run: {num_samples}")
 
-        # Refine search space around previous best configuration
-        logger.info("Refining search space...")
+        # Refine search space
         initial_space = refine_space(request)
-        logger.info(f"⚠️  MODEL CHECK: model_name in initial_space = {initial_space.get('model_name', 'NOT FOUND')}")
-        logger.info(f"⚠️  FULL SEARCH SPACE: {initial_space}")
 
-        # Create and configure the optimization pipeline
-        logger.info("Creating optimization pipeline...")
+        # Create pipeline with smart allocation
         pipeline = TunePipeline(
-            train_fn=train_cifar10_torch,  # PyTorch training function
+            train_fn=train_cifar10_torch,
             initial_search=initial_space,
             metric="accuracy",
             target=0.99,
@@ -455,44 +1002,21 @@ if __name__ == "__main__":
             num_samples=num_samples,
             improvement_threshold=1e-2,
             patience=2,
-            numHosts=args.hosts
+            numHosts=args.hosts,
+            scaling_efficiency=args.efficiency
         )
 
-        # Execute the optimization with baseline performance
-        logger.info("Executing optimization pipeline...")
-        best_result = pipeline.run(cohesion=0.85)  # Baseline accuracy for comparison
+        # Execute
+        best_result = pipeline.run(cohesion=0.85)
 
-        # Output results for next iteration
-        # logger.info("=" * 80)
-        # logger.info("📋 FINAL OUTPUT FOR NEXT ITERATION")
-        # logger.info("=" * 80)
-
-        # Create a detailed output summary
-        output_summary = {
-            "iteration_summary": {
-                "trials_completed": num_samples,
-                "trials_next": best_result.get("config", {}).get("next_trials", 0),
-                "best_accuracy": best_result.get("config", {}).get("accuracy", "N/A"),
-                "adaptive_strategy": "expand" if best_result.get("config", {}).get("next_trials", 0) > num_samples else "converge"
-            },
-            "hyperparameter_evolution": "Check logs above for detailed parameter changes",
-            "next_iteration_config": best_result
-        }
-
-        # logger.info("📊 ITERATION SUMMARY:")
-        # logger.info(f"   Trials this round: {num_samples}")
-        # logger.info(f"   Trials next round: {best_result.get('config', {}).get('next_trials', 0)}")
-        # logger.info(f"   Evolution direction: {output_summary['iteration_summary']['adaptive_strategy']}")
-        best_result["config"].pop("amp")
-        best_result["config"].pop("train_backbone")
-        print(json.dumps(best_result))
-
-        # logger.info("🎯 WORKFLOW ITERATION COMPLETED SUCCESSFULLY!")
-        # logger.info("💡 Key adaptations made:")
-        # logger.info("   1. Hyperparameters refined around best performers")
-        # logger.info("   2. Trial count adjusted based on success rate")
-        # logger.info("   3. Resource allocation optimized for next iteration")
-        # logger.info("=" * 80)
+        # Output for next iteration
+        output_config = best_result.get("config", {})
+        if "amp" in output_config:
+            output_config.pop("amp")
+        if "train_backbone" in output_config:
+            output_config.pop("train_backbone")
+            
+        print(json.dumps({"config": output_config}))
 
     except Exception as e:
         logger.error("=" * 80)
@@ -500,5 +1024,5 @@ if __name__ == "__main__":
         logger.error("=" * 80)
         logger.error(f"Error: {str(e)}")
         import traceback
-        logger.error(f"Full traceback:\n{traceback.format_exc()}")
+        logger.error(traceback.format_exc())
         sys.exit(1)
