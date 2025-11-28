@@ -1,0 +1,10 @@
+{
+    "epoch": 3,
+    "learning_rate": 0.01,
+    "momentum": 0.9,
+    "hidden": 10,
+    "batch_size": 64,
+    "image_size": 160,
+    "data_dir": "/home/ubuntu/cifar10",
+    "next_trials": 6
+  }

@@ -6,7 +6,6 @@ import logging
 from datetime import datetime
 import torch
 from typing import List, Tuple, Dict, Any
-import pandas as pd
 
 # Set timeout for worker startup BEFORE importing ray.train
 os.environ["RAY_TRAIN_WORKER_GROUP_START_TIMEOUT_S"] = "180"
@@ -488,8 +487,8 @@ class TunePipeline:
         
         # Get trial info
         trial_context = ray.tune.get_context()
-        trial_id = trial_context.get_trial_id() if trial_context else "unknown"
-        trial_name = trial_context.get_trial_name() if trial_context else "unknown"
+        trial_id = trial_context.get_trial_id() #if trial_context else "unknown"
+        trial_name = trial_context.get_trial_name() #if trial_context else "unknown"
         num_workers = config.get("num_workers", 1)
         
         # Get current node info
@@ -632,170 +631,122 @@ class TunePipeline:
             best_metric = cohesion or 0.0
             logger.info(f"Baseline metric for comparison: {best_metric}")
 
-            # Calculate optimal batch plan for multi-phase execution
+            # Calculate optimal batch plan (for logging/analysis)
             batches = calculate_optimal_batches(
                 self.num_samples, 
                 self.numHosts, 
                 self.scaling_efficiency
             )
             
-            # Log multi-phase execution plan
+            # Get simple allocation for Ray Tune (single-phase)
+            workers_per_trial, max_concurrent, mode = get_simple_allocation(
+                self.num_samples, 
+                self.numHosts,
+                self.scaling_efficiency
+            )
+
+            # Log allocation decision
             logger.info("-" * 80)
-            logger.info("MULTI-PHASE EXECUTION PLAN")
+            logger.info("RESOURCE ALLOCATION DECISION")
             logger.info("-" * 80)
-            logger.info(f"  Total Phases: {len(batches)}")
-            for i, batch in enumerate(batches):
-                logger.info(f"  Phase {i+1}: {batch['num_trials']} trial(s), {batch['workers_per_trial']} GPU(s)/trial, {batch['concurrent_trials']} concurrent ({batch['mode']})")
+            logger.info(f"  Mode:              {mode}")
+            logger.info(f"  Workers/Trial:     {workers_per_trial} GPU(s)")
+            logger.info(f"  Max Concurrent:    {max_concurrent} trial(s)")
+            logger.info(f"  Expected Batches:  {(self.num_samples + max_concurrent - 1) // max_concurrent}")
             logger.info("-" * 80)
 
-            # Pre-generate all hyperparameter configs upfront
-            logger.info("Pre-generating hyperparameter configurations...")
-            base_space = self.search_space[0].copy()
-            all_configs = []
-            for i in range(self.num_samples):
-                config = {}
-                for key, value in base_space.items():
-                    if key == "num_workers":
-                        continue  # Will be set per-phase
-                    if hasattr(value, 'sample'):
-                        config[key] = value.sample()
-                    elif hasattr(value, 'categories'):
-                        config[key] = np.random.choice(value.categories)
-                    else:
-                        config[key] = value
-                all_configs.append(config)
-                logger.info(f"  Config {i+1}: {config}")
+            # Setup scheduler
+            logger.info("Setting up hyperparameter scheduler...")
+            scheduler = AsyncHyperBandScheduler(
+                max_t=200,
+                metric=self.metric,
+                mode=self.mode,
+            )
+
+            # Set num_workers in search space based on allocation
+            logger.info(f"Setting num_workers={workers_per_trial} in search space")
+            self.search_space[0]["num_workers"] = tune.choice([workers_per_trial])
+            logger.info(f"Updated search space: {self.search_space[0]}")
+
+            # Create Ray Tune experiment
+            logger.info("Creating Ray Tune experiment...")
+            logger.info(f"  num_samples={self.num_samples}")
+            logger.info(f"  max_concurrent_trials={max_concurrent}")
             
-            # Track results across all phases
-            all_results_dfs = []
-            best_score = 0.0
-            best_config = None
-            total_trials_run = 0
-            early_stopped = False
+            tuner = tune.Tuner(
+                self.train_driver_fn,
+                tune_config=tune.TuneConfig(
+                    scheduler=scheduler,
+                    num_samples=self.num_samples,
+                    max_concurrent_trials=max_concurrent,
+                ),
+                run_config=tune.RunConfig(
+                    name="pytorch_hpo_exp",
+                    stop={self.metric: self.target},
+                    storage_path='/fsx/ray_results',
+                    verbose=2
+                ),
+                param_space=self.search_space[0]
+            )
+            logger.info("Ray Tune experiment configured")
+
+            # Execute hyperparameter search
+            tune_start_time = time.time()
+            tune_start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             
-            # Execute each phase
-            config_idx = 0
-            for phase_num, batch in enumerate(batches):
-                phase_start_time = time.time()
-                phase_start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                
-                workers = batch['workers_per_trial']
-                concurrent = batch['concurrent_trials']
-                num_trials_this_phase = batch['num_trials']
-                mode = batch['mode']
-                
-                logger.info("=" * 80)
-                logger.info(f"PHASE {phase_num + 1}/{len(batches)} STARTED")
-                logger.info("=" * 80)
-                logger.info(f"  Start Time:     {phase_start_timestamp}")
-                logger.info(f"  Trials:         {num_trials_this_phase}")
-                logger.info(f"  Workers/Trial:  {workers} GPU(s)")
-                logger.info(f"  Max Concurrent: {concurrent}")
-                logger.info(f"  Mode:           {mode}")
-                logger.info("-" * 80)
-                
-                # Get configs for this phase
-                phase_configs = all_configs[config_idx:config_idx + num_trials_this_phase]
-                config_idx += num_trials_this_phase
-                
-                # Add num_workers to each config
-                for cfg in phase_configs:
-                    cfg['num_workers'] = workers
-                
-                logger.info(f"  Configs for this phase:")
-                for i, cfg in enumerate(phase_configs):
-                    logger.info(f"    Trial {total_trials_run + i + 1}: {cfg}")
-                
-                # Create search space that samples from pre-generated configs
-                phase_space = base_space.copy()
-                phase_space['num_workers'] = tune.choice([workers])
-                
-                # Setup scheduler for this phase
-                scheduler = AsyncHyperBandScheduler(
-                    max_t=200,
-                    metric=self.metric,
-                    mode=self.mode,
-                )
-                
-                # Create and run Tuner for this phase
-                tuner = tune.Tuner(
-                    self.train_driver_fn,
-                    tune_config=tune.TuneConfig(
-                        scheduler=scheduler,
-                        num_samples=num_trials_this_phase,
-                        max_concurrent_trials=concurrent,
-                    ),
-                    run_config=tune.RunConfig(
-                        name=f"pytorch_hpo_phase{phase_num + 1}",
-                        stop={self.metric: self.target},
-                        storage_path='/fsx/ray_results',
-                        verbose=2
-                    ),
-                    param_space=phase_space
-                )
-                
-                logger.info(f"  Executing phase {phase_num + 1}...")
-                results = tuner.fit()
-                
-                phase_end_time = time.time()
-                phase_end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                phase_duration = phase_end_time - phase_start_time
-                
-                # Collect results from this phase
-                df = results.get_dataframe()
-                if not df.empty:
-                    df['phase'] = phase_num + 1
-                    df['workers_per_trial'] = workers
-                    all_results_dfs.append(df)
-                    
-                    # Check for best result in this phase
-                    if self.metric in df.columns:
-                        phase_best_idx = df[self.metric].idxmax() if self.mode == 'max' else df[self.metric].idxmin()
-                        phase_best_score = df.loc[phase_best_idx, self.metric]
-                        if phase_best_score > best_score:
-                            best_score = phase_best_score
-                            best_config = df.loc[phase_best_idx].to_dict()
-                
-                total_trials_run += num_trials_this_phase
-                
-                logger.info("=" * 80)
-                logger.info(f"PHASE {phase_num + 1}/{len(batches)} COMPLETED")
-                logger.info("=" * 80)
-                logger.info(f"  End Time:       {phase_end_timestamp}")
-                logger.info(f"  Duration:       {phase_duration:.2f}s ({phase_duration/60:.2f} min)")
-                logger.info(f"  Trials Run:     {num_trials_this_phase}")
-                logger.info(f"  Best Score:     {best_score:.4f}")
-                logger.info("=" * 80)
-                
-                # Early stopping: if we hit target, skip remaining phases
-                if best_score >= self.target:
-                    logger.info(f"TARGET REACHED ({best_score:.4f} >= {self.target}) - Skipping remaining phases")
-                    early_stopped = True
-                    break
+            logger.info("=" * 80)
+            logger.info(f"EXECUTING HPO TRIALS")
+            logger.info("=" * 80)
+            logger.info(f"  Tune Start:     {tune_start_timestamp}")
+            logger.info(f"  Trials:         {self.num_samples}")
+            logger.info(f"  Mode:           {mode}")
+            logger.info(f"  Workers/Trial:  {workers_per_trial}")
+            logger.info(f"  Max Concurrent: {max_concurrent}")
+            logger.info("=" * 80)
+            results = tuner.fit()
             
-            # Merge all results
-            logger.info("Merging results from all phases...")
-            if all_results_dfs:
-                final_df = pd.concat(all_results_dfs, ignore_index=True)
-            else:
-                final_df = pd.DataFrame()
+            tune_end_time = time.time()
+            tune_end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            tune_duration = tune_end_time - tune_start_time
             
-            logger.info(f"Combined results shape: {final_df.shape}")
-            
-            if not final_df.empty:
+            logger.info("=" * 80)
+            logger.info("HPO TRIALS COMPLETED")
+            logger.info("=" * 80)
+            logger.info(f"  Tune End:       {tune_end_timestamp}")
+            logger.info(f"  Tune Duration:  {tune_duration:.2f}s ({tune_duration/60:.2f} min)")
+            logger.info("=" * 80)
+
+            # Analyze results
+            logger.info("Analyzing results...")
+            df = results.get_dataframe()
+            logger.info(f"Results dataframe shape: {df.shape}")
+
+            if not df.empty:
+                logger.info(f"Results:\n{df.head()}")
                 results_file = 'pytorch_hpo_results.csv'
-                final_df.to_csv(results_file, index=False)
+                df.to_csv(results_file)
                 logger.info(f"Results saved to: {results_file}")
-                logger.info(f"Results preview:\n{final_df.head()}")
 
             # Calculate success rate
-            if self.metric in final_df.columns:
-                accs = final_df[self.metric].values
+            if self.metric in df.columns:
+                accs = df[self.metric].values
                 hits = (accs >= best_metric + self.improvement_threshold).sum()
                 success_rate = hits / max(len(accs), 1)
                 logger.info(f"Success rate: {hits}/{len(accs)} = {success_rate:.3f}")
             else:
                 success_rate = 0.0
+
+            # Get best result
+            try:
+                best = results.get_best_result(metric=self.metric, mode=self.mode)
+                score = best.metrics.get(self.metric, 0.0)
+                configs = best.config.copy()
+                logger.info(f"Best score: {score}")
+                logger.info(f"Best config: {configs}")
+            except Exception as e:
+                logger.error(f"Error getting best result: {e}")
+                score = 0.0
+                configs = self.search_space[0].copy() if self.search_space else {}
 
             # Determine next iteration trial count
             if success_rate > 0.5:
@@ -808,15 +759,15 @@ class TunePipeline:
             # Build output
             output = {
                 "config": {
-                    **{k: v for k, v in (best_config or {}).items() 
-                       if k not in ['num_workers', 'phase', 'workers_per_trial']},
-                    "accuracy": best_score,
+                    **{k: (v if not hasattr(v, 'sample') else v.categories[0] if hasattr(v, 'categories') else v)
+                       for k, v in configs.items() if k != 'num_workers'},
+                    "accuracy": score,
                     "next_trials": next_trials
                 },
-                "phases_executed": phase_num + 1,
-                "total_trials_run": total_trials_run,
-                "early_stopped": early_stopped,
-                "batch_plan": batches
+                "allocation_mode": mode,
+                "workers_per_trial": workers_per_trial,
+                "max_concurrent": max_concurrent,
+                "batch_plan": batches  # Include optimal batch plan for reference
             }
 
             # Final summary
@@ -830,10 +781,11 @@ class TunePipeline:
             logger.info(f"  Start Time:       {hpo_start_timestamp}")
             logger.info(f"  End Time:         {hpo_end_timestamp}")
             logger.info(f"  Total Duration:   {hpo_duration:.2f}s ({hpo_duration/60:.2f} min)")
-            logger.info(f"  Phases Executed:  {phase_num + 1}/{len(batches)}")
-            logger.info(f"  Trials Executed:  {total_trials_run}/{self.num_samples}")
-            logger.info(f"  Early Stopped:    {early_stopped}")
-            logger.info(f"  Best Accuracy:    {best_score:.4f}")
+            logger.info(f"  Trials Executed:  {self.num_samples}")
+            logger.info(f"  Allocation Mode:  {mode}")
+            logger.info(f"  Workers/Trial:    {workers_per_trial}")
+            logger.info(f"  Max Concurrent:   {max_concurrent}")
+            logger.info(f"  Best Accuracy:    {score:.4f}")
             logger.info(f"  Success Rate:     {success_rate:.3f}")
             logger.info("=" * 80)
 
@@ -1073,4 +1025,4 @@ if __name__ == "__main__":
         logger.error(f"Error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        sys.exit(1) 
+        sys.exit(1)
