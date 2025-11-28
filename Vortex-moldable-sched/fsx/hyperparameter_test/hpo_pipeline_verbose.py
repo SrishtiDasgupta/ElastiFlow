@@ -488,8 +488,8 @@ class TunePipeline:
         
         # Get trial info
         trial_context = ray.tune.get_context()
-        trial_id = trial_context.trial_id if trial_context else "unknown"
-        trial_name = trial_context.trial_name if trial_context else "unknown"
+        trial_id = trial_context.get_trial_id() if trial_context else "unknown"
+        trial_name = trial_context.get_trial_name() if trial_context else "unknown"
         num_workers = config.get("num_workers", 1)
         
         # Get current node info
@@ -645,7 +645,7 @@ class TunePipeline:
             logger.info("-" * 80)
             logger.info(f"  Total Phases: {len(batches)}")
             for i, batch in enumerate(batches):
-                logger.info(f"  Phase {i+1}: {batch['trials']} trial(s), {batch['workers']} GPU(s)/trial, {batch['concurrent']} concurrent ({batch['mode']})")
+                logger.info(f"  Phase {i+1}: {batch['num_trials']} trial(s), {batch['workers_per_trial']} GPU(s)/trial, {batch['concurrent_trials']} concurrent ({batch['mode']})")
             logger.info("-" * 80)
 
             # Pre-generate all hyperparameter configs upfront
@@ -679,9 +679,9 @@ class TunePipeline:
                 phase_start_time = time.time()
                 phase_start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                 
-                workers = batch['workers']
-                concurrent = batch['concurrent']
-                num_trials_this_phase = batch['trials']
+                workers = batch['workers_per_trial']
+                concurrent = batch['concurrent_trials']
+                num_trials_this_phase = batch['num_trials']
                 mode = batch['mode']
                 
                 logger.info("=" * 80)
@@ -1073,4 +1073,4 @@ if __name__ == "__main__":
         logger.error(f"Error: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        sys.exit(1)
+        sys.exit(1) 
