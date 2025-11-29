@@ -1,0 +1,44 @@
+Region: eu-north-1  # e.g., eu-north-1
+
+Image:
+  Os: ubuntu2204  # or ubuntu2204 - check AMI compatibility
+  CustomAmi: ami-0bace95aa4cfc84f8  # e.g., ami-0bace95aa4cfc84f8
+
+HeadNode:
+  InstanceType: t3.medium  # e.g., t3.medium
+  Networking:
+    SubnetId: subnet-098f73921fcc5fbe1  # e.g., subnet-098f73921fcc5fbe1
+    SecurityGroups:
+      - sg-0d61f6325a433891b  # e.g., sg-xxxxxxxx
+  Ssh:
+    KeyName: hpc-exp  # Your EC2 key pair name
+  CustomActions:
+Scheduling:
+  Scheduler: slurm
+  SlurmQueues:
+    - Name: compute
+      CapacityType: ONDEMAND  # or SPOT
+      ComputeResources:
+        - Name: nodes
+          InstanceType: <g4dn.xlarge  # e.g., g4dn.xlarge
+          MinCount: 3
+          MaxCount: 3  # e.g., 2
+      Networking:
+        SubnetIds:
+          - subnet-098f73921fcc5fbe1
+        SecurityGroups:
+          - sg-0d61f6325a433891b
+      CustomActions:
+        OnNodeConfigured:
+          Script: <S3_SCRIPT_PATH>
+          Args:
+            - <GIT_TOKEN>
+            - <GIT_REPO_URL>
+            - <GIT_BRANCH>
+
+SharedStorage:
+  - MountDir: /fsx
+    Name: fsx
+    StorageType: FsxLustre
+    FsxLustreSettings:
+      FileSystemId: <FSX_ID>  # e.g., fs-04a4223998940b3ef

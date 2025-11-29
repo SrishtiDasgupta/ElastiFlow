@@ -64,7 +64,7 @@ variable "fsx_mount_name" {
 variable "s3_script_path" {
   description = "S3 path to startup script"
   type        = string
-  default     = "s3://hpoexp/create_instance_HPO.py"
+  default     = "s3://hpoexp/instance_setup_hpo.sh"
 }
 
 variable "git_token" {
