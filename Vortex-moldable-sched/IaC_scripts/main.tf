@@ -1,14 +1,12 @@
-# Data source for existing IAM instance profile
+locals {
+  fsx_dns_name   = "fs-04a4223998940b3ef.fsx.eu-north-1.amazonaws.com"
+  fsx_mount_name = "5ynhnbev"
+}
+
 data "aws_iam_instance_profile" "existing" {
   name = var.iam_instance_profile
 }
 
-# Data source for FSx filesystem to get mount name
-data "aws_fsx_lustre_file_system" "existing" {
-  id = "fs-04a4223998940b3ef"
-}
-
-# EC2 Instances
 resource "aws_instance" "hpo_worker" {
   count = var.instance_count
 
@@ -28,8 +26,8 @@ resource "aws_instance" "hpo_worker" {
     git_token      = var.git_token
     git_repo       = var.git_repo
     git_branch     = var.git_branch
-    fsx_dns_name   = data.aws_fsx_lustre_file_system.existing.dns_name
-    fsx_mount_name = data.aws_fsx_lustre_file_system.existing.mount_name
+    fsx_dns_name   = local.fsx_dns_name
+    fsx_mount_name = local.fsx_mount_name
     s3_script_path = var.s3_script_path
   }))
 
