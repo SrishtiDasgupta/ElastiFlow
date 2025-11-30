@@ -1,0 +1,5 @@
+region               = "eu-north-1"
+instance_type        = "g4dn.xlarge"
+instance_count       = 2
+iam_instance_profile = "REPLACE_ME"
+git_token            = "REPLACE_ME"

@@ -1,1 +1,16 @@
 .DS_Store
+
+# Secrets
+terraform.tfvars
+*.auto.tfvars
+
+# State files
+*.tfstate
+*.tfstate.*
+
+# Provider directory
+.terraform/
+.terraform.lock.hcl
+
+# Crash logs
+crash.log
