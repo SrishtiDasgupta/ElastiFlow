@@ -28,7 +28,7 @@ workflows:
 
   # Arrival pattern
   arrival_distribution: exponential
-  mean_interarrival_seconds: 3600  # 1 hour average between workflow submissions
+  mean_interarrival_seconds: 300  # 1 hour average between workflow submissions
 
 # Human delay model for manual intervention mode
 human_delay:
@@ -38,16 +38,22 @@ human_delay:
   min_hours: 0.5          # Minimum 30 minutes
   max_hours: 24.0         # Maximum 24 hours
 
-  # Work hours constraint (optional)
+  # Work hours constraint (disabled for more realistic continuous operation)
+  # When enabled, delays only count during work hours, causing synchronized idle periods
   work_hours:
-    enabled: true
-    start: 9              # 9 AM
-    end: 17               # 5 PM
+    enabled: false        # Disabled to avoid synchronized dips in utilization
+    start: 9              # 9 AM (only used if enabled)
+    end: 17               # 5 PM (only used if enabled)
     timezone: local
 
 # Automated mode delay (system processing only)
 auto_delay:
   system_delay_seconds: 5  # Time to process feedback and trigger next iteration
+
+# Manual flexible mode configuration
+manual_flexible:
+  min_nodes_per_job: 1      # Minimum nodes a job can run with
+  max_scale_factor: 2.0     # Maximum scale-up factor (2.0 = can use 2x requested)
 
 # Output configuration
 output:

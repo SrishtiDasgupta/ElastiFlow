@@ -1,5 +1,7 @@
 """
 CSV export functionality for simulation results.
+
+Supports three modes: manual (strict), manual (flexible), and automated.
 """
 
 import csv
@@ -7,8 +9,14 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
 
-from ..simulation.simulate_comparison import ComparisonResult
-from ..metrics.comparison_metrics import MetricsCollector, AggregateMetrics
+try:
+    from ..simulation.simulate_comparison import ComparisonResult
+    from ..metrics.comparison_metrics import MetricsCollector, AggregateMetrics
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from simulation.simulate_comparison import ComparisonResult
+    from metrics.comparison_metrics import MetricsCollector, AggregateMetrics
 
 
 def export_per_workflow_results(
@@ -44,11 +52,26 @@ def export_per_workflow_results(
             'turnaround_hours', 'compute_hours', 'delay_hours', 'queue_wait_hours'
         ])
 
-        # Manual results
+        # Manual (strict) results
         for wf_id, wf_data in result.manual_results['workflows'].items():
             delay = wf_data.get('human_delay', 0)
             writer.writerow([
-                wf_id, 'manual',
+                wf_id, 'manual_strict',
+                wf_data['submit_time'], wf_data['completion_time'],
+                wf_data['turnaround_time'], wf_data['compute_time'],
+                delay, wf_data['queue_wait_time'],
+                wf_data['num_iterations'], wf_data['completed'],
+                wf_data['turnaround_time'] / 3600,
+                wf_data['compute_time'] / 3600,
+                delay / 3600,
+                wf_data['queue_wait_time'] / 3600
+            ])
+
+        # Manual (flexible) results
+        for wf_id, wf_data in result.manual_flexible_results['workflows'].items():
+            delay = wf_data.get('human_delay', 0)
+            writer.writerow([
+                wf_id, 'manual_flexible',
                 wf_data['submit_time'], wf_data['completion_time'],
                 wf_data['turnaround_time'], wf_data['compute_time'],
                 delay, wf_data['queue_wait_time'],
@@ -105,46 +128,56 @@ def export_aggregate_results(
         writer = csv.writer(f)
 
         # Header
-        writer.writerow(['metric', 'manual', 'automated', 'improvement', 'unit'])
+        writer.writerow(['metric', 'manual_strict', 'manual_flexible', 'automated', 'improvement_vs_strict', 'improvement_vs_flexible', 'unit'])
 
         # Metrics
         writer.writerow([
             'makespan',
             summary['manual']['makespan_hours'],
+            summary['manual_flexible']['makespan_hours'],
             summary['automated']['makespan_hours'],
             summary['improvement']['makespan_pct'],
+            summary['improvement']['makespan_flexible_pct'],
             'hours / %'
         ])
 
         writer.writerow([
             'compute_time',
             summary['manual']['compute_hours'],
+            summary['manual_flexible']['compute_hours'],
             summary['automated']['compute_hours'],
-            0,  # Same compute work
+            0,
+            0,
             'hours'
         ])
 
         writer.writerow([
             'delay_time',
             summary['manual']['human_delay_hours'],
+            summary['manual_flexible']['human_delay_hours'],
             summary['automated']['system_delay_seconds'] / 3600,
-            (summary['manual']['human_delay_hours'] - summary['automated']['system_delay_seconds'] / 3600),
+            summary['manual']['human_delay_hours'] - summary['automated']['system_delay_seconds'] / 3600,
+            summary['manual_flexible']['human_delay_hours'] - summary['automated']['system_delay_seconds'] / 3600,
             'hours'
         ])
 
         writer.writerow([
             'queue_wait_time',
             summary['manual']['queue_wait_hours'],
+            summary['manual_flexible']['queue_wait_hours'],
             summary['automated']['queue_wait_hours'],
             summary['manual']['queue_wait_hours'] - summary['automated']['queue_wait_hours'],
+            summary['manual_flexible']['queue_wait_hours'] - summary['automated']['queue_wait_hours'],
             'hours'
         ])
 
         writer.writerow([
             'utilization',
             summary['manual']['utilization'] * 100,
+            summary['manual_flexible']['utilization'] * 100,
             summary['automated']['utilization'] * 100,
-            summary['improvement']['utilization_ppt'],
+            (summary['automated']['utilization'] - summary['manual']['utilization']) * 100,
+            (summary['automated']['utilization'] - summary['manual_flexible']['utilization']) * 100,
             '% / ppt'
         ])
 
@@ -179,10 +212,15 @@ def export_utilization_timeseries(
         # Header
         writer.writerow(['mode', 'time_seconds', 'time_hours', 'used_nodes', 'total_nodes', 'utilization'])
 
-        # Manual utilization
+        # Manual (strict) utilization
         for time, used, total in result.manual_results.get('utilization_history', []):
             util = used / total if total > 0 else 0
-            writer.writerow(['manual', time, time / 3600, used, total, util])
+            writer.writerow(['manual_strict', time, time / 3600, used, total, util])
+
+        # Manual (flexible) utilization
+        for time, used, total in result.manual_flexible_results.get('utilization_history', []):
+            util = used / total if total > 0 else 0
+            writer.writerow(['manual_flexible', time, time / 3600, used, total, util])
 
         # Automated utilization
         for time, used, total in result.auto_results.get('utilization_history', []):
@@ -220,11 +258,12 @@ def export_replication_results(
         # Header
         writer.writerow([
             'replication', 'num_workflows',
-            'manual_makespan_hours', 'auto_makespan_hours',
-            'manual_compute_hours', 'auto_compute_hours',
-            'manual_delay_hours', 'auto_delay_seconds',
-            'manual_utilization', 'auto_utilization',
-            'makespan_improvement_pct', 'turnaround_improvement_pct'
+            'manual_strict_makespan_hours', 'manual_flexible_makespan_hours', 'auto_makespan_hours',
+            'manual_strict_compute_hours', 'manual_flexible_compute_hours', 'auto_compute_hours',
+            'manual_strict_delay_hours', 'manual_flexible_delay_hours', 'auto_delay_seconds',
+            'manual_strict_utilization', 'manual_flexible_utilization', 'auto_utilization',
+            'makespan_improvement_vs_strict_pct', 'makespan_improvement_vs_flexible_pct',
+            'turnaround_improvement_pct'
         ])
 
         for i, result in enumerate(results):
@@ -232,14 +271,19 @@ def export_replication_results(
             writer.writerow([
                 i + 1, summary['num_workflows'],
                 summary['manual']['makespan_hours'],
+                summary['manual_flexible']['makespan_hours'],
                 summary['automated']['makespan_hours'],
                 summary['manual']['compute_hours'],
+                summary['manual_flexible']['compute_hours'],
                 summary['automated']['compute_hours'],
                 summary['manual']['human_delay_hours'],
+                summary['manual_flexible']['human_delay_hours'],
                 summary['automated']['system_delay_seconds'],
                 summary['manual']['utilization'],
+                summary['manual_flexible']['utilization'],
                 summary['automated']['utilization'],
                 summary['improvement']['makespan_pct'],
+                summary['improvement']['makespan_flexible_pct'],
                 summary['improvement']['turnaround_pct']
             ])
 
@@ -281,8 +325,7 @@ if __name__ == "__main__":
     print("CSV Export Test")
     print("=" * 60)
 
-    # Create mock results
-    from ..simulation.simulate_comparison import ComparisonResult, ComparisonSimulator
+    from simulation.simulate_comparison import ComparisonSimulator
 
     config = {
         'experiment': {'seed': 42},
@@ -295,7 +338,7 @@ if __name__ == "__main__":
             'chains_range': [2, 6],
             'nodes_per_chain_range': [1, 3],
             'tinyda_iterations_range': [1, 5],
-            'mean_interarrival_seconds': 1800
+            'mean_interarrival_seconds': 300
         },
         'human_delay': {
             'median_hours': 2.0,
@@ -304,7 +347,11 @@ if __name__ == "__main__":
             'max_hours': 12.0,
             'work_hours': {'enabled': False}
         },
-        'auto_delay': {'system_delay_seconds': 5.0}
+        'auto_delay': {'system_delay_seconds': 5.0},
+        'manual_flexible': {
+            'min_nodes_per_job': 1,
+            'max_scale_factor': 2.0
+        }
     }
 
     simulator = ComparisonSimulator(config, seed=42)

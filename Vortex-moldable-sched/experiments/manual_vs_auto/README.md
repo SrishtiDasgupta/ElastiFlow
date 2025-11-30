@@ -25,15 +25,78 @@ Automated workflows trigger iterations automatically:
 5. Repeat automatically until completion
 6. Resources released only after workflow completes
 
+## Three Scheduling Modes
+
+The experiment compares three scheduling modes:
+
+### 1. Manual (Strict)
+- Each iteration requests **exact** resources needed
+- Job waits in queue until exact node count is available
+- Human delay (hours) between iterations
+- Represents traditional HPC batch scheduling
+
+### 2. Manual (Flexible)
+- Each iteration can **scale up or down** based on availability
+- Uses queue-aware smart allocation strategy
+- Human delay (hours) between iterations
+- Represents moldable job scheduling with human intervention
+
+### 3. Automated
+- Resources allocated **once** for entire workflow
+- All iterations run back-to-back with minimal system delay (~5s)
+- Wave-based execution adapts to fixed allocation
+- Represents feedback-driven automated workflows
+
 ## Key Differences Between Modes
 
-| Aspect | Manual Mode | Automated Mode |
-|--------|-------------|----------------|
-| Resource allocation | Per-iteration (re-queue each time) | Once for entire workflow |
-| Delay between iterations | Human delay (hours, lognormal) | System delay (5 seconds) |
-| Queue wait | Each iteration waits independently | Only initial wait |
-| Resource sizing | Exact fit per iteration | Max needed across all iterations |
-| Execution model | chains × nodes_per_chain per iteration | Wave-based (adapts to fixed allocation) |
+| Aspect | Manual (Strict) | Manual (Flexible) | Automated |
+|--------|-----------------|-------------------|-----------|
+| Resource allocation | Exact per-iteration | Flexible per-iteration | Once for entire workflow |
+| Delay between iterations | Human (hours) | Human (hours) | System (5 seconds) |
+| Queue wait | Each iteration waits | Each iteration waits | Only initial wait |
+| Resource sizing | Exact fit | Adapts to available | Max needed across iterations |
+| Execution model | Fixed allocation | Wave-based (flexible) | Wave-based (fixed) |
+
+## Queue-Aware Flexible Allocation Strategy
+
+The Manual (Flexible) mode uses a smart allocation strategy that balances individual job speed with overall cluster throughput:
+
+### Strategy
+
+```
+IF queue has waiting jobs:
+    allocation = min(available, requested)
+    # Take only what needed, leave resources for others
+
+IF queue is empty AND extra resources available:
+    allocation = min(available - reserve, requested × max_scale_factor)
+    # Scale up to use idle resources, reserve some for new arrivals
+```
+
+### Example Scenarios
+
+| Available | Requested | Queue | Allocation | Reason |
+|-----------|-----------|-------|------------|--------|
+| 100 | 10 | 5 jobs waiting | 10 | Queue not empty, don't hog resources |
+| 100 | 10 | empty | 19 | Scale up (2×10=20, minus 1 reserve) |
+| 5 | 10 | any | 5 | Scale down, run in waves |
+| 3 | 10 | any | 3 | Scale down significantly |
+| 0 | 10 | any | 0 | No resources, must wait |
+
+### Configuration
+
+```yaml
+manual_flexible:
+  min_nodes_per_job: 1      # Minimum nodes a job can run with
+  max_scale_factor: 2.0     # Maximum scale-up (2.0 = up to 2× requested)
+```
+
+### Benefits
+
+1. **No idle resources**: Jobs can run with fewer nodes using wave-based execution
+2. **Efficient packing**: Multiple small jobs can run in parallel
+3. **Opportunistic scaling**: Uses extra resources when no one else needs them
+4. **Fair sharing**: Doesn't starve other jobs when queue is busy
 
 ### Wave-Based Execution in Automated Mode
 
@@ -87,7 +150,8 @@ experiments/manual_vs_auto/
 │   └── human_delay.py            # Lognormal delay model
 ├── schedulers/
 │   ├── resource_manager.py       # 148-node cluster manager
-│   ├── manual_fcfs.py            # Manual intervention scheduler
+│   ├── manual_fcfs.py            # Manual (Strict) scheduler
+│   ├── manual_fcfs_flexible.py   # Manual (Flexible) scheduler with queue-aware allocation
 │   └── auto_fcfs.py              # Automated feedback scheduler (fixed allocation)
 ├── simulation/
 │   └── simulate_comparison.py    # Main simulation orchestrator
@@ -130,10 +194,57 @@ human_delay:
   median_hours: 3.0       # Typical response time
   sigma: 0.9              # Variability
   work_hours:
-    enabled: true         # Enable 9-5 work hour constraints
+    enabled: false        # Work hour constraints (can cause synchronized idle periods)
     start: 9
     end: 17
 ```
+
+## Per-Engineer Variation
+
+To create realistic human delay patterns, the simulation models each workflow as being managed by a different engineer with unique characteristics:
+
+### Per-Engineer Profiles
+
+Each engineer (workflow) has randomly assigned:
+
+1. **Speed Multiplier** (lognormal, median=1.0, σ=0.3)
+   - Range: 0.5× to 2.0×
+   - Some engineers respond faster, others slower
+   - Applied to base delay samples
+
+2. **Work Schedule Jitter** (when work hours enabled)
+   - Start time: ±1.5 hours around configured start (e.g., 7:30 AM - 10:30 AM)
+   - End time: ±2.0 hours around configured end (e.g., 3:00 PM - 7:00 PM)
+   - Different engineers have different schedules
+
+3. **Time-of-Day Efficiency**
+   - Morning (9-12): 0.9× (peak efficiency)
+   - Post-lunch (12-14): 1.3× (slower - post-lunch slump)
+   - Afternoon (14-17): 1.1× (slightly slower)
+   - Evening (17-20): 1.4× (tired)
+   - Outside hours: 1.5× (slowest)
+
+### Why Per-Engineer Variation?
+
+Without variation, all engineers would have synchronized delays, causing:
+- Periodic bursts of activity followed by idle periods
+- Unrealistic "wave" patterns in utilization graphs
+- Artificial clustering of job submissions
+
+With per-engineer variation:
+- Delays are spread throughout the simulation
+- More realistic continuous cluster utilization
+- Different workflows progress at different rates
+
+### Example
+
+```
+Engineer for wf-0001: speed=0.85× (fast), works 8:00-18:00
+Engineer for wf-0002: speed=1.20× (slow), works 9:30-16:30
+Engineer for wf-0003: speed=1.00× (average), works 7:45-17:15
+```
+
+This creates natural variation in when iterations are submitted, leading to more realistic resource utilization patterns.
 
 ### Automated Mode Configuration
 ```yaml

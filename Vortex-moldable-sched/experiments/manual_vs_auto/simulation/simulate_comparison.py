@@ -1,8 +1,13 @@
 """
 Comparison Simulation Runner.
 
-Runs both manual and automated simulations with identical workflows
+Runs manual, manual-flexible, and automated simulations with identical workflows
 and compares the results.
+
+Three modes:
+1. Manual (strict): Each iteration waits for exact resources
+2. Manual (flexible): Each iteration can scale up/down based on availability
+3. Automated: Fixed allocation for entire workflow, iterations run back-to-back
 """
 
 import yaml
@@ -10,7 +15,7 @@ import copy
 import sys
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Handle imports for both package and standalone execution
 try:
@@ -26,6 +31,7 @@ try:
         create_resource_manager_from_config
     )
     from ..schedulers.manual_fcfs import ManualFCFSScheduler
+    from ..schedulers.manual_fcfs_flexible import ManualFCFSFlexibleScheduler
     from ..schedulers.auto_fcfs import AutoFCFSScheduler
 except ImportError:
     # Add parent to path for standalone execution
@@ -42,13 +48,15 @@ except ImportError:
         create_resource_manager_from_config
     )
     from schedulers.manual_fcfs import ManualFCFSScheduler
+    from schedulers.manual_fcfs_flexible import ManualFCFSFlexibleScheduler
     from schedulers.auto_fcfs import AutoFCFSScheduler
 
 
 @dataclass
 class ComparisonResult:
-    """Results from comparing manual vs automated modes."""
+    """Results from comparing all modes."""
     manual_results: dict
+    manual_flexible_results: dict
     auto_results: dict
     workflows: List[SeisSolWorkflow]
     config: dict
@@ -64,6 +72,16 @@ class ComparisonResult:
         return 0.0
 
     @property
+    def makespan_improvement_flexible(self) -> float:
+        """Makespan improvement (manual_flexible - auto) / manual_flexible."""
+        if self.manual_flexible_results['total_makespan'] > 0:
+            return (
+                self.manual_flexible_results['total_makespan'] -
+                self.auto_results['total_makespan']
+            ) / self.manual_flexible_results['total_makespan']
+        return 0.0
+
+    @property
     def turnaround_improvement(self) -> float:
         """Average turnaround time improvement."""
         manual_avg = self._get_average_turnaround(self.manual_results)
@@ -74,7 +92,7 @@ class ComparisonResult:
 
     @property
     def utilization_improvement(self) -> float:
-        """Utilization improvement."""
+        """Utilization improvement (auto - manual)."""
         return (
             self.auto_results['average_utilization'] -
             self.manual_results['average_utilization']
@@ -100,6 +118,13 @@ class ComparisonResult:
                 'queue_wait_hours': self.manual_results['total_queue_wait_time'] / 3600,
                 'utilization': self.manual_results['average_utilization'],
             },
+            'manual_flexible': {
+                'makespan_hours': self.manual_flexible_results['total_makespan'] / 3600,
+                'compute_hours': self.manual_flexible_results['total_compute_time'] / 3600,
+                'human_delay_hours': self.manual_flexible_results['total_human_delay'] / 3600,
+                'queue_wait_hours': self.manual_flexible_results['total_queue_wait_time'] / 3600,
+                'utilization': self.manual_flexible_results['average_utilization'],
+            },
             'automated': {
                 'makespan_hours': self.auto_results['total_makespan'] / 3600,
                 'compute_hours': self.auto_results['total_compute_time'] / 3600,
@@ -109,6 +134,7 @@ class ComparisonResult:
             },
             'improvement': {
                 'makespan_pct': self.makespan_improvement * 100,
+                'makespan_flexible_pct': self.makespan_improvement_flexible * 100,
                 'turnaround_pct': self.turnaround_improvement * 100,
                 'utilization_ppt': self.utilization_improvement * 100,
             }
@@ -117,7 +143,7 @@ class ComparisonResult:
 
 class ComparisonSimulator:
     """
-    Runs comparison simulations between manual and automated modes.
+    Runs comparison simulations between manual, manual-flexible, and automated modes.
 
     Ensures fair comparison by using:
     - Identical workflows
@@ -148,7 +174,7 @@ class ComparisonSimulator:
         workflows: List[SeisSolWorkflow]
     ) -> dict:
         """
-        Run simulation with manual intervention scheduler.
+        Run simulation with manual intervention scheduler (strict allocation).
 
         Args:
             workflows: List of workflows to simulate
@@ -175,6 +201,47 @@ class ComparisonSimulator:
             resource_manager=resource_manager,
             delay_model=delay_model,
             system_delay=system_delay
+        )
+
+        # Deep copy workflows to avoid state pollution
+        workflows_copy = [self._copy_workflow(wf) for wf in workflows]
+
+        return scheduler.run_simulation(workflows_copy)
+
+    def run_manual_flexible_simulation(
+        self,
+        workflows: List[SeisSolWorkflow]
+    ) -> dict:
+        """
+        Run simulation with manual intervention scheduler (flexible allocation).
+
+        Args:
+            workflows: List of workflows to simulate
+
+        Returns:
+            Simulation results
+        """
+        # Create fresh resource manager
+        res_config = self.config.get('resources', {})
+        rm_config = ResourceManagerConfig(
+            total_nodes=res_config.get('total_nodes', 148),
+            cores_per_node=res_config.get('cores_per_node', 48)
+        )
+        resource_manager = OnPremResourceManager(rm_config)
+
+        # Create delay model
+        delay_model = create_delay_model_from_config(self.config, self.seed)
+
+        # Get flexible config
+        flexible_config = self.config.get('manual_flexible', {})
+        min_nodes = flexible_config.get('min_nodes_per_job', 1)
+        max_scale = flexible_config.get('max_scale_factor', 2.0)
+
+        scheduler = ManualFCFSFlexibleScheduler(
+            resource_manager=resource_manager,
+            delay_model=delay_model,
+            min_nodes_per_job=min_nodes,
+            max_scale_factor=max_scale
         )
 
         # Deep copy workflows to avoid state pollution
@@ -244,23 +311,28 @@ class ComparisonSimulator:
 
     def run_comparison(self) -> ComparisonResult:
         """
-        Run both simulations and compare results.
+        Run all three simulations and compare results.
 
         Returns:
-            ComparisonResult with both results and analysis
+            ComparisonResult with all results and analysis
         """
-        # Generate workflows (same for both)
+        # Generate workflows (same for all)
         workflows = self.generate_workflows()
 
         print(f"Generated {len(workflows)} workflows")
-        print("Running manual simulation...")
+
+        print("Running manual (strict) simulation...")
         manual_results = self.run_manual_simulation(workflows)
+
+        print("Running manual (flexible) simulation...")
+        manual_flexible_results = self.run_manual_flexible_simulation(workflows)
 
         print("Running automated simulation...")
         auto_results = self.run_auto_simulation(workflows)
 
         return ComparisonResult(
             manual_results=manual_results,
+            manual_flexible_results=manual_flexible_results,
             auto_results=auto_results,
             workflows=workflows,
             config=self.config
@@ -325,20 +397,27 @@ def print_results(result: ComparisonResult):
     """Print formatted comparison results."""
     summary = result.get_summary()
 
-    print("\n" + "=" * 70)
-    print("COMPARISON RESULTS: Manual vs Automated Workflows")
-    print("=" * 70)
+    print("\n" + "=" * 80)
+    print("COMPARISON RESULTS: Manual vs Manual-Flexible vs Automated Workflows")
+    print("=" * 80)
 
     print(f"\nWorkflows simulated: {summary['num_workflows']}")
 
-    print("\n--- MANUAL MODE ---")
+    print("\n--- MANUAL MODE (Strict Allocation) ---")
     print(f"  Makespan:        {summary['manual']['makespan_hours']:.2f} hours")
     print(f"  Compute time:    {summary['manual']['compute_hours']:.2f} hours")
     print(f"  Human delay:     {summary['manual']['human_delay_hours']:.2f} hours")
     print(f"  Queue wait:      {summary['manual']['queue_wait_hours']:.2f} hours")
     print(f"  Utilization:     {summary['manual']['utilization']:.1%}")
 
-    print("\n--- AUTOMATED MODE ---")
+    print("\n--- MANUAL MODE (Flexible Allocation) ---")
+    print(f"  Makespan:        {summary['manual_flexible']['makespan_hours']:.2f} hours")
+    print(f"  Compute time:    {summary['manual_flexible']['compute_hours']:.2f} hours")
+    print(f"  Human delay:     {summary['manual_flexible']['human_delay_hours']:.2f} hours")
+    print(f"  Queue wait:      {summary['manual_flexible']['queue_wait_hours']:.2f} hours")
+    print(f"  Utilization:     {summary['manual_flexible']['utilization']:.1%}")
+
+    print("\n--- AUTOMATED MODE (Fixed Allocation) ---")
     print(f"  Makespan:        {summary['automated']['makespan_hours']:.2f} hours")
     print(f"  Compute time:    {summary['automated']['compute_hours']:.2f} hours")
     print(f"  System delay:    {summary['automated']['system_delay_seconds']:.0f} seconds")
@@ -346,15 +425,18 @@ def print_results(result: ComparisonResult):
     print(f"  Utilization:     {summary['automated']['utilization']:.1%}")
 
     print("\n--- IMPROVEMENT (Automated vs Manual) ---")
-    print(f"  Makespan:        {summary['improvement']['makespan_pct']:+.1f}%")
+    print(f"  vs Strict:       {summary['improvement']['makespan_pct']:+.1f}% makespan")
+    print(f"  vs Flexible:     {summary['improvement']['makespan_flexible_pct']:+.1f}% makespan")
     print(f"  Turnaround:      {summary['improvement']['turnaround_pct']:+.1f}%")
     print(f"  Utilization:     {summary['improvement']['utilization_ppt']:+.1f} ppt")
 
     # Calculate time saved
-    time_saved = summary['manual']['makespan_hours'] - summary['automated']['makespan_hours']
-    print(f"\n  Time saved:      {time_saved:.1f} hours")
+    time_saved_strict = summary['manual']['makespan_hours'] - summary['automated']['makespan_hours']
+    time_saved_flexible = summary['manual_flexible']['makespan_hours'] - summary['automated']['makespan_hours']
+    print(f"\n  Time saved vs strict:   {time_saved_strict:.1f} hours")
+    print(f"  Time saved vs flexible: {time_saved_flexible:.1f} hours")
 
-    print("=" * 70)
+    print("=" * 80)
 
 
 if __name__ == "__main__":
@@ -380,7 +462,7 @@ if __name__ == "__main__":
                 'chains_range': [2, 8],
                 'nodes_per_chain_range': [1, 4],
                 'tinyda_iterations_range': [1, 10],
-                'mean_interarrival_seconds': 3600
+                'mean_interarrival_seconds': 300
             },
             'human_delay': {
                 'median_hours': 3.0,
@@ -389,7 +471,11 @@ if __name__ == "__main__":
                 'max_hours': 24.0,
                 'work_hours': {'enabled': False}
             },
-            'auto_delay': {'system_delay_seconds': 5.0}
+            'auto_delay': {'system_delay_seconds': 5.0},
+            'manual_flexible': {
+                'min_nodes_per_job': 1,
+                'max_scale_factor': 2.0
+            }
         }
 
         simulator = ComparisonSimulator(config, seed=42)

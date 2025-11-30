@@ -1,21 +1,23 @@
 """
-Manual Intervention FCFS Scheduler.
+Manual Intervention FCFS Scheduler with Flexible Resource Allocation.
 
-In manual mode, each workflow iteration is submitted as a SEPARATE job.
-After an iteration completes, there's a human delay (hours) before
-the engineer reviews results and submits the next iteration.
+This variant allows jobs to scale up or down based on available resources,
+similar to the automated mode. This isolates the effect of human delay
+from resource allocation strategy.
 
 Key characteristics:
 - Each iteration enters the queue independently
 - Human delay between iterations (lognormal distribution)
 - FCFS scheduling for each job
-- No cross-iteration optimization
+- **Flexible allocation**: Jobs can run with fewer or more nodes than requested
+- Wave-based execution when allocated nodes < chains
 """
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Callable
 from collections import deque
 import heapq
+import math
 import sys
 from pathlib import Path
 
@@ -35,15 +37,18 @@ except ImportError:
 
 
 @dataclass
-class Job:
-    """Represents a single job (one iteration of a workflow)."""
+class FlexibleJob:
+    """Represents a single job (one iteration of a workflow) with flexible allocation."""
     job_id: str
     workflow_id: str
     iteration_idx: int
     submit_time: float
-    nodes_needed: int
-    runtime: float
-    mesh: int
+    nodes_requested: int      # What the iteration ideally wants
+    nodes_allocated: int = 0  # What it actually gets (set at start time)
+    chains: int = 0
+    tinyda_iterations: int = 0
+    mesh: int = 750
+    runtime: float = 0.0      # Calculated based on actual allocation
 
     # Timing tracking
     queue_enter_time: float = 0.0
@@ -53,12 +58,12 @@ class Job:
     @property
     def wait_time(self) -> float:
         """Time spent waiting in queue."""
-        return self.start_time - self.queue_enter_time
+        return self.start_time - self.queue_enter_time if self.start_time > 0 else 0.0
 
     @property
     def turnaround_time(self) -> float:
         """Total time from submit to completion."""
-        return self.end_time - self.submit_time
+        return self.end_time - self.submit_time if self.end_time > 0 else 0.0
 
 
 @dataclass
@@ -80,42 +85,47 @@ class WorkflowState:
 class Event:
     """Simulation event."""
     time: float
-    event_type: str  # 'job_submit', 'job_complete', 'workflow_submit'
+    event_type: str  # 'job_submit', 'job_complete'
     data: dict
 
     def __lt__(self, other):
         return self.time < other.time
 
 
-class ManualFCFSScheduler:
+class ManualFCFSFlexibleScheduler:
     """
-    Manual intervention FCFS scheduler.
+    Manual intervention FCFS scheduler with flexible resource allocation.
 
-    Simulates the manual workflow pattern where engineers must
-    intervene between iterations to analyze results and submit
-    the next iteration as a new job.
+    Unlike the strict manual scheduler, this variant allows jobs to:
+    - Run with fewer nodes than requested (wave-based execution)
+    - Run with more nodes than requested (faster execution)
+
+    This isolates the effect of human delay from resource allocation efficiency.
     """
 
     def __init__(
         self,
         resource_manager: OnPremResourceManager,
         delay_model: HumanDelayModel,
-        system_delay: float = 5.0
+        min_nodes_per_job: int = 1,
+        max_scale_factor: float = 2.0
     ):
         """
-        Initialize the manual scheduler.
+        Initialize the flexible manual scheduler.
 
         Args:
             resource_manager: Resource manager for the cluster
             delay_model: Human delay model for inter-iteration delays
-            system_delay: Minimum system delay in seconds (default 5s)
+            min_nodes_per_job: Minimum nodes a job can run with
+            max_scale_factor: Maximum scale-up factor (e.g., 2.0 = can use 2x requested)
         """
         self.resource_manager = resource_manager
         self.delay_model = delay_model
-        self.system_delay = system_delay
+        self.min_nodes_per_job = min_nodes_per_job
+        self.max_scale_factor = max_scale_factor
 
         # Job queue (FCFS order)
-        self.job_queue: deque[Job] = deque()
+        self.job_queue: deque[FlexibleJob] = deque()
 
         # Event queue (priority queue by time)
         self.event_queue: List[Event] = []
@@ -124,10 +134,10 @@ class ManualFCFSScheduler:
         self.workflow_states: Dict[str, WorkflowState] = {}
 
         # Running jobs
-        self.running_jobs: Dict[str, Job] = {}
+        self.running_jobs: Dict[str, FlexibleJob] = {}
 
         # Completed jobs (for metrics)
-        self.completed_jobs: List[Job] = []
+        self.completed_jobs: List[FlexibleJob] = []
 
         # Current simulation time
         self.current_time: float = 0.0
@@ -136,12 +146,9 @@ class ManualFCFSScheduler:
         """
         Submit a workflow to the scheduler.
 
-        This creates the initial job submission for iteration 0.
-
         Args:
             workflow: The workflow to submit
         """
-        # Track workflow state
         self.workflow_states[workflow.id] = WorkflowState(
             workflow=workflow,
             submit_time=workflow.submit_time
@@ -154,10 +161,6 @@ class ManualFCFSScheduler:
         """
         Submit a single iteration as a job.
 
-        In manual mode, each iteration requests its own node allocation.
-        The runtime is calculated based on wave-based execution to match
-        the automated mode's calculation for fair comparison.
-
         Args:
             workflow_id: Parent workflow ID
             iteration_idx: Iteration index
@@ -167,30 +170,22 @@ class ManualFCFSScheduler:
         workflow = state.workflow
 
         if iteration_idx >= workflow.num_iterations:
-            return  # No more iterations
+            return
 
         iter_config = workflow.iterations[iteration_idx]
         job_id = f"{workflow_id}-iter{iteration_idx}"
 
-        # In manual mode, each iteration requests exactly what it needs
-        nodes_needed = iter_config.get_total_nodes()
+        # Requested nodes = chains × nodes_per_chain (ideal)
+        nodes_requested = iter_config.get_total_nodes()
 
-        # Calculate runtime using wave-based execution
-        # For manual mode: nodes_allocated = nodes_needed (exact fit)
-        runtime = calculate_wave_runtime(
-            allocated_nodes=nodes_needed,
-            chains=iter_config.chains,
-            mesh=workflow.mesh,
-            tinyda_iterations=iter_config.tinyda_iterations
-        )
-
-        job = Job(
+        job = FlexibleJob(
             job_id=job_id,
             workflow_id=workflow_id,
             iteration_idx=iteration_idx,
             submit_time=submit_time,
-            nodes_needed=nodes_needed,
-            runtime=runtime,
+            nodes_requested=nodes_requested,
+            chains=iter_config.chains,
+            tinyda_iterations=iter_config.tinyda_iterations,
             mesh=workflow.mesh,
             queue_enter_time=submit_time
         )
@@ -206,9 +201,58 @@ class ManualFCFSScheduler:
         """Add an event to the event queue."""
         heapq.heappush(self.event_queue, event)
 
-    def _try_start_job(self, job: Job) -> bool:
+    def _determine_allocation(self, job: FlexibleJob) -> int:
         """
-        Try to start a job if resources are available.
+        Determine how many nodes to allocate to a job using queue-aware strategy.
+
+        Smart packing strategy:
+        - Scale DOWN when resources are scarce (run with fewer nodes using waves)
+        - Scale UP when queue is empty and extra resources available
+        - Don't scale up if other jobs are waiting (leave resources for them)
+
+        This balances individual job speed with overall cluster throughput.
+
+        Args:
+            job: The job to allocate for
+
+        Returns:
+            Number of nodes to allocate (0 if cannot run)
+        """
+        available = self.resource_manager.available_nodes
+        requested = job.nodes_requested
+
+        if available == 0:
+            return 0
+
+        # Minimum needed: at least 1 node (or configured minimum)
+        min_needed = max(self.min_nodes_per_job, 1)
+
+        if available < min_needed:
+            return 0  # Cannot run at all
+
+        # Base allocation: what the job requests (or less if not available)
+        allocation = min(available, requested)
+
+        # Queue-aware scale-up: only if no other jobs are waiting
+        if len(self.job_queue) == 0 and available > requested:
+            # No jobs waiting - we can scale up to use idle resources
+            # Scale up to max_scale_factor × requested, but leave at least
+            # min_nodes_per_job for any new job that might arrive
+            max_scale_up = int(requested * self.max_scale_factor)
+            # Reserve some nodes for potential new arrivals (at least min_nodes)
+            reserve = self.min_nodes_per_job
+            max_usable = available - reserve if available > reserve else available
+            allocation = min(max_usable, max_scale_up)
+            allocation = max(allocation, requested)  # At least what was requested
+
+        # Ensure at least minimum
+        allocation = max(allocation, min_needed)
+
+        return allocation
+
+    def _try_start_job(self, job: FlexibleJob) -> bool:
+        """
+        Try to start a job with flexible allocation.
 
         Args:
             job: Job to start
@@ -216,15 +260,31 @@ class ManualFCFSScheduler:
         Returns:
             True if job started, False if waiting
         """
+        allocation = self._determine_allocation(job)
+
+        if allocation == 0:
+            return False
+
+        # Allocate resources
         if self.resource_manager.allocate(
             job.job_id,
-            job.nodes_needed,
+            allocation,
             self.current_time,
             job.workflow_id,
             job.iteration_idx
         ):
-            # Job started
+            # Job started with this allocation
+            job.nodes_allocated = allocation
             job.start_time = self.current_time
+
+            # Calculate runtime based on actual allocation
+            job.runtime = calculate_wave_runtime(
+                allocated_nodes=allocation,
+                chains=job.chains,
+                mesh=job.mesh,
+                tinyda_iterations=job.tinyda_iterations
+            )
+
             self.running_jobs[job.job_id] = job
 
             # Update workflow state
@@ -290,16 +350,27 @@ class ManualFCFSScheduler:
         self._try_start_waiting_jobs()
 
     def _try_start_waiting_jobs(self):
-        """Try to start jobs from the waiting queue."""
-        started = True
-        while started and self.job_queue:
-            started = False
-            # Check each job in FCFS order
-            for i, job in enumerate(self.job_queue):
+        """
+        Try to start jobs from the waiting queue.
+
+        Continues starting jobs until no more can be started,
+        allowing multiple jobs to run in parallel.
+        """
+        # Keep trying to start jobs until no progress is made
+        made_progress = True
+        while made_progress and self.job_queue:
+            made_progress = False
+            jobs_started = []
+
+            # Try each job in the queue
+            for job in list(self.job_queue):  # Use list() to avoid modifying during iteration
                 if self._try_start_job(job):
-                    self.job_queue.remove(job)
-                    started = True
-                    break
+                    jobs_started.append(job)
+                    made_progress = True
+
+            # Remove started jobs from queue
+            for job in jobs_started:
+                self.job_queue.remove(job)
 
     def run_simulation(self, workflows: List[SeisSolWorkflow]) -> dict:
         """
@@ -343,7 +414,7 @@ class ManualFCFSScheduler:
     def _collect_results(self) -> dict:
         """Collect and return simulation results."""
         results = {
-            'mode': 'manual',
+            'mode': 'manual_flexible',
             'workflows': {},
             'total_makespan': 0.0,
             'total_compute_time': 0.0,
@@ -358,7 +429,7 @@ class ManualFCFSScheduler:
                 'workflow_id': wf_id,
                 'submit_time': state.submit_time,
                 'completion_time': state.last_job_end_time,
-                'turnaround_time': state.last_job_end_time - state.submit_time,
+                'turnaround_time': state.last_job_end_time - state.submit_time if state.last_job_end_time > 0 else 0,
                 'compute_time': state.total_compute_time,
                 'human_delay': state.total_human_delay,
                 'queue_wait_time': state.total_queue_wait_time,
@@ -383,16 +454,16 @@ class ManualFCFSScheduler:
         return results
 
 
-def create_manual_scheduler_from_config(config: dict, seed: int = 42) -> ManualFCFSScheduler:
+def create_manual_flexible_scheduler_from_config(config: dict, seed: int = 42) -> ManualFCFSFlexibleScheduler:
     """
-    Create a ManualFCFSScheduler from experiment configuration.
+    Create a ManualFCFSFlexibleScheduler from experiment configuration.
 
     Args:
         config: Experiment configuration dictionary
         seed: Random seed
 
     Returns:
-        Configured ManualFCFSScheduler instance
+        Configured ManualFCFSFlexibleScheduler instance
     """
     try:
         from .resource_manager import create_resource_manager_from_config
@@ -404,23 +475,30 @@ def create_manual_scheduler_from_config(config: dict, seed: int = 42) -> ManualF
     resource_manager = create_resource_manager_from_config(config)
     delay_model = create_delay_model_from_config(config, seed)
 
-    auto_config = config.get('auto_delay', {})
-    system_delay = auto_config.get('system_delay_seconds', 5.0)
+    flexible_config = config.get('manual_flexible', {})
+    min_nodes = flexible_config.get('min_nodes_per_job', 1)
+    max_scale = flexible_config.get('max_scale_factor', 2.0)
 
-    return ManualFCFSScheduler(
+    return ManualFCFSFlexibleScheduler(
         resource_manager=resource_manager,
         delay_model=delay_model,
-        system_delay=system_delay
+        min_nodes_per_job=min_nodes,
+        max_scale_factor=max_scale
     )
 
 
 if __name__ == "__main__":
-    # Test manual scheduler
-    from ..models.workflow import WorkflowGenerator
-    from .resource_manager import ResourceManagerConfig
-    from ..models.human_delay import HumanDelayConfig, WorkHoursConfig
+    # Test flexible manual scheduler
+    try:
+        from models.workflow import WorkflowGenerator
+        from models.human_delay import HumanDelayConfig, WorkHoursConfig
+        from schedulers.resource_manager import ResourceManagerConfig
+    except ImportError:
+        from ..models.workflow import WorkflowGenerator
+        from ..models.human_delay import HumanDelayConfig, WorkHoursConfig
+        from .resource_manager import ResourceManagerConfig
 
-    print("Manual FCFS Scheduler Test")
+    print("Manual FCFS Flexible Scheduler Test")
     print("=" * 60)
 
     # Create resource manager
@@ -431,20 +509,26 @@ if __name__ == "__main__":
     delay_config = HumanDelayConfig(
         median_hours=3.0,
         sigma=0.9,
-        work_hours=WorkHoursConfig(enabled=False)  # Disable for testing
+        work_hours=WorkHoursConfig(enabled=False)
     )
     delay_model = HumanDelayModel(delay_config, seed=42)
 
     # Create scheduler
-    scheduler = ManualFCFSScheduler(rm, delay_model)
+    scheduler = ManualFCFSFlexibleScheduler(
+        rm, delay_model,
+        min_nodes_per_job=1,
+        max_scale_factor=2.0
+    )
 
     # Generate test workflows
-    generator = WorkflowGenerator(seed=42, num_workflows=3, iteration_range=(2, 4))
+    generator = WorkflowGenerator(seed=42, num_workflows=5, iteration_range=(2, 4))
     workflows = generator.generate_workflows()
 
     print(f"\nGenerated {len(workflows)} workflows:")
     for wf in workflows:
         print(f"  {wf.id}: {wf.num_iterations} iterations, mesh {wf.mesh}")
+        for i, it in enumerate(wf.iterations):
+            print(f"    Iter {i}: {it.chains} chains x {it.nodes_per_chain} nodes = {it.get_total_nodes()} requested")
 
     # Run simulation
     print("\nRunning simulation...")
