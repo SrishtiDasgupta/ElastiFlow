@@ -2,10 +2,9 @@
 Visualization generation for manual vs automated comparison.
 
 Creates publication-quality plots for:
-1. Gantt chart comparison
-2. Bar chart metrics comparison
-3. Utilization time series
-4. Box plots for distributions
+1. Bar chart metrics comparison (3 modes)
+2. Utilization time series (3 modes)
+3. Box plots for turnaround distributions (3 modes)
 """
 
 import matplotlib.pyplot as plt
@@ -15,17 +14,23 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
-from ..simulation.simulate_comparison import ComparisonResult
+try:
+    from ..simulation.simulate_comparison import ComparisonResult
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from simulation.simulate_comparison import ComparisonResult
 
 
-# Color scheme
+# Color scheme for three modes
 COLORS = {
-    'manual': '#E74C3C',       # Red
-    'automated': '#2ECC71',    # Green
-    'compute': '#3498DB',      # Blue
-    'delay': '#E74C3C',        # Red
-    'queue_wait': '#F39C12',   # Orange
-    'idle': '#95A5A6',         # Gray
+    'manual_strict': '#E74C3C',      # Red
+    'manual_flexible': '#F39C12',    # Orange
+    'automated': '#2ECC71',          # Green
+    'compute': '#3498DB',            # Blue
+    'delay': '#E74C3C',              # Red
+    'queue_wait': '#9B59B6',         # Purple
+    'idle': '#95A5A6',               # Gray
 }
 
 
@@ -33,110 +38,127 @@ def plot_metric_comparison(
     result: ComparisonResult,
     output_dir: str,
     filename: str = "metric_comparison.png",
-    figsize: Tuple[int, int] = (12, 8),
+    figsize: Tuple[int, int] = (14, 10),
     dpi: int = 150
 ) -> str:
     """
-    Create bar chart comparing key metrics between modes.
-
-    Args:
-        result: ComparisonResult from simulation
-        output_dir: Output directory path
-        filename: Output filename
-        figsize: Figure size
-        dpi: DPI for output
-
-    Returns:
-        Path to created figure
+    Create bar chart comparing key metrics between all three modes.
     """
     summary = result.get_summary()
 
     fig, axes = plt.subplots(2, 2, figsize=figsize)
-    fig.suptitle('Manual vs Automated Workflow Comparison', fontsize=14, fontweight='bold')
+    fig.suptitle('Manual (Strict) vs Manual (Flexible) vs Automated Workflow Comparison',
+                 fontsize=14, fontweight='bold')
+
+    modes = ['Manual\n(Strict)', 'Manual\n(Flexible)', 'Automated']
+    colors = [COLORS['manual_strict'], COLORS['manual_flexible'], COLORS['automated']]
 
     # 1. Makespan comparison
     ax = axes[0, 0]
-    modes = ['Manual', 'Automated']
-    makespans = [summary['manual']['makespan_hours'], summary['automated']['makespan_hours']]
-    bars = ax.bar(modes, makespans, color=[COLORS['manual'], COLORS['automated']])
+    makespans = [
+        summary['manual']['makespan_hours'],
+        summary['manual_flexible']['makespan_hours'],
+        summary['automated']['makespan_hours']
+    ]
+    bars = ax.bar(modes, makespans, color=colors)
     ax.set_ylabel('Hours')
     ax.set_title('Total Makespan')
-    # Add improvement annotation
-    imp = summary['improvement']['makespan_pct']
-    ax.annotate(f'{imp:.1f}% reduction', xy=(1, makespans[1]), xytext=(1.3, makespans[0] * 0.8),
-                fontsize=10, ha='center', arrowprops=dict(arrowstyle='->', color='gray'))
+    # Add values on bars
+    for bar, val in zip(bars, makespans):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                f'{val:.1f}h', ha='center', va='bottom', fontsize=9)
+    # Add improvement annotations
+    imp_strict = summary['improvement']['makespan_pct']
+    imp_flex = summary['improvement']['makespan_flexible_pct']
+    ax.annotate(f'{imp_strict:.1f}% ↓', xy=(2, makespans[2]),
+                xytext=(2.3, makespans[0] * 0.7),
+                fontsize=9, ha='center', color=COLORS['manual_strict'],
+                arrowprops=dict(arrowstyle='->', color=COLORS['manual_strict'], lw=0.5))
 
     # 2. Time breakdown (stacked bar)
     ax = axes[0, 1]
     width = 0.6
-    manual_breakdown = [
+    x = np.array([0, 1, 2])
+
+    compute = [
         summary['manual']['compute_hours'],
-        summary['manual']['human_delay_hours'],
-        summary['manual']['queue_wait_hours']
+        summary['manual_flexible']['compute_hours'],
+        summary['automated']['compute_hours']
     ]
-    auto_breakdown = [
-        summary['automated']['compute_hours'],
-        summary['automated']['system_delay_seconds'] / 3600,
+    delay = [
+        summary['manual']['human_delay_hours'],
+        summary['manual_flexible']['human_delay_hours'],
+        summary['automated']['system_delay_seconds'] / 3600
+    ]
+    queue = [
+        summary['manual']['queue_wait_hours'],
+        summary['manual_flexible']['queue_wait_hours'],
         summary['automated']['queue_wait_hours']
     ]
 
-    x = np.array([0, 1])
-    bottom_manual = 0
-    bottom_auto = 0
+    ax.bar(x, compute, width, label='Compute', color=COLORS['compute'])
+    ax.bar(x, delay, width, bottom=compute, label='Delay', color=COLORS['delay'])
+    ax.bar(x, queue, width, bottom=[c+d for c,d in zip(compute, delay)],
+           label='Queue Wait', color=COLORS['queue_wait'])
 
-    colors = [COLORS['compute'], COLORS['delay'], COLORS['queue_wait']]
-    labels = ['Compute', 'Delay', 'Queue Wait']
-
-    for i, (m_val, a_val, color, label) in enumerate(zip(manual_breakdown, auto_breakdown, colors, labels)):
-        ax.bar([0], [m_val], width, bottom=[bottom_manual], color=color, label=label if i == 0 else None)
-        ax.bar([1], [a_val], width, bottom=[bottom_auto], color=color)
-        bottom_manual += m_val
-        bottom_auto += a_val
-
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(['Manual', 'Automated'])
+    ax.set_xticks(x)
+    ax.set_xticklabels(modes)
     ax.set_ylabel('Hours')
     ax.set_title('Time Breakdown')
-
-    # Create legend
-    compute_patch = mpatches.Patch(color=COLORS['compute'], label='Compute')
-    delay_patch = mpatches.Patch(color=COLORS['delay'], label='Delay')
-    queue_patch = mpatches.Patch(color=COLORS['queue_wait'], label='Queue Wait')
-    ax.legend(handles=[compute_patch, delay_patch, queue_patch], loc='upper right')
+    ax.legend(loc='upper right', fontsize=8)
 
     # 3. Resource utilization
     ax = axes[1, 0]
-    utils = [summary['manual']['utilization'] * 100, summary['automated']['utilization'] * 100]
-    bars = ax.bar(modes, utils, color=[COLORS['manual'], COLORS['automated']])
+    utils = [
+        summary['manual']['utilization'] * 100,
+        summary['manual_flexible']['utilization'] * 100,
+        summary['automated']['utilization'] * 100
+    ]
+    bars = ax.bar(modes, utils, color=colors)
     ax.set_ylabel('Utilization (%)')
     ax.set_title('Average Resource Utilization')
     ax.set_ylim(0, 100)
     # Add values on bars
     for bar, val in zip(bars, utils):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 2,
-                f'{val:.1f}%', ha='center', va='bottom')
+                f'{val:.1f}%', ha='center', va='bottom', fontsize=9)
 
     # 4. Summary table
     ax = axes[1, 1]
     ax.axis('off')
 
     table_data = [
-        ['Metric', 'Manual', 'Automated', 'Improvement'],
-        ['Makespan', f"{summary['manual']['makespan_hours']:.1f}h",
-         f"{summary['automated']['makespan_hours']:.1f}h",
+        ['Metric', 'Manual\n(Strict)', 'Manual\n(Flexible)', 'Automated'],
+        ['Makespan',
+         f"{summary['manual']['makespan_hours']:.1f}h",
+         f"{summary['manual_flexible']['makespan_hours']:.1f}h",
+         f"{summary['automated']['makespan_hours']:.1f}h"],
+        ['Compute',
+         f"{summary['manual']['compute_hours']:.1f}h",
+         f"{summary['manual_flexible']['compute_hours']:.1f}h",
+         f"{summary['automated']['compute_hours']:.1f}h"],
+        ['Delay',
+         f"{summary['manual']['human_delay_hours']:.1f}h",
+         f"{summary['manual_flexible']['human_delay_hours']:.1f}h",
+         f"{summary['automated']['system_delay_seconds']:.0f}s"],
+        ['Queue Wait',
+         f"{summary['manual']['queue_wait_hours']:.1f}h",
+         f"{summary['manual_flexible']['queue_wait_hours']:.1f}h",
+         f"{summary['automated']['queue_wait_hours']:.1f}h"],
+        ['Utilization',
+         f"{summary['manual']['utilization']*100:.1f}%",
+         f"{summary['manual_flexible']['utilization']*100:.1f}%",
+         f"{summary['automated']['utilization']*100:.1f}%"],
+        ['Improvement',
+         'baseline',
+         f"{summary['improvement']['makespan_pct'] - summary['improvement']['makespan_flexible_pct']:.1f}%",
          f"{summary['improvement']['makespan_pct']:.1f}%"],
-        ['Avg Turnaround', '-', '-', f"{summary['improvement']['turnaround_pct']:.1f}%"],
-        ['Utilization', f"{summary['manual']['utilization']*100:.1f}%",
-         f"{summary['automated']['utilization']*100:.1f}%",
-         f"+{summary['improvement']['utilization_ppt']:.1f}ppt"],
-        ['Human Delay', f"{summary['manual']['human_delay_hours']:.1f}h",
-         f"{summary['automated']['system_delay_seconds']:.0f}s", 'N/A'],
     ]
 
     table = ax.table(cellText=table_data[1:], colLabels=table_data[0],
                      loc='center', cellLoc='center')
     table.auto_set_font_size(False)
-    table.set_fontsize(10)
+    table.set_fontsize(9)
     table.scale(1.2, 1.5)
 
     # Style header row
@@ -159,51 +181,34 @@ def plot_utilization_timeseries(
     result: ComparisonResult,
     output_dir: str,
     filename: str = "utilization_timeseries.png",
-    figsize: Tuple[int, int] = (14, 6),
+    figsize: Tuple[int, int] = (16, 5),
     dpi: int = 150
 ) -> str:
     """
-    Plot resource utilization over time for both modes.
-
-    Args:
-        result: ComparisonResult from simulation
-        output_dir: Output directory path
-        filename: Output filename
-        figsize: Figure size
-        dpi: DPI for output
-
-    Returns:
-        Path to created figure
+    Plot resource utilization over time for all three modes.
     """
-    fig, axes = plt.subplots(1, 2, figsize=figsize, sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=figsize, sharey=True)
     fig.suptitle('Resource Utilization Over Time', fontsize=14, fontweight='bold')
 
-    # Manual mode
-    ax = axes[0]
-    manual_history = result.manual_results.get('utilization_history', [])
-    if manual_history:
-        times = [t / 3600 for t, _, _ in manual_history]
-        utils = [used / total * 100 if total > 0 else 0 for _, used, total in manual_history]
-        ax.fill_between(times, utils, alpha=0.3, color=COLORS['manual'])
-        ax.plot(times, utils, color=COLORS['manual'], linewidth=1.5)
-    ax.set_xlabel('Time (hours)')
-    ax.set_ylabel('Utilization (%)')
-    ax.set_title('Manual Mode')
-    ax.set_ylim(0, 100)
-    ax.grid(True, alpha=0.3)
+    modes_data = [
+        ('Manual (Strict)', result.manual_results, COLORS['manual_strict']),
+        ('Manual (Flexible)', result.manual_flexible_results, COLORS['manual_flexible']),
+        ('Automated', result.auto_results, COLORS['automated']),
+    ]
 
-    # Automated mode
-    ax = axes[1]
-    auto_history = result.auto_results.get('utilization_history', [])
-    if auto_history:
-        times = [t / 3600 for t, _, _ in auto_history]
-        utils = [used / total * 100 if total > 0 else 0 for _, used, total in auto_history]
-        ax.fill_between(times, utils, alpha=0.3, color=COLORS['automated'])
-        ax.plot(times, utils, color=COLORS['automated'], linewidth=1.5)
-    ax.set_xlabel('Time (hours)')
-    ax.set_title('Automated Mode')
-    ax.set_ylim(0, 100)
-    ax.grid(True, alpha=0.3)
+    for ax, (title, results, color) in zip(axes, modes_data):
+        history = results.get('utilization_history', [])
+        if history:
+            times = [t / 3600 for t, _, _ in history]
+            utils = [used / total * 100 if total > 0 else 0 for _, used, total in history]
+            ax.fill_between(times, utils, alpha=0.3, color=color)
+            ax.plot(times, utils, color=color, linewidth=1.5)
+        ax.set_xlabel('Time (hours)')
+        if ax == axes[0]:
+            ax.set_ylabel('Utilization (%)')
+        ax.set_title(title)
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
 
@@ -220,28 +225,23 @@ def plot_turnaround_distribution(
     result: ComparisonResult,
     output_dir: str,
     filename: str = "turnaround_distribution.png",
-    figsize: Tuple[int, int] = (10, 6),
+    figsize: Tuple[int, int] = (12, 6),
     dpi: int = 150
 ) -> str:
     """
-    Plot turnaround time distribution comparison.
-
-    Args:
-        result: ComparisonResult from simulation
-        output_dir: Output directory path
-        filename: Output filename
-        figsize: Figure size
-        dpi: DPI for output
-
-    Returns:
-        Path to created figure
+    Plot turnaround time distribution comparison for all three modes.
     """
     fig, ax = plt.subplots(figsize=figsize)
 
     # Extract turnaround times
-    manual_turnarounds = [
+    manual_strict_turnarounds = [
         wf['turnaround_time'] / 3600
         for wf in result.manual_results['workflows'].values()
+        if wf['completed']
+    ]
+    manual_flexible_turnarounds = [
+        wf['turnaround_time'] / 3600
+        for wf in result.manual_flexible_results['workflows'].values()
         if wf['completed']
     ]
     auto_turnarounds = [
@@ -252,32 +252,93 @@ def plot_turnaround_distribution(
 
     # Box plot
     bp = ax.boxplot(
-        [manual_turnarounds, auto_turnarounds],
-        labels=['Manual', 'Automated'],
+        [manual_strict_turnarounds, manual_flexible_turnarounds, auto_turnarounds],
+        labels=['Manual\n(Strict)', 'Manual\n(Flexible)', 'Automated'],
         patch_artist=True
     )
 
     # Color the boxes
-    bp['boxes'][0].set_facecolor(COLORS['manual'])
-    bp['boxes'][0].set_alpha(0.6)
-    bp['boxes'][1].set_facecolor(COLORS['automated'])
-    bp['boxes'][1].set_alpha(0.6)
+    colors = [COLORS['manual_strict'], COLORS['manual_flexible'], COLORS['automated']]
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.6)
 
     ax.set_ylabel('Turnaround Time (hours)')
     ax.set_title('Workflow Turnaround Time Distribution')
     ax.grid(True, alpha=0.3, axis='y')
 
     # Add mean markers
-    ax.scatter([1], [np.mean(manual_turnarounds)], marker='D', color='black', s=50, zorder=3, label='Mean')
-    ax.scatter([2], [np.mean(auto_turnarounds)], marker='D', color='black', s=50, zorder=3)
+    means = [
+        np.mean(manual_strict_turnarounds),
+        np.mean(manual_flexible_turnarounds),
+        np.mean(auto_turnarounds)
+    ]
+    ax.scatter([1, 2, 3], means, marker='D', color='black', s=50, zorder=3, label='Mean')
 
     # Add statistics annotation
     stats_text = (
-        f"Manual: mean={np.mean(manual_turnarounds):.1f}h, median={np.median(manual_turnarounds):.1f}h\n"
-        f"Auto: mean={np.mean(auto_turnarounds):.1f}h, median={np.median(auto_turnarounds):.1f}h"
+        f"Manual (Strict): mean={np.mean(manual_strict_turnarounds):.1f}h, median={np.median(manual_strict_turnarounds):.1f}h\n"
+        f"Manual (Flexible): mean={np.mean(manual_flexible_turnarounds):.1f}h, median={np.median(manual_flexible_turnarounds):.1f}h\n"
+        f"Automated: mean={np.mean(auto_turnarounds):.1f}h, median={np.median(auto_turnarounds):.1f}h"
     )
     ax.text(0.02, 0.98, stats_text, transform=ax.transAxes, fontsize=9,
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
+    plt.tight_layout()
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    filepath = output_path / filename
+    plt.savefig(filepath, dpi=dpi, bbox_inches='tight')
+    plt.close()
+
+    return str(filepath)
+
+
+def plot_delay_comparison(
+    result: ComparisonResult,
+    output_dir: str,
+    filename: str = "delay_comparison.png",
+    figsize: Tuple[int, int] = (10, 6),
+    dpi: int = 150
+) -> str:
+    """
+    Plot comparison of delay times across modes.
+    Shows that human delay is the bottleneck.
+    """
+    summary = result.get_summary()
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    modes = ['Manual\n(Strict)', 'Manual\n(Flexible)', 'Automated']
+    delays = [
+        summary['manual']['human_delay_hours'],
+        summary['manual_flexible']['human_delay_hours'],
+        summary['automated']['system_delay_seconds'] / 3600
+    ]
+    colors = [COLORS['manual_strict'], COLORS['manual_flexible'], COLORS['automated']]
+
+    bars = ax.bar(modes, delays, color=colors)
+    ax.set_ylabel('Total Delay Time (hours)')
+    ax.set_title('Inter-Iteration Delay: Human vs System')
+
+    # Add values on bars
+    for bar, val in zip(bars, delays):
+        if val > 0.1:
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                    f'{val:.1f}h', ha='center', va='bottom', fontsize=10)
+        else:
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
+                    f'{val*3600:.0f}s', ha='center', va='bottom', fontsize=10)
+
+    # Add annotation showing the difference
+    ax.annotate(
+        f'Human delay dominates:\n{delays[0]:.1f}h vs {delays[2]*3600:.0f}s',
+        xy=(2, delays[2]), xytext=(1.5, delays[0] * 0.5),
+        fontsize=10, ha='center',
+        bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7),
+        arrowprops=dict(arrowstyle='->', color='gray')
+    )
 
     plt.tight_layout()
 
@@ -322,6 +383,10 @@ def generate_all_plots(
         result, output_dir, f"{timestamp}_turnaround_distribution.png", dpi=dpi
     )
 
+    paths['delay_comparison'] = plot_delay_comparison(
+        result, output_dir, f"{timestamp}_delay_comparison.png", dpi=dpi
+    )
+
     return paths
 
 
@@ -330,7 +395,7 @@ if __name__ == "__main__":
     print("Plot Generation Test")
     print("=" * 60)
 
-    from ..simulation.simulate_comparison import ComparisonSimulator
+    from simulation.simulate_comparison import ComparisonSimulator
 
     config = {
         'experiment': {'seed': 42},
@@ -343,7 +408,7 @@ if __name__ == "__main__":
             'chains_range': [2, 6],
             'nodes_per_chain_range': [1, 3],
             'tinyda_iterations_range': [1, 5],
-            'mean_interarrival_seconds': 1800
+            'mean_interarrival_seconds': 300
         },
         'human_delay': {
             'median_hours': 3.0,
@@ -352,7 +417,11 @@ if __name__ == "__main__":
             'max_hours': 12.0,
             'work_hours': {'enabled': False}
         },
-        'auto_delay': {'system_delay_seconds': 5.0}
+        'auto_delay': {'system_delay_seconds': 5.0},
+        'manual_flexible': {
+            'min_nodes_per_job': 1,
+            'max_scale_factor': 2.0
+        }
     }
 
     print("Running simulation...")

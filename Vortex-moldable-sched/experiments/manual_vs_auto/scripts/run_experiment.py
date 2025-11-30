@@ -50,7 +50,7 @@ def get_default_config() -> dict:
             'chains_range': [2, 8],
             'nodes_per_chain_range': [1, 4],
             'tinyda_iterations_range': [1, 10],
-            'mean_interarrival_seconds': 3600
+            'mean_interarrival_seconds': 300
         },
         'human_delay': {
             'distribution': 'lognormal',
@@ -66,6 +66,10 @@ def get_default_config() -> dict:
         },
         'auto_delay': {
             'system_delay_seconds': 5.0
+        },
+        'manual_flexible': {
+            'min_nodes_per_job': 1,
+            'max_scale_factor': 2.0
         },
         'output': {
             'dir': 'output/',
@@ -108,7 +112,7 @@ def run_multiple_replications(
     if verbose:
         print(f"Running {num_replications} replications...")
 
-    results = simulator.run_multiple_replications(num_replications)
+    results = simulator.run_multiple_Ireplications(num_replications)
 
     # Collect data for statistics
     manual_makespans = [r.manual_results['total_makespan'] for r in results]
