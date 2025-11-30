@@ -1,0 +1,60 @@
+# Manual vs Automated Workflow Simulation Configuration
+# =====================================================
+
+experiment:
+  name: manual_vs_auto_seissol
+  description: "Compare manual intervention vs automated feedback-driven workflows"
+  seed: 42
+  num_replications: 30  # For statistical significance
+
+# Single homogeneous on-prem cluster (SuperMUC-like)
+resources:
+  total_nodes: 148
+  cores_per_node: 48
+
+# Workflow generation parameters
+workflows:
+  num_workflows: 200
+  iteration_range: [2, 6]  # 2-6 workflow iterations
+
+  # Mesh sizes: 500 (slowest), 750, 1000 (fastest)
+  mesh_sizes: [500, 750, 1000]
+  mesh_distribution: [0.33, 0.34, 0.33]  # Equal distribution
+
+  # Chain configuration per iteration
+  chains_range: [2, 8]
+  nodes_per_chain_range: [1, 4]
+  tinyda_iterations_range: [1, 10]
+
+  # Arrival pattern
+  arrival_distribution: exponential
+  mean_interarrival_seconds: 3600  # 1 hour average between workflow submissions
+
+# Human delay model for manual intervention mode
+human_delay:
+  distribution: lognormal
+  median_hours: 3.0       # Typical delay: 3 hours
+  sigma: 0.9              # Variability parameter
+  min_hours: 0.5          # Minimum 30 minutes
+  max_hours: 24.0         # Maximum 24 hours
+
+  # Work hours constraint (optional)
+  work_hours:
+    enabled: true
+    start: 9              # 9 AM
+    end: 17               # 5 PM
+    timezone: local
+
+# Automated mode delay (system processing only)
+auto_delay:
+  system_delay_seconds: 5  # Time to process feedback and trigger next iteration
+
+# Output configuration
+output:
+  dir: output/
+  generate_plots: true
+  csv_export: true
+
+  # Plot settings
+  plot_format: png
+  plot_dpi: 150
