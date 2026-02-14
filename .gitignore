@@ -1,16 +1,25 @@
-.DS_Store
+**/.DS_Store
 
-# Secrets
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+vortex_venv/
+
+# Terraform
 terraform.tfvars
 *.auto.tfvars
-
-# State files
 *.tfstate
 *.tfstate.*
-
-# Provider directory
 .terraform/
 .terraform.lock.hcl
-
-# Crash logs
+*.tfplan
 crash.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
