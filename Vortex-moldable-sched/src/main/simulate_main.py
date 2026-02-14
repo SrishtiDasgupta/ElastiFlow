@@ -14,7 +14,8 @@ from scripts.dispatcher import dispatcher
 queue = Redis_Queue(queue_name='wf-queue')
 finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
 resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
-sched = FCFS_Scheduler(queue, finish_queue, resource_request_queue, sort_key='runtime_per_iteration') # runtime_per_iteration
+sched = EarliestDeadlineEDF(queue, finish_queue, resource_request_queue, sort_key='runtime_per_iteration')
+sched.metrics.set_output_file('results_edf_moldable_runtime_400')
 # sched = HEFT_FCFS_REQ(queue, finish_queue, resource_request_queue)
 # sched = HEFT_HEFT_REQ(queue, finish_queue, resource_request_queue)
 # sched = FCFS_Optimized(queue, finish_queue, resource_request_queue, sort_key='runtime_per_iteration')
@@ -40,5 +41,5 @@ sim_sched.process(sched.run, sim_sched, wf_mb, resource_request_mb, name='fcfs_s
 # P3: Scheduler reads MB2 and frees resources
 sim_sched.process(sched.processJobCompletion, sim_sched, completed_jobs_mb, name='job_completion_sched')
 
-g = simulus.sync([sim_dispatcher, sim_sched], enable_smp=True)
+g = simulus.sync([sim_dispatcher, sim_sched], enable_smp=False)
 g.run(show_runtime_report=True)

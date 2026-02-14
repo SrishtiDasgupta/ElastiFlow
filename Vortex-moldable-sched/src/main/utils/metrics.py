@@ -1,9 +1,8 @@
 import pandas as pd
 import time
 
-# Import from constants_LA to get correct TOTAL_WORKFLOWS for LA simulations
-# constants_LA inherits from constants and overrides specific values
-from config.constants_LA import RESOURCE_UTILIZATION_POLLING, TOTAL_RESOURCES, TOTAL_WORKFLOWS
+# Import from constants for non-LA simulations
+from config.constants import RESOURCE_UTILIZATION_POLLING, TOTAL_RESOURCES, TOTAL_WORKFLOWS
 
 from resource_manager.instance import CloudReservedInstance, OnPremInstance
 from resource_manager.resource_manager import ResourceManager
@@ -14,6 +13,11 @@ class Metrics():
         self.df = {}
         self.free_resources = []
         self.collectFlag = True
+        self.output_file = 'results'  # default output filename (without extension)
+
+    def set_output_file(self, filename):
+        """Set the output filename for CSV results (without extension)"""
+        self.output_file = filename
 
     def addToDataframe(self, id, wf, submit_time: float):
         instances = self.processInstances(wf[0], wf[3])
@@ -62,7 +66,7 @@ class Metrics():
         print('Computing metrics...')
         self.collectFlag = False
         resource_df = pd.DataFrame(self.free_resources, columns=['Timestamp', 'On-prem', 'Cloud'])
-        resource_df.to_csv('resources.csv')
+        resource_df.to_csv(f'{self.output_file}_resources.csv')
         makespan, waitTime, cost = 0, 0, 0
         budget_miss, deadline_miss, overall_miss = 0, 0, 0
         executed_workflows = 0
@@ -84,21 +88,44 @@ class Metrics():
                 wasted_cost += self.computeCost(wf, self.df[wf]['finish_time'])
                 wasted_time += self.df[wf]['finish_time'] - self.df[wf]['exec_start_time']
         
+        avg_flowtime = round(makespan/executed_workflows, 4) if executed_workflows > 0 else 0
+        avg_cost = round(cost/executed_workflows, 4) if executed_workflows > 0 else 0
+        avg_wait_time = round(waitTime/executed_workflows, 4) if executed_workflows > 0 else 0
+        avg_resource_util = round(self.computeResourceUtilization(), 4)
+        deadline_miss_rate = round((deadline_miss + TOTAL_WORKFLOWS - executed_workflows)/TOTAL_WORKFLOWS, 4)
+        budget_miss_rate = round(budget_miss/TOTAL_WORKFLOWS, 4)
+        overall_miss_rate = round((overall_miss + TOTAL_WORKFLOWS - executed_workflows)/TOTAL_WORKFLOWS, 4)
+        wasted_time_hours = round(wasted_time / (60*60), 2)
+        wasted_cost_total = round(wasted_cost, 2)
+
         print(f'Total workflows = {TOTAL_WORKFLOWS}')
         print(f'Executed workflows = {executed_workflows}')
-        
-        print(f'Average Flowtime = {round(makespan/executed_workflows, 4)}')
-        print(f'Average Cost = {round(cost/executed_workflows, 4)}')
-        print(f'Average Wait Time = {round(waitTime/executed_workflows, 4)}')
-        print(f'Average resourcs utilized = {round(self.computeResourceUtilization(), 4)}')
-        print(f'Deadline miss rate = {round((deadline_miss + TOTAL_WORKFLOWS - executed_workflows)/TOTAL_WORKFLOWS, 4)}')
-        print(f'Budget miss rate = {round(budget_miss/TOTAL_WORKFLOWS, 4)}')
-        print(f'Overall miss rate = {round((overall_miss + TOTAL_WORKFLOWS - executed_workflows)/TOTAL_WORKFLOWS, 4)}')
-        print(f'Time spent on incomplete workflows = {round(wasted_time / (60*60), 2)} hours')
-        print(f'Wasted cost on incomplete workflows = {round(wasted_cost, 2)}')       
+        print(f'Average Flowtime = {avg_flowtime}')
+        print(f'Average Cost = {avg_cost}')
+        print(f'Average Wait Time = {avg_wait_time}')
+        print(f'Average resourcs utilized = {avg_resource_util}')
+        print(f'Deadline miss rate = {deadline_miss_rate}')
+        print(f'Budget miss rate = {budget_miss_rate}')
+        print(f'Overall miss rate = {overall_miss_rate}')
+        print(f'Time spent on incomplete workflows = {wasted_time_hours} hours')
+        print(f'Wasted cost on incomplete workflows = {wasted_cost_total}')
+
+        # Save summary metrics to .out file
+        with open(f'{self.output_file}.out', 'w') as f:
+            f.write(f'Total workflows = {TOTAL_WORKFLOWS}\n')
+            f.write(f'Executed workflows = {executed_workflows}\n')
+            f.write(f'Average Flowtime = {avg_flowtime}\n')
+            f.write(f'Average Cost = {avg_cost}\n')
+            f.write(f'Average Wait Time = {avg_wait_time}\n')
+            f.write(f'Average resources utilized = {avg_resource_util}\n')
+            f.write(f'Deadline miss rate = {deadline_miss_rate}\n')
+            f.write(f'Budget miss rate = {budget_miss_rate}\n')
+            f.write(f'Overall miss rate = {overall_miss_rate}\n')
+            f.write(f'Time spent on incomplete workflows = {wasted_time_hours} hours\n')
+            f.write(f'Wasted cost on incomplete workflows = {wasted_cost_total}\n')
 
         df = pd.DataFrame(self.df).T
-        df.to_csv('results.csv')
+        df.to_csv(f'{self.output_file}.csv')
         exit()
 
     def collectResourceUtilization(self, sim, rm: ResourceManager):

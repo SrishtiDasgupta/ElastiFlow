@@ -9,7 +9,7 @@ import pandas as pd
 
 AVG_TINYDA_ITERATIONS = 7
 AVG_WORKFLOW_ITERATIONS = 4
-TOTAL_WORKFLOWS = 200
+TOTAL_WORKFLOWS = 400
 
 def gaussian(x, a, b, c):
     return a * np.exp(-(x - b) ** 2 / (2 * c ** 2))

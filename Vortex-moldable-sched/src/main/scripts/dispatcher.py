@@ -7,8 +7,7 @@ import seaborn as sns
 import requests
 import yaml
 
-# from config.constants import TOTAL_WORKFLOWS
-TOTAL_WORKFLOWS = 5
+from config.constants import TOTAL_WORKFLOWS
 
 # DEPRECATED
 def delay_generation(workflows):
@@ -55,6 +54,7 @@ def plotSubmitTimes(submitTimes):
     plt.savefig('submitTimes.png')
 
 def delayGenerationFromSubmitTimes(workflows):
+    np.random.seed(0)  # Fixed seed for reproducibility across experiments
     data = pd.read_csv('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv', sep="\t")
     data['submit times'] = pd.to_datetime(data['submit times'])
     data['submit_time_only'] = data['submit times'].dt.time
@@ -122,7 +122,7 @@ def dispatcher(sim, wf_mb):
         sim.sync().send(sim, wf_mb, str(workflow))
 
     # Send END after all requests are complete
-    sim.sleep(150000)
+    sim.sleep(300000)
     sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/")))
 
 

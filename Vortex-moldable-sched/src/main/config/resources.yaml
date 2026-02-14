@@ -8,11 +8,11 @@ executor-incoming-port: 8089
 
 fsx-cost: 8.38e-05
 
-# 148 instances of 48 cores
+# 148 instances of 48 cores (DISABLED for cloud-only experiments)
 on-prem:
   - name: on-prem
     ip: [10.19.212.212] # Slurm head node IP
-    slots: 148 # 148 instances
+    slots: 0 # 148 instances - set to 0 to disable on-prem
     cores: 48 # Only for readability
     runtime: 817.0609 # 689.9875 # runtime in seconds for 1 run of the 500 mesh model 
     reserved-cost: 0.0004056 # per second cost for 48 cores # 1.46
@@ -54,12 +54,12 @@ cloud:
     on-demand-cost: 0.001274 # 4.5864
     reserved-cost: 0.000503 # 1.811
   
-  - name: hpc7a.12xlarge 
+  - name: hpc7a.12xlarge
     ip: [10.19.231.78, 10.19.231.79, 10.19.231.80, 10.19.231.81, 10.19.231.82, 10.19.231.83]
     cores: 24
     runtime: 1277.7992
-    reserved-slots: 1
-    on-demand-slots: 0
+    reserved-slots: 6
+    on-demand-slots: 12
     on-demand-cost: 0.002146 # 7.7252
     reserved-cost: 0.0010086 # 3.631
 
