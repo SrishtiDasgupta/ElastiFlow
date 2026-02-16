@@ -8,9 +8,13 @@ import subprocess
 import yaml
 import json
 
+import os as _os
+
 from config.constants import SIMULATE
 from utils.sim import getTime
 from utils.exec_sched import getClientInputs, getWorkflowConfig, setWorkflowComplete
+
+_PORTS_YAML = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))), 'config', 'ports.yaml')
 
 from .steep_variables import Variable
 
@@ -133,12 +137,12 @@ class ExecuteAction(Action):
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
             if not SIMULATE and len(args['hosts'].get('on-prem', [])) != 0:       
                 port = args['port']
-                with open("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "r") as f:
+                with open(_PORTS_YAML, "r") as f:
                     data = yaml.safe_load(f)
                 ports = data.get("onprem_ports", [])
                 ports.append(port)
                 data["onprem_ports"] = ports
-                with open("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "w") as f:
+                with open(_PORTS_YAML, "w") as f:
                     yaml.safe_dump(data, f) 
             self.workflow_iterator += 1 # increment the iterator for the workflow
             if next_trials>0 and self.workflow_iterator<=MAX_ITERATIONS:

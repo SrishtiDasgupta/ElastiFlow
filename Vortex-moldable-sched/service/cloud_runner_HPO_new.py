@@ -419,7 +419,7 @@ class CloudRunnerHPO:
             self.logger.error(f"Error parsing HPO results: {e}")
             return {'error': str(e), 'config': {'next_trials': 0}}
 
-   def cleanup_ray_cluster(self):
+    def cleanup_ray_cluster(self):
         """Clean up Ray cluster on all worker nodes"""
         self.logger.info("Cleaning up Ray cluster...")
 

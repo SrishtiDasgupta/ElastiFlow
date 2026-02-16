@@ -8,6 +8,9 @@ from .request import ExecutorRequest, getConfig, sendRequest
 from scripts.create_instance import createInstance, deleteInstanceFromIp
 
 import yaml
+import os
+
+_PORTS_YAML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'ports.yaml')
 
 workflow_config = {}
 
@@ -53,7 +56,7 @@ def detectWorkflowType(wf_id):
 
 
 def getWorkflowOnpremPort():
-    with open("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "r") as f:
+    with open(_PORTS_YAML, "r") as f:
         data = yaml.safe_load(f)
 
     ports = data.get("onprem_ports", [])
@@ -63,7 +66,7 @@ def getWorkflowOnpremPort():
     popped = ports.pop(0)
     data["onprem_ports"] = ports
 
-    with open("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "w") as f:
+    with open(_PORTS_YAML, "w") as f:
         yaml.safe_dump(data, f) # default = block style
 
     return popped

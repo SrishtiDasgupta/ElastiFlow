@@ -89,7 +89,7 @@ class PlclRunnerHPO(RunnerBase):
         self.output_file = os.path.join(log_dir, f"{self.job_name}-%j.out")
         self.error_file = os.path.join(log_dir, f"{self.job_name}-%j.err")
         self.slurm_script = os.path.join(log_dir, f"{self.job_name}_dispatcher.slurm")
-        self.port = 6379 ##' HARDCODED FOR NOW: RAY HEAD NODE ... might clash with redis port .. have to check 
+        self.port = int(self.request.get('port', 6380))  # From port pool; default 6380 to avoid Redis (6379)
 
         slurm_script = f"""#!/bin/bash
 #SBATCH -J {self.job_name}
@@ -234,6 +234,7 @@ echo '[INFO] HPO Completed!'
                     print(output)
                     break
 
+        return output
 
     def run(self) -> dict:
         # Arguments from the workflow
@@ -242,7 +243,7 @@ echo '[INFO] HPO Completed!'
         self._generate_slurm_script()
         self._submit_slurm()
         self._wait_for_completion()
-        self._parse_results()
+        return self._parse_results()
 
 
 """

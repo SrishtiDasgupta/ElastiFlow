@@ -1,1 +1,1 @@
-onprem_ports: []
+onprem_ports: [6380, 6381, 6382, 6383]
