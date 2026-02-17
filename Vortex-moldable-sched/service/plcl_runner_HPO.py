@@ -69,7 +69,7 @@ class PlclRunnerHPO(RunnerBase):
 
         self.wf_id = self.request['wf_id']
         self.learning_rate = self.request['cohesion']['learning_rate']
-        self.momentum = self.request['cohesion']['hidden']
+        self.momentum = self.request['cohesion']['momentum']
         self.threads = self.request['cohesion']['threads']
         self.epoch = self.request['cohesion']['epoch']
         self.next_trials = self.request['cohesion']['next_trials']
@@ -144,7 +144,7 @@ echo "[INFO] Running HPO pipeline on head ...."
 srun --overlap -N1 -n1 -w "$head_node" bash -lc "
 export RAY_ADDRESS='$head_ip:$port'
 echo '{{\\"learning_rate\\": {self.learning_rate}, \\"momentum\\": {self.momentum}, \\"next_trials\\": {self.next_trials}}}' \\
-      | python3 /home/ubuntu/Vortex/pytorch-test-scripts/hpo_pipeline_verbose.py --hosts {self.nodes} "
+      | python3 /fsx/Vortex-mid/Vortex-moldable-sched/fsx/hyperparameter_test/hpo_pipeline_verbose.py --hosts {self.nodes} "
 
 echo '[INFO] Shutting down Ray Cluster ..........'
 srun --label bash -c 'ray stop' || true
