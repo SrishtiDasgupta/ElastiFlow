@@ -232,8 +232,8 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
                     batches = math.ceil(trials / num_hosts)
                     runtime = batches * runtime_func(1, model, epochs)
 
-                # Calculate cost for this configuration (use cost_per_second directly)
-                cost = runtime * cost_per_second * num_hosts
+                # Calculate cost for this configuration (cost_per_second is actually $/hour)
+                cost = (runtime / 3600) * cost_per_second * num_hosts
 
                 # Check if meets constraints
                 if runtime <= deadline and cost <= budget:

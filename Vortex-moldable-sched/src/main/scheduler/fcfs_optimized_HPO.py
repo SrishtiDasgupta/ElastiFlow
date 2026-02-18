@@ -245,8 +245,8 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                     batches = math.ceil(trials / num_hosts)
                     runtime = batches * runtime_func(1, model, epochs)
 
-                # Calculate cost for this configuration (use cost_per_second directly)
-                cost = runtime * cost_per_second * num_hosts
+                # Calculate cost for this configuration (cost_per_second is actually $/hour)
+                cost = (runtime / 3600) * cost_per_second * num_hosts
 
                 # Check if meets constraints
                 if runtime <= deadline and cost <= budget:
@@ -275,7 +275,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         elif 'g5' in instance_name:
             return 'g5'
         elif 'on-prem' in instance_name:
-            return 'g5'  # On-prem has g5-equivalent performance
+            return 'g4'  # On-prem uses g4dn.xlarge instances
         else:
             return 'unknown'
 
@@ -373,7 +373,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         # CASE 1: On-prem workflow - scale ONLY within on-prem
         if isinstance(instance, OnPremInstance):
             runtime = runtime_func(1, model, request['tinyda-iterations'])
-            cost_per_instance = instance.cost_per_second * runtime
+            cost_per_instance = (runtime / 3600) * instance.cost_per_second
             to_be_used = min(instance.getFreeSlots(), request['count'], int(budget / cost_per_instance))
 
             if to_be_used > 0:
@@ -407,9 +407,9 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             if acquired_count >= trials_needed or budget < MIN_INSTANCE_COST:
                 break
 
-            # Calculate cost
+            # Calculate cost (cost_per_second is actually $/hour)
             runtime = runtime_func(1, model, request['tinyda-iterations'])
-            cost_per_instance = inst.cost_per_second * runtime
+            cost_per_instance = (runtime / 3600) * inst.cost_per_second
 
             # Add cold start for on-demand
             if inst.type == 'on-demand':
