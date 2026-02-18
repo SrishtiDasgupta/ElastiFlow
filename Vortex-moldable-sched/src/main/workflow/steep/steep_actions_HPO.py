@@ -130,8 +130,11 @@ class ExecuteAction(Action):
             else:
                 print(f"{self.wf_id} Workflow iteration {self.workflow_iterator} finished at {time.time()}")
                 output_lines = result.stdout.splitlines()  # Split the output into lines
-                input_value = output_lines[0]
-                result = eval(input_value)
+                # Line 0 is the wf_id printed by run_hpo.py; result dict starts at line 1
+                for line in output_lines:
+                    if 'config' in line:
+                        result = eval(line)
+                        break
                 next_trials = result['config']['next_trials']
                 print(result)
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
