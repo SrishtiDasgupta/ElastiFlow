@@ -6,8 +6,11 @@ from config.constants_HPO import WORKFLOW_POLLING, SIMULATE, COLD_START_TIME
 from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 from scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
 from utils.request import ExecutorRequest, sendRequest, getConfig
+import os
 from resource_manager.resource_manager import ResourceManager
 from resource_manager.instance import CloudOnDemandInstance, OnPremInstance
+
+_HPO_RESOURCES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
 from utils.sim import getTime, peekElement, removeElement
 from utils.resource import getConstraintsFromWorkflow
 from scheduler.scheduler_HPO import Scheduler_HPO
@@ -17,7 +20,7 @@ from scheduler.scheduler_HPO import Scheduler_HPO
 class FCFS_Scheduler_HPO(Scheduler_HPO):
 
     def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost'):
-        self.resource_manager = ResourceManager()
+        self.resource_manager = ResourceManager(_HPO_RESOURCES)
         # Sort by base cost (hourly rate) - cost_per_trial calculated during allocation
         func = lambda x: x.cost if hasattr(x, 'cost') else 0
         self.resource_manager.sortResourcesByFunction(func)
