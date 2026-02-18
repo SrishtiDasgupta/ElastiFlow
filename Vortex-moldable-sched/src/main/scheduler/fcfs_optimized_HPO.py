@@ -516,9 +516,14 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         # If on-prem workers → use on-prem executor (manually started)
         # If cloud workers → create dedicated cloud executor
 
-        if 'on-prem' in ips and len(ips['on-prem'][1]) > 0:
-            # On-prem workflow: Use on-prem executor (pre-started)
-            executor_ip = ips['on-prem'][1][0]  # Head node IP
+        # ips['on-prem'] is a dict: {'on-prem': (count, [ip_list])}
+        on_prem_hosts = ips.get('on-prem', {})
+        on_prem_ips = []
+        for name, (count, ip_list) in on_prem_hosts.items():
+            on_prem_ips.extend(ip_list)
+
+        if on_prem_ips:
+            executor_ip = on_prem_ips[0]  # Head node IP
             print(f"HPO Moldable Workflow {wf_plan['id']}: Using on-prem executor at {executor_ip}")
         else:
             # Cloud workflow: Create dedicated executor instance
