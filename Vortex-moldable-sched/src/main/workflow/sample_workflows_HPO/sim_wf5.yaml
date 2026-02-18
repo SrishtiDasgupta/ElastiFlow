@@ -18,7 +18,7 @@ vars:
       "momentum": 0.9,
       "batch_size": 64,
       "epochs": 5,
-      "next_trials": 2,
+      "next_trials": 3,
       "model": "convnext_large"
     }
 

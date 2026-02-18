@@ -4,7 +4,7 @@ id: test-hpo-dedicated-executor-001
 constraints:
   budget: 25.50
   deadline: 7200
-  chains: 2                     # Number of trials/samples
+  chains: 4                     # Number of trials/samples (must match next_trials in vars)
   tinydaIterations: 6           # Number of epochs per trial
 
 config:
@@ -18,7 +18,7 @@ vars:
       "momentum": 0.9,
       "batch_size": 64,
       "epochs": 6,
-      "next_trials": 3,
+      "next_trials": 4,
       "model_name": "vgg19"
     }
 

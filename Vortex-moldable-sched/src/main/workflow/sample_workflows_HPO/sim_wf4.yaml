@@ -18,7 +18,7 @@ vars:
       "momentum": 0.9,
       "batch_size": 128,
       "epochs": 10,
-      "next_trials": 6,
+      "next_trials": 8,
       "model": "vgg19"
     }
 

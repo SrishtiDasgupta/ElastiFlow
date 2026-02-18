@@ -18,7 +18,7 @@ vars:
       "momentum": 0.9,
       "batch_size": 64,
       "epochs": 6,
-      "next_trials": 4,
+      "next_trials": 6,
       "model": "wide_resnet101_2"
     }
 

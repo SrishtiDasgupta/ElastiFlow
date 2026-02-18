@@ -3,8 +3,8 @@ id: hpo-sim-wf1-vgg19-small
 
 constraints:
   budget: 15.00
-  deadline: 3600
-  chains: 2                     # Small parallel trials
+  deadline: 800
+  chains: 4                     # 4 parallel trials (must match next_trials in vars)
   tinydaIterations: 4           # Few epochs
 
 config:
@@ -18,7 +18,7 @@ vars:
       "momentum": 0.9,
       "batch_size": 64,
       "epochs": 4,
-      "next_trials": 2,
+      "next_trials": 4,
       "model": "vgg19"
     }
 
