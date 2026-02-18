@@ -197,9 +197,11 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
         chains = input[0].get('next_trials', 0)
         tinyda_iterations = input[0].get('epoch', input[0].get('epochs', 1))
 
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+    # HPO uses its own MOLDABLE flag from constants_HPO (not the shared constants.py)
+    from config.constants_HPO import MOLDABLE as HPO_MOLDABLE, SIMULATE as HPO_SIMULATE
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, HPO_MOLDABLE, chains)
 
-    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
+    if not HPO_SIMULATE and len(hosts.get('on-prem', [])) != 0:
         port = getWorkflowOnpremPort()
     else:
         port = 4242

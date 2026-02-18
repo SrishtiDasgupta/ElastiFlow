@@ -179,7 +179,7 @@ DEADLINE_BUFFER = 180  # Safety buffer for deadline calculations (3 minutes)
 # ====================================================================================
 
 SIMULATE = False  # False for real execution; True for simulation only
-MOLDABLE = True  # Enable moldable scheduling
+MOLDABLE = False  # False for static scheduler; True for moldable (fcfs_optimized_HPO)
 FREE_RESOURCES = True  # Allow resource deallocation
 TOTAL_WORKFLOWS = PRIMARY_WORKFLOWS  # Default to 10 workflows
 

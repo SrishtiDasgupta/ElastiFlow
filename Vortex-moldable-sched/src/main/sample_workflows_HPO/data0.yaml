@@ -29,7 +29,7 @@ actions:
     yieldToInput: output_config
     actions:
       - type: execute
-        service: /fsx/Vortex/service/run_hpo.py
+        service: /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py
         inputs:
           - id: config
             var: i
