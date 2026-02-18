@@ -10,7 +10,7 @@ import json
 
 import os as _os
 
-from config.constants import SIMULATE
+from config.constants_HPO import SIMULATE
 from utils.sim import getTime
 from utils.exec_sched import getClientInputs, getWorkflowConfig, setWorkflowComplete
 

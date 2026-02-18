@@ -5,7 +5,7 @@ from utils.sim import getTime
 from utils.exec_sched import setNewResources
 from scripts.create_instance_HPO import deleteInstanceFromIp
 from utils.request import getConfig, sendRequest
-from workflow.steep_workflow import Steep_Workflow
+from workflow.steep_workflow_HPO import Steep_Workflow_HPO
 from server import server
 from wf_queue.redis_queue import Redis_Queue
 from config.constants_HPO import SIMULATE
@@ -53,7 +53,7 @@ def executeWorkflowHPO(data, sim=None):
 
     # Create Steep workflow (same as SeisSol)
     try:
-        workflow = Steep_Workflow(workflow_plan, sim, deadline)
+        workflow = Steep_Workflow_HPO(workflow_plan, sim, deadline)
         start_time = getTime(sim)
 
         print(f'Executing HPO workflow {workflow.id} at {start_time}')
@@ -86,8 +86,8 @@ def executeWorkflowHPO(data, sim=None):
         raise
 
     # Tell scheduler workflow execution is complete
-    if SIMULATE:
-        sim.sleep(7.7)  # Executor overhead
+    if sim:
+        sim.sleep(7.7)  # Executor overhead (simulation only)
 
     request = {
         "wf-id": workflow.id,

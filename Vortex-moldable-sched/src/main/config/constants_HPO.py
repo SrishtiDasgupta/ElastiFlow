@@ -178,7 +178,7 @@ DEADLINE_BUFFER = 180  # Safety buffer for deadline calculations (3 minutes)
 # SIMULATION PARAMETERS
 # ====================================================================================
 
-SIMULATE = True  # Use simulation mode for testing
+SIMULATE = False  # False for real execution; True for simulation only
 MOLDABLE = True  # Enable moldable scheduling
 FREE_RESOURCES = True  # Allow resource deallocation
 TOTAL_WORKFLOWS = PRIMARY_WORKFLOWS  # Default to 10 workflows

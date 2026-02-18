@@ -22,8 +22,7 @@ Scheduling:
   SlurmQueues:
     - Name: gpu-compute
       CapacityType: ONDEMAND
-      Image:
-        CustomAmi: ami-0bace95aa4cfc84f8     # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.7 (Ubuntu 22.04)
+      # Default ParallelCluster AMI — NVIDIA drivers installed automatically for GPU instances
       ComputeResources:
         - Name: g4dn-nodes
           InstanceType: g4dn.xlarge
