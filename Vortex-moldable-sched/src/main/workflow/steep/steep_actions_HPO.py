@@ -76,7 +76,7 @@ class ExecuteAction(Action):
         self.wf_id = wf_id
         
         # Init iterator for dynamic iterations
-        # self.workflow_iterations = getWorkflowConfig(self.wf_id)["workflowIterations"]
+        self.workflow_iterations = getWorkflowConfig(self.wf_id)["workflowIterations"]
         self.workflow_iterator = 0
         
         for parameter in self.input_parameters:
@@ -148,7 +148,7 @@ class ExecuteAction(Action):
                 with open(_PORTS_YAML, "w") as f:
                     yaml.safe_dump(data, f) 
             self.workflow_iterator += 1 # increment the iterator for the workflow
-            if next_trials>0 and self.workflow_iterator<=MAX_ITERATIONS:
+            if next_trials>0 and self.workflow_iterator<self.workflow_iterations:
                 self.output_parameters[0].append((result['config'],  hosts))
             else:
                 # Else condition terminates the execution since a new input value is not appended
