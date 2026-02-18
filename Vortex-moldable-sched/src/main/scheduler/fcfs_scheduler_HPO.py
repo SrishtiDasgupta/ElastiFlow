@@ -262,7 +262,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         elif 'g5' in instance_name:
             return 'g5'
         elif 'on-prem' in instance_name:
-            return 'g5'  # On-prem has g5-equivalent performance
+            return 'g4'  # On-prem uses g4dn.xlarge instances
         else:
             return 'unknown'
 
