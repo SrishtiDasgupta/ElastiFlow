@@ -108,13 +108,13 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         """
         model = constraints['mesh']
         budget = constraints['budget']
-        deadline = constraints['deadline']
+        deadline_duration = constraints['deadline_duration']  # Duration in seconds (not absolute timestamp)
         trials = constraints['chains']
         epochs = constraints['tinydaIterations']
 
         # Get optimal instance type AND number of hosts
         optimal_type, num_hosts_requested = self.selectOptimalInstanceType(
-            budget, deadline, model, trials, epochs
+            budget, deadline_duration, model, trials, epochs
         )
 
         instances = self.resource_manager.getResources()
