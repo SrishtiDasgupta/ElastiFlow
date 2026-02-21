@@ -9,7 +9,7 @@ import torchvision.transforms as T
 from torch.utils.data import DataLoader
 
 from ray import tune
-from ray.air import session
+import ray.train
 
 # from ray.train import ScalingConfig
 # from ray.air.config import RunConfig as AirRunConfig
@@ -229,7 +229,7 @@ def train_cifar10_torch(config):
         acc = correct / max(1, total)
         best = max(best, acc)
         # per-epoch stats; keep or remove as you like
-        session.report(
+        ray.train.report(
             {
                 "epoch": ep,
                 "accuracy": acc,
