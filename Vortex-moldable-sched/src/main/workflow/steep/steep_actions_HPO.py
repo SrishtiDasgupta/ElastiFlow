@@ -132,9 +132,12 @@ class ExecuteAction(Action):
                 output_lines = result.stdout.splitlines()  # Split the output into lines
                 # Line 0 is the wf_id printed by run_hpo.py; result dict starts at line 1
                 for line in output_lines:
-                    if 'config' in line:
-                        result = json.loads(line)
-                        break
+                    if '{"config"' in line:
+                        try:
+                            result = json.loads(line)
+                            break
+                        except json.JSONDecodeError:
+                            continue
                 next_trials = result['config']['next_trials']
                 print(result)
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
