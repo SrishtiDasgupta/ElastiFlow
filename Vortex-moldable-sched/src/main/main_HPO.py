@@ -9,17 +9,20 @@ from wf_queue.redis_queue import Redis_Queue
 # Import HPO-specific schedulers
 from scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
 from scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
+from scheduler.edf_scheduler_HPO import EDF_Scheduler_HPO
+from scheduler.edf_optimized_HPO import EDF_Optimized_HPO
 
-def main(scheduler_type='moldable'):
+def main(scheduler_type='moldable', algo='fcfs'):
     """
     Main entry point for HPO scheduling system
 
     Args:
         scheduler_type: 'static' or 'moldable' (default: moldable)
+        algo: 'fcfs' or 'edf' (default: fcfs)
     """
 
-    print(f"🚀 Starting HPO Scheduling System")
-    print(f"Scheduler Type: {scheduler_type.upper()}")
+    print(f"Starting HPO Scheduling System")
+    print(f"Algorithm: {algo.upper()}, Mode: {scheduler_type.upper()}")
     print("=" * 50)
 
     # Create queues for communication
@@ -27,23 +30,19 @@ def main(scheduler_type='moldable'):
     finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
     resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
 
-    # Select scheduler based on type
-    if scheduler_type == 'static':
+    # Select scheduler based on algo + mode
+    if algo == 'fcfs' and scheduler_type == 'static':
         print("Using Static HPO FCFS Scheduler")
-        sched = FCFS_Scheduler_HPO(
-            queue,
-            finish_queue,
-            resource_request_queue,
-            sort_key='cost_per_trial'
-        )
-    else:  # moldable
+        sched = FCFS_Scheduler_HPO(queue, finish_queue, resource_request_queue, sort_key='cost_per_trial')
+    elif algo == 'fcfs' and scheduler_type == 'moldable':
         print("Using Moldable HPO FCFS Scheduler")
-        sched = FCFS_Optimized_HPO(
-            queue,
-            finish_queue,
-            resource_request_queue,
-            sort_key='cost_per_trial'
-        )
+        sched = FCFS_Optimized_HPO(queue, finish_queue, resource_request_queue, sort_key='cost_per_trial')
+    elif algo == 'edf' and scheduler_type == 'static':
+        print("Using Static HPO EDF Scheduler")
+        sched = EDF_Scheduler_HPO(queue, finish_queue, resource_request_queue, sort_key='cost_per_trial')
+    elif algo == 'edf' and scheduler_type == 'moldable':
+        print("Using Moldable HPO EDF Scheduler")
+        sched = EDF_Optimized_HPO(queue, finish_queue, resource_request_queue, sort_key='cost_per_trial')
 
     print(f"Scheduler initialized: {sched.__class__.__name__}")
 
@@ -113,8 +112,8 @@ def main(scheduler_type='moldable'):
     print("  ✅ Resource Request Listener started")
 
     print("\n" + "=" * 50)
-    print("🎯 HPO Scheduling System Ready!")
-    print(f"Mode: {scheduler_type.upper()}")
+    print("HPO Scheduling System Ready!")
+    print(f"Algorithm: {algo.upper()}, Mode: {scheduler_type.upper()}")
     print("Waiting for HPO workflows...")
     print("=" * 50)
 
@@ -153,8 +152,14 @@ if __name__ == "__main__":
         default='moldable',
         help='Scheduler mode: static or moldable (default: moldable)'
     )
+    parser.add_argument(
+        '--algo',
+        choices=['fcfs', 'edf'],
+        default='fcfs',
+        help='Scheduling algorithm: fcfs or edf (default: fcfs)'
+    )
 
     args = parser.parse_args()
 
-    # Run main with selected scheduler type
-    main(scheduler_type=args.mode)
+    # Run main with selected scheduler type and algorithm
+    main(scheduler_type=args.mode, algo=args.algo)

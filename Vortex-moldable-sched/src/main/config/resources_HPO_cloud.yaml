@@ -1,0 +1,36 @@
+scheduler: 172.31.8.202
+
+user-request-port: 8080
+workflow-complete-port: 8082
+resource-request-port: 8084
+executor-incoming-port: 8089
+
+fsx-cost: 8.38e-05
+
+# Cloud-only environment: reserved + on-demand (no Slurm)
+on-prem:
+  - name: on-prem
+    ip: []
+    slots: 0
+    cores: 4
+    runtime: 540
+    reserved-cost: 0.526
+
+cloud:
+  - name: g4dn.xlarge
+    ip: [] # Reserved IPs to be filled at deployment
+    cores: 4
+    runtime: 540
+    reserved-slots: 2
+    on-demand-slots: 2
+    on-demand-cost: 0.526
+    reserved-cost: 0.227
+
+  - name: g5.xlarge
+    ip: [] # Reserved IPs to be filled at deployment
+    cores: 4
+    runtime: 265
+    reserved-slots: 2
+    on-demand-slots: 2
+    on-demand-cost: 1.006
+    reserved-cost: 0.435

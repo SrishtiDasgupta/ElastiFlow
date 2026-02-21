@@ -183,6 +183,11 @@ MOLDABLE = False  # False for static scheduler; True for moldable (fcfs_optimize
 FREE_RESOURCES = True  # Allow resource deallocation
 TOTAL_WORKFLOWS = PRIMARY_WORKFLOWS  # Default to 10 workflows
 
+# Poisson arrival process: average inter-arrival time between workflow submissions
+# For HPO (20 workflows over ~4 hours): avg ~720s between submissions
+# For HPO (10 workflows over ~2 hours): avg ~720s between submissions
+AVG_INTERARRIVAL_TIME = 720  # seconds between HPO workflow submissions
+
 # ====================================================================================
 # EXPECTED IMPROVEMENTS WITH OPTIMIZED PARAMETERS
 # ====================================================================================
