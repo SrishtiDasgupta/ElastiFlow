@@ -12,7 +12,7 @@ yes | sudo apt install -y lustre-client-modules-$(uname -r) >> ~/setup.out
 
 sudo mkdir -p /fsx
 
-sudo mount -t lustre -o relatime,flock fs-0577278416bdf1172.fsx.eu-north-1.amazonaws.com@tcp:/zyqr7bev /fsx
+sudo mount -t lustre -o relatime,flock fs-04a4223998940b3ef.fsx.eu-north-1.amazonaws.com@tcp:/5ynhnbev /fsx
 
 if ! command -v aws &> /dev/null; then
     cp /fsx/install_aws.sh ~
