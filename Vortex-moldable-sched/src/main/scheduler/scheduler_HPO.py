@@ -5,7 +5,7 @@ from typing import List
 from config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT
 from executor_HPO import executeWorkflowHPO, processNewResourcesHPO
 from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
-from utils.metrics import Metrics
+from utils.metrics_HPO import MetricsHPO as Metrics
 from utils.resource import getEstimate
 from resource_manager.instance import Instance, OnPremInstance
 from utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest

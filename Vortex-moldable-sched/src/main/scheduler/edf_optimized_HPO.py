@@ -1,3 +1,19 @@
+"""
+EDF_Optimized_HPO: Moldable EDF Scheduler for HPO Workflows
+
+Combines EDF (Earliest Deadline First) queue ordering with moldable
+resource allocation from fcfs_optimized_HPO.py. Adds deadline-urgency-based
+graduated scaling from the LA EDF pattern.
+
+Key features:
+- EDF heap ordering for deadline-based priority
+- Moldable resource reallocation between HPO iterations
+- Deadline urgency boost: CRITICAL (<30%) -> 2.0x, WARNING (<50%) -> 1.5x, Regular -> 1.2x
+- Cluster isolation (on-prem vs cloud, no cross-cluster migration)
+- Instance type locking (no g5<->g4 switching within workflow)
+"""
+
+import heapq
 from collections import deque
 import math
 import threading
@@ -14,34 +30,47 @@ import os
 from resource_manager.resource_manager import ResourceManager
 
 _HPO_RESOURCES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from utils.sim import getTime, peekElement, removeElement
+from utils.sim import getTime, getAllElements, peekElement, removeElement
 from utils.resource import getConstraintsFromWorkflow, getEstimate
 from utils.request import ExecutorRequest, sendRequest, getConfig
 from scheduler.scheduler_HPO import Scheduler_HPO
 
-# HPO-specific Moldable FCFS Scheduler with Dedicated Executor Design
-# Supports full cross-type instance switching and elastic scaling
-class FCFS_Optimized_HPO(Scheduler_HPO):
+
+class EDF_Optimized_HPO(Scheduler_HPO):
+    """
+    Moldable EDF scheduler for HPO workflows.
+
+    EDF ordering + moldable resource reallocation + deadline urgency boost.
+    """
 
     def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost_per_trial'):
         self.resource_manager = ResourceManager(_HPO_RESOURCES)
-        # HPO-specific sorting: prioritize by trial cost + cold start penalty
         func = lambda x: self.getHPOInstanceCost(x) + (COLD_START_TIME * 0.001 if isinstance(x, CloudOnDemandInstance) else 0)
         self.resource_manager.sortResourcesByFunction(func)
+
+        # EDF heap setup
+        self.workflow_heap = []
+        self.resource_request_heap = []
+        self.workflow_counter = 0
+        self.resource_request_counter = 0
+
         super().__init__(queue, finish_queue, resource_request_queue)
 
     def getHPOInstanceCost(self, instance):
         """Get cost per trial for HPO instances"""
         if 'g4dn' in instance.name:
-            return 0.798 / 3600  # g4dn.2xlarge cost per second
+            return 0.798 / 3600
         elif 'g5' in instance.name:
-            return 1.28 / 3600   # g5.2xlarge cost per second
+            return 1.28 / 3600
         else:
-            return 0.90 / 3600   # on-premise equivalent
+            return 0.90 / 3600
 
-    def run(self, sim = None, wf_mb = None, resource_request_mb = None):
+    def run(self, sim=None, wf_mb=None, resource_request_mb=None):
 
-        print(f'Starting HPO Moldable FCFS scheduler...')
+        print(f'Starting HPO Moldable EDF scheduler...')
+        print(f'  - EDF ordering: Workflows prioritized by earliest deadline')
+        print(f'  - Moldable: Dynamic resource reallocation between iterations')
+        print(f'  - Deadline urgency boost: CRITICAL 2.0x, WARNING 1.5x, Regular 1.2x')
 
         # Start a thread to periodically compute resource utilization
         if sim:
@@ -52,31 +81,41 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
         while True:
 
-            # Check queue for moldable resource requests
-            resource_request = peekElement(resource_request_mb, self.resource_request_queue)
+            # === PHASE 1: Process resource requests sorted by deadline ===
+            resource_requests = getAllElements(resource_request_mb, self.resource_request_queue, None)
+
+            if resource_requests:
+                self.processResourceRequestsByDeadline(resource_requests)
+
+            resource_request = self.peekWorkflow(self.resource_request_heap)
 
             if resource_request:
-                # Process moldable resource requests
                 start = time.time()
-                resource_request = eval(resource_request)
                 if getTime(sim) - resource_request['request-time'] > 300:  # 5 min timeout
+                    self.popWorkflow(self.resource_request_heap)
                     removeElement(resource_request_mb, self.resource_request_queue)
                     continue
                 self.processMoldableRequestHPO(resource_request, sim)
-                print(f"HPO Moldable resource processing overhead: {time.time() - start}")
+                print(f"  HPO EDF Moldable resource processing overhead: {time.time() - start}")
+                self.popWorkflow(self.resource_request_heap)
                 removeElement(resource_request_mb, self.resource_request_queue)
                 continue
 
-            # Check the queue for new jobs
-            workflow_plan = peekElement(wf_mb, self.queue)
+            # === PHASE 2: Schedule new workflows in EDF order ===
+            workflows = getAllElements(wf_mb, self.queue, None)
 
-            if workflow_plan:
-                wf_plan = eval(workflow_plan) # Convert string back to dictionary
+            if workflows:
+                self.processWorkflowsByDeadline(workflows)
+
+            wf_plan = self.peekWorkflow(self.workflow_heap)
+
+            if wf_plan:
 
                 # End the simulation and compute metrics
                 if wf_plan['id'] == 'END':
+                    self.popWorkflow(self.workflow_heap)
                     removeElement(wf_mb, self.queue)
-                    self.metrics.computeMetrics(file_prefix='FCFS_Moldable_HPO_')
+                    self.metrics.computeMetrics(file_prefix='EDF_Moldable_HPO_')
                     break
 
                 # Moldable scheduling
@@ -84,35 +123,76 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
                     constraints = getConstraintsFromWorkflow(wf_plan)
                     ips, alloc_resources = self.allocateResourcesMoldableHPO(constraints, sim)
-                    print(f"{wf_plan['id']} moldable allocation: ", ips)
+                    print(f"{wf_plan['id']} EDF moldable allocation (deadline={constraints['deadline']:.1f}s): ", ips)
 
-                    # Remove the element if we found the resources needed.
                     if ips:
+                        self.popWorkflow(self.workflow_heap)
                         removeElement(wf_mb, self.queue)
-                        # NOTE: We start billing at this point
                         start_time = getTime(sim)
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
                     else:
-                        # Wait until resources become available
                         self.resource_manager.setResourcesAvailable(False)
-                        print('No HPO moldable resources to allocate, waiting...')
+                        print('No HPO EDF moldable resources to allocate, waiting...')
 
             (sim or time).sleep(WORKFLOW_POLLING)
+
+    # =========================================================================
+    # EDF HEAP MANAGEMENT
+    # =========================================================================
+
+    def processWorkflowsByDeadline(self, workflows: List[any]):
+        """Sort workflows by deadline (EDF ordering)"""
+        for wf in workflows:
+            wf_plan = eval(wf)
+            if wf_plan['id'] == 'END':
+                heapq.heappush(self.workflow_heap, (1000000, self.workflow_counter, wf_plan['id'], wf_plan))
+            else:
+                deadline = wf_plan['submit_time'] + wf_plan['constraints']['deadline']
+                heapq.heappush(self.workflow_heap, (deadline, self.workflow_counter, wf_plan['id'], wf_plan))
+            self.workflow_counter += 1
+
+    def processResourceRequestsByDeadline(self, requests: List[any]):
+        """Sort resource requests by deadline (EDF ordering) — urgent workflows get resources first"""
+        for req in requests:
+            req_dict = eval(req)
+            # Get workflow deadline for ordering
+            try:
+                wf = self.resource_manager.getWorkflow(req_dict['wf-id'])
+                deadline = wf[2] if wf else float('inf')
+            except Exception:
+                deadline = float('inf')
+
+            heapq.heappush(self.resource_request_heap, (deadline, self.resource_request_counter, req_dict['wf-id'], req_dict))
+            self.resource_request_counter += 1
+
+    def peekWorkflow(self, heap):
+        """Peek at top of heap without removing"""
+        return heap and heap[0][3]
+
+    def popWorkflow(self, heap):
+        """Remove top of heap"""
+        try:
+            heapq.heappop(heap)
+        except Exception as e:
+            print(f'HEAP POP ERROR: {e}')
+            print(heap)
+
+    # =========================================================================
+    # HPO MOLDABLE RESOURCE ALLOCATION (from fcfs_optimized_HPO.py)
+    # =========================================================================
 
     def allocateResourcesMoldableHPO(self, constraints, sim=None):
         """
         Moldable HPO resource allocation with resilient fallback
-        Same logic as static but prepares for moldable adjustments between rounds
         """
         model = constraints['mesh']
         budget = constraints['budget']
-        deadline_duration = constraints['deadline_duration']  # Duration in seconds (not absolute timestamp)
+        deadline_duration = constraints['deadline_duration']
         trials = constraints['chains']
         epochs = constraints['tinydaIterations']
 
-        # Get optimal instance type AND number of hosts
         optimal_type, num_hosts_requested = self.selectOptimalInstanceType(
             budget, deadline_duration, model, trials, epochs
         )
@@ -121,7 +201,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         selected_instances = []
         remaining = num_hosts_requested
 
-        # PRIORITY 1: On-premise (if type matches)
+        # PRIORITY 1: On-premise
         for instance in instances:
             if isinstance(instance, OnPremInstance) and \
                self.getInstanceTypeForHPO(instance.name) == optimal_type:
@@ -129,12 +209,12 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                 if slots_available >= remaining:
                     selected_instances = [(instance, remaining)]
                     remaining = 0
-                    print(f"Moldable: Allocated {num_hosts_requested} on-prem {instance.name}")
+                    print(f"EDF Moldable: Allocated {num_hosts_requested} on-prem {instance.name}")
                     break
                 elif slots_available > 0:
                     selected_instances = [(instance, slots_available)]
                     remaining -= slots_available
-                    print(f"Moldable: Partial on-prem {slots_available}/{num_hosts_requested}")
+                    print(f"EDF Moldable: Partial on-prem {slots_available}/{num_hosts_requested}")
                     break
 
         # PRIORITY 2: Cloud reserved
@@ -172,20 +252,18 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                         if cost < budget:
                             selected_instances.append((instance, slots_available))
                             remaining -= slots_available
-                            print(f"Moldable: {slots_available} on-demand {optimal_type} (${cost:.2f})")
+                            print(f"EDF Moldable: {slots_available} on-demand {optimal_type} (${cost:.2f})")
                             if remaining == 0:
                                 break
 
-        # RESILIENT: Proceed with what we got
         allocated_hosts = num_hosts_requested - remaining
         if remaining > 0:
-            print(f"⚠️  Moldable degraded: requested {num_hosts_requested}, got {allocated_hosts}")
+            print(f"EDF Moldable degraded: requested {num_hosts_requested}, got {allocated_hosts}")
 
         if allocated_hosts == 0:
-            print(f"❌ Moldable: Failed to allocate any {optimal_type} hosts")
+            print(f"EDF Moldable: Failed to allocate any {optimal_type} hosts")
             return None, None
 
-        # Allocate and create instances
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)
         ips = self.createOnDemandWorkers(ips, sim)
 
@@ -195,19 +273,13 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         """
         Select optimal instance type AND number of hosts (moldable version)
         Returns: (instance_type, num_hosts)
-
-        Considers ALL available instance types (on-prem, g4, g5) with actual costs
-        Explores different host counts to find best cost/performance tradeoff
-        No instance type switching - stays within one type for entire workflow
         """
         instances = self.resource_manager.getResources()
 
-        # Build list of unique instance types to evaluate
         instance_types = {}
         for instance in instances:
             inst_type = self.getInstanceTypeForHPO(instance.name)
             if inst_type not in instance_types:
-                # Store cheapest cost for this type (prioritize reserved/on-prem over on-demand)
                 cost = instance.cost_per_second
                 runtime_func = getRuntime_g5 if inst_type == 'g5' else getRuntime_g4
                 instance_types[inst_type] = {
@@ -216,7 +288,6 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                     'name': instance.name
                 }
             else:
-                # Update if we found a cheaper instance of same type
                 if instance.cost_per_second < instance_types[inst_type]['cost_per_second']:
                     instance_types[inst_type]['cost_per_second'] = instance.cost_per_second
                     instance_types[inst_type]['name'] = instance.name
@@ -227,30 +298,21 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         best_cost = 0
         best_runtime = 0
 
-        # Evaluate each instance type
         for inst_type, info in instance_types.items():
             runtime_func = info['runtime_func']
             cost_per_second = info['cost_per_second']
-            cost_per_hour = cost_per_second * 3600
 
-            # Try different num_hosts for this instance type
             for num_hosts in range(1, trials + 1):
-                # Calculate actual runtime based on execution pattern
                 if num_hosts >= trials:
-                    # Parallel execution: each trial gets (num_hosts // trials) workers
                     workers_per_trial = num_hosts // trials
                     runtime = runtime_func(workers_per_trial, model, epochs)
                 else:
-                    # Sequential batches: some trials must wait
                     batches = math.ceil(trials / num_hosts)
                     runtime = batches * runtime_func(1, model, epochs)
 
-                # Calculate cost for this configuration (cost_per_second is actually $/hour)
                 cost = (runtime / 3600) * cost_per_second * num_hosts
 
-                # Check if meets constraints
                 if runtime <= deadline and cost <= budget:
-                    # Score: minimize cost with slight preference for faster completion
                     score = cost + (runtime / deadline) * 0.1
                     if score < best_score:
                         best_score = score
@@ -260,12 +322,11 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                         best_runtime = runtime
 
         if best_instance_type is None:
-            # No solution found within constraints - return cheapest option
             cheapest_type = min(instance_types.items(), key=lambda x: x[1]['cost_per_second'])[0]
-            print(f"⚠️  No configuration meets constraints, defaulting to cheapest: 1 × {cheapest_type}")
+            print(f"No configuration meets constraints, defaulting to cheapest: 1 x {cheapest_type}")
             return cheapest_type, 1
 
-        print(f"Moldable selected: {best_num_hosts} × {best_instance_type} for {trials} trials (cost: ${best_cost:.2f}, runtime: {best_runtime:.0f}s)")
+        print(f"EDF Moldable selected: {best_num_hosts} x {best_instance_type} for {trials} trials (cost: ${best_cost:.2f}, runtime: {best_runtime:.0f}s)")
         return (best_instance_type, best_num_hosts)
 
     def getInstanceTypeForHPO(self, instance_name):
@@ -275,62 +336,127 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         elif 'g5' in instance_name:
             return 'g5'
         elif 'on-prem' in instance_name:
-            return 'g4'  # On-prem uses g4dn.xlarge instances
+            return 'g4'
         else:
             return 'unknown'
 
+    # =========================================================================
+    # MOLDABLE REQUEST PROCESSING WITH DEADLINE URGENCY BOOST
+    # =========================================================================
+
     def processMoldableRequestHPO(self, request, sim):
         """
-        Process moldable resource requests between HPO optimization rounds
-        Decides: scale up, scale down, or maintain allocation (NO instance type switching)
+        Process moldable resource requests between HPO optimization rounds.
+        Adds deadline-urgency-based graduated scaling from LA EDF pattern.
+
+        Urgency modes:
+        - CRITICAL (<30% time remaining): 2.0x budget boost, aggressive scale-up
+        - WARNING (<50% time remaining): 1.5x budget boost
+        - Regular (falling behind): 1.2x budget boost
         """
         wf_id = request['wf-id']
         (instances, budget, deadline, start_time, model) = self.resource_manager.getWorkflow(wf_id)
 
-        # Calculate iteration-weighted constraints
         ind = request['iteration']
         available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
 
         # Current allocation
         current_instance = instances[0][0]
-        current_instance_type = current_instance.name  # Locked to this type (no switching!)
+        current_instance_type = current_instance.name
         current_trials = sum(count for _, count, _ in instances)
 
-        # Check if can reduce resources (deadline not tight)
+        # === DEADLINE URGENCY ASSESSMENT ===
+        elapsed_time = getTime(sim) - start_time
+        total_time = deadline - start_time
+        time_progress = elapsed_time / total_time if total_time > 0 else 0.0
+
+        used_budget = self.metrics.computeCost(wf_id, getTime(sim))
+        budget_progress = used_budget / budget if budget > 0 else 0.0
+
+        time_remaining = deadline - getTime(sim)
+        deadline_urgency = time_remaining / total_time if total_time > 0 else 0.0
+
+        urgency_mode = 'NORMAL'
+        skip_scale_down = False
+        force_scale_up = False
+
+        # CRITICAL: <30% time remaining
+        if deadline_urgency < 0.30:
+            print(f"  DEADLINE CRITICAL for {wf_id}: only {time_remaining:.1f}s ({deadline_urgency*100:.1f}%) remaining")
+            urgency_mode = 'CRITICAL'
+            skip_scale_down = True
+            force_scale_up = True
+
+        # WARNING: <50% time remaining and falling behind
+        elif deadline_urgency < 0.50 and time_progress > budget_progress + 0.03:
+            print(f"  DEADLINE WARNING for {wf_id}: {deadline_urgency*100:.1f}% time left")
+            urgency_mode = 'WARNING'
+            skip_scale_down = True
+            force_scale_up = True
+
+        # Falling behind
+        elif time_progress > budget_progress + 0.03:
+            print(f"  EARLY SCALE-UP for {wf_id}: time {time_progress*100:.1f}% > budget {budget_progress*100:.1f}%")
+            skip_scale_down = True
+            force_scale_up = True
+
+        # === SCALE DOWN CHECK ===
         trials_per_instance = 3
         request['count'] = None
         min_needed_trials = request['chains']
-        min_needed_instances = min_needed_trials  # default: 1 instance per trial
+        min_needed_instances = min_needed_trials
 
-        # Determine runtime function
-        if current_instance_type.startswith('g4dn'):
+        if current_instance_type.startswith('g4dn') or 'on-prem' in current_instance_type:
             runtime_per_trial = getRuntime_g4(1, model, request['tinyda-iterations'])
         else:
             runtime_per_trial = getRuntime_g5(1, model, request['tinyda-iterations'])
 
-        while trials_per_instance > 0:
+        while trials_per_instance > 0 and not skip_scale_down:
             runtime = trials_per_instance * runtime_per_trial
             if runtime < available_time:
                 min_needed_instances = min_needed_trials // trials_per_instance + bool(min_needed_trials % trials_per_instance)
                 if current_trials > min_needed_instances:
-                    # Free excess instances
                     request['count'] = current_trials - min_needed_instances
                     self.freeResources(instances, request, sim)
                     return
                 else:
-                    # Need more instances
                     break
             else:
                 trials_per_instance -= 1
 
-        # Allocate additional resources if needed
+        # === SCALE UP CHECK WITH DEADLINE URGENCY BOOST ===
         used_budget = self.metrics.computeCost(wf_id, getTime(sim))
-        available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]
+
+        # Graduated boost factor based on urgency
+        if urgency_mode == 'CRITICAL':
+            boost_factor = 2.0
+            print(f"  CRITICAL BOOST: 2.0x budget allocation for {wf_id}")
+        elif urgency_mode == 'WARNING':
+            boost_factor = 1.5
+            print(f"  WARNING BOOST: 1.5x budget allocation for {wf_id}")
+        elif force_scale_up:
+            boost_factor = 1.2
+            print(f"  SCALE-UP BOOST: 1.2x budget allocation for {wf_id}")
+        else:
+            boost_factor = 1.0
+
+        available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind] * boost_factor
 
         free_resources = self.resource_manager.getResources()
 
         if request['count'] is None:
-            request['count'] = min_needed_instances - current_trials
+            if force_scale_up:
+                # Request additional instances scaled by urgency
+                if urgency_mode == 'CRITICAL':
+                    additional = max(1, int(current_trials * 0.50))
+                elif urgency_mode == 'WARNING':
+                    additional = max(1, int(current_trials * 0.40))
+                else:
+                    additional = max(1, int(current_trials * 0.30))
+                request['count'] = additional
+                print(f"  Requesting +{additional} instances (current: {current_trials})")
+            else:
+                request['count'] = min_needed_instances - current_trials
 
         # Allocate new resources (same instance type only, homogeneous)
         alloc_instances = self.checkNewResourcesHPO(
@@ -346,7 +472,6 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
 
-        # Create actual on-demand instances if allocated
         if ips:
             ips = self.createOnDemandWorkers(ips, sim)
 
@@ -354,21 +479,17 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
     def checkNewResourcesHPO(self, resources, current_resources, budget, available_runtime, request, model, instance_type_filter, sim):
         """
-        Allocate additional resources for moldable HPO with cluster isolation
-        - On-prem workflows scale ONLY within on-prem
-        - Cloud workflows scale ONLY within cloud (reserved + on-demand)
-        - NO cross-cluster migration
+        Allocate additional resources for moldable HPO with cluster isolation.
+        Identical to fcfs_optimized_HPO version.
         """
         if budget < MIN_INSTANCE_COST:
             return []
 
-        # Determine runtime function
-        if instance_type_filter.startswith('g4dn'):
+        if instance_type_filter.startswith('g4dn') or 'on-prem' in instance_type_filter:
             runtime_func = getRuntime_g4
         else:
             runtime_func = getRuntime_g5
 
-        # Check current cluster
         instance = current_resources[0][0]
 
         # CASE 1: On-prem workflow - scale ONLY within on-prem
@@ -378,28 +499,23 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             to_be_used = min(instance.getFreeSlots(), request['count'], int(budget / cost_per_instance))
 
             if to_be_used > 0:
-                print(f"Moldable: Scaling on-prem workflow, adding {to_be_used} on-prem instances")
+                print(f"EDF Moldable: Scaling on-prem workflow, adding {to_be_used} on-prem instances")
                 return [(instance, to_be_used)]
             else:
-                print(f"Moldable: On-prem workflow cannot scale (no free on-prem slots or budget)")
+                print(f"EDF Moldable: On-prem workflow cannot scale (no free slots or budget)")
                 return []
 
         # CASE 2: Cloud workflow - scale ONLY within cloud (reserved + on-demand)
-        # Filter out on-prem instances (cluster isolation!)
         available_instances = []
         for inst in resources:
             if (not isinstance(inst, OnPremInstance) and
                 inst.name == instance_type_filter and
                 inst.getFreeSlots() > 0):
-
-                # Priority: reserved first, on-demand second (cost-based)
                 priority = 0 if inst.type == 'reserved' else 1
                 available_instances.append((priority, inst))
 
-        # Sort by priority (reserved before on-demand)
         available_instances.sort(key=lambda x: x[0])
 
-        # Allocate resources within budget
         acquired_count = 0
         acquired_instances = []
         trials_needed = request['count']
@@ -408,15 +524,12 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             if acquired_count >= trials_needed or budget < MIN_INSTANCE_COST:
                 break
 
-            # Calculate cost (cost_per_second is actually $/hour)
             runtime = runtime_func(1, model, request['tinyda-iterations'])
             cost_per_instance = (runtime / 3600) * inst.cost_per_second
 
-            # Add cold start for on-demand
             if inst.type == 'on-demand':
                 cost_per_instance += COLD_START_TIME * inst.cost_per_second
 
-            # Check speedup justification
             current_trials = request['chains'] - request['count'] + acquired_count
             new_trials = current_trials + 1
 
@@ -424,7 +537,6 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             new_runtime = runtime * (request['chains'] / new_trials)
             speedup = current_runtime / new_runtime if new_runtime > 0 else 0
 
-            # Allocate if justified
             if (cost_per_instance < budget and
                 speedup > SPEEDUP_THRESHOLD and
                 new_runtime < available_runtime):
@@ -437,21 +549,15 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         return acquired_instances
 
     def freeResources(self, instances, request, sim):
-        """
-        Free excess resources when deadline allows
-        Uses LIFO strategy: frees most recently allocated instances first
-        (typically on-demand instances allocated last)
-        """
+        """Free excess resources when deadline allows (LIFO strategy)"""
         response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
         freed_count = 0
         to_free_instances = []
 
         if request['count'] > 0:
-            # LIFO: Iterate from END of instances list (most recently allocated)
             for i in range(len(instances) - 1, -1, -1):
                 instance, count, ips = instances[i]
                 to_free = min(request['count'] - freed_count, count)
-                # Free last IPs from this instance (LIFO within instance)
                 to_free_instances.append((instance, to_free, ips[-to_free:]))
                 instances[i] = (instance, count - to_free, ips[:-to_free])
                 response_instances[instance.type][instance.name] = (to_free, ips[-to_free:])
@@ -470,7 +576,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             "wf-id": wf_id,
             "hosts": ips,
         }
-        print(f"{wf_id} allocated additional resources: ", ips)
+        print(f"{wf_id} EDF allocated additional resources: ", ips)
         if sim:
             from executor_HPO import processNewResourcesHPO
             sim.process(processNewResourcesHPO, new_req)
@@ -488,7 +594,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             "wf-id": wf_id,
             "hosts": response_instances
         }
-        print(f"Scheduler freeing {response_instances} for {wf_id} ")
+        print(f"EDF Scheduler freeing {response_instances} for {wf_id}")
         if sim:
             from executor_HPO import processNewResourcesHPO
             sim.process(processNewResourcesHPO, new_req)
@@ -511,48 +617,37 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
     def sendWorkflowForExecutionHPO(self, wf_plan, ips, sim, deadline):
         """
         HPO-specific workflow execution with dedicated executor design
-        Routes to on-prem executor OR creates cloud executor based on worker allocation
         """
-        # Determine executor based on worker allocation
-        # If on-prem workers → use on-prem executor (manually started)
-        # If cloud workers → create dedicated cloud executor
-
-        # ips['on-prem'] is a dict: {'on-prem': (count, [ip_list])}
         on_prem_hosts = ips.get('on-prem', {})
         on_prem_ips = []
         for name, (count, ip_list) in on_prem_hosts.items():
             on_prem_ips.extend(ip_list)
 
         if on_prem_ips:
-            executor_ip = on_prem_ips[0]  # Head node IP
-            print(f"HPO Moldable Workflow {wf_plan['id']}: Using on-prem executor at {executor_ip}")
+            executor_ip = on_prem_ips[0]
+            print(f"HPO EDF Moldable Workflow {wf_plan['id']}: Using on-prem executor at {executor_ip}")
         else:
-            # Cloud workflow: Create dedicated executor instance
             executor_ip = createExecutorInstance('g4dn.2xlarge', sim)
 
             if not executor_ip:
                 print(f"Error: Could not create dedicated executor instance for {wf_plan['id']}")
                 return
 
-            print(f"HPO Moldable Workflow {wf_plan['id']}: Created cloud executor at {executor_ip}")
+            print(f"HPO EDF Moldable Workflow {wf_plan['id']}: Created cloud executor at {executor_ip}")
 
-        # Prepare request with separated executor and worker instances
         request = {
             "initial-alloc": True,
             "wf-plan": wf_plan,
-            "hosts": ips,  # Worker instances only
-            "executor-ip": executor_ip,  # Dedicated executor (on-prem or cloud)
+            "hosts": ips,
+            "executor-ip": executor_ip,
             "deadline": deadline,
-            "moldable": True  # Enable moldable features
+            "moldable": True
         }
 
         print(f"  Workers: {ips}")
 
-        # Send to executor
         if sim:
-            # In simulation mode, process directly
             from executor_HPO import executeWorkflowHPO
             sim.process(executeWorkflowHPO, request, sim)
         else:
-            # Send to executor instance
             sendRequest(executor_ip, getConfig('executor-incoming-port'), request)
