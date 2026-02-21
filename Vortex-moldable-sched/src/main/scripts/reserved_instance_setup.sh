@@ -86,7 +86,7 @@ pip install numpy pandas filelock boto3 paramiko pyyaml redis scikit-learn
 echo "PyTorch + Ray venv created"
 
 # --- Copy Vortex codebase ---
-cp -r /fsx/Vortex ~/Vortex
+cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
 echo "Vortex codebase copied"
 
 # --- Copy HPO scripts ---
@@ -137,7 +137,7 @@ if [ "${ROLE}" = "executor" ]; then
 
     # Start executor
     source ~/rayenv/bin/activate
-    cd ~/Vortex/src/main
+    cd ~/Vortex-moldable-sched/src/main
     EXECUTOR_IP=$(hostname -I | awk '{print $1}')
     nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
     echo "Executor started on ${EXECUTOR_IP}"
@@ -151,7 +151,7 @@ echo ""
 echo "Summary:"
 echo "  Role:     ${ROLE}"
 echo "  Venv:     ~/rayenv"
-echo "  Vortex:   ~/Vortex"
+echo "  Vortex:   ~/Vortex-moldable-sched"
 echo "  CIFAR-10: ~/cifar10"
 echo "  FSx:      /fsx"
 if [ "${ROLE}" = "executor" ]; then

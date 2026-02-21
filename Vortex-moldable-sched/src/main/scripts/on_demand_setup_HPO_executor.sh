@@ -45,9 +45,9 @@ echo "HPO instance setup completed"
 cd ~
 
 # Copy Vortex codebase
-sudo cp -r /fsx/Vortex/ ~
+sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
 
-cd Vortex/src/main
+cd Vortex-moldable-sched/src/main
 
 # Install and start Redis server (required for executor queue)
 echo "Installing Redis server..."

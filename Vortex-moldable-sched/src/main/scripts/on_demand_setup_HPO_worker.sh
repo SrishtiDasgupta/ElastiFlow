@@ -45,7 +45,7 @@ echo "HPO worker instance setup completed"
 cd ~
 
 # Copy Vortex codebase
-sudo cp -r /fsx/Vortex/ ~
+sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
 
 # Copy HPO-specific scripts and data
 sudo cp -r /fsx/hyperparametr_test/ ~/

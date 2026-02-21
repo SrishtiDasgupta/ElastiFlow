@@ -32,9 +32,9 @@ echo "Setup complete"
 
 cd ~
 
-sudo cp -r /fsx/Vortex/ ~
+sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
 
-cd Vortex/src/main
+cd Vortex-moldable-sched/src/main
 
 nohup python3 executor.py > ~/executor.out 2>&1 &
 
