@@ -512,8 +512,12 @@ class TunePipeline:
         logger.info("-" * 70)
 
         try:
+            # Pass a shared file path so the training function can write metrics
+            # (workaround: Result.metrics is None in some Ray versions)
+            metrics_file = f'/fsx/_train_metrics_{trial_id}.json'
+            config['_metrics_file'] = metrics_file
+
             # Create TorchTrainer for distributed PyTorch training
-            # Note: Do NOT specify resources_per_worker here - let Ray auto-detect
             logger.info(f"[{trial_id}] Creating TorchTrainer with {num_workers} workers...")
             trainer = TorchTrainer(
                 train_loop_per_worker=self.train_fn,
@@ -568,6 +572,17 @@ class TunePipeline:
                 df = result.metrics_dataframe
                 if 'accuracy' in df.columns and len(df) > 0:
                     final_accuracy = max(final_accuracy, df['accuracy'].iloc[-1])
+
+            # Fallback: read from shared file written by training function
+            # (workaround for Result.metrics being None in some Ray versions)
+            if final_accuracy == 0.0 and os.path.exists(metrics_file):
+                try:
+                    with open(metrics_file, 'r') as _mf:
+                        file_metrics = json.loads(_mf.read())
+                    final_accuracy = float(file_metrics.get('accuracy', 0.0))
+                    logger.info(f"[{trial_id}] Got accuracy from file: {final_accuracy}")
+                except Exception:
+                    pass
 
             logger.info(f"[{trial_id}] FINAL extracted accuracy: {final_accuracy}")
 

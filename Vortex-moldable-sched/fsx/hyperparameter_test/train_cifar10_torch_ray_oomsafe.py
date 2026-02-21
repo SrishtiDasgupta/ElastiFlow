@@ -238,6 +238,14 @@ def train_cifar10_torch(config):
             }
         )
 
+    # Write final metrics to file (workaround: Result.metrics is None in some Ray versions)
+    # Only rank 0 writes to avoid multi-worker race conditions
+    metrics_file = config.get("_metrics_file")
+    if metrics_file and ray.train.get_context().get_world_rank() == 0:
+        import json as _json
+        with open(metrics_file, "w") as _mf:
+            _mf.write(_json.dumps({"accuracy": best, "epochs_run": epochs}))
+
 
 # ----------------------------- Ray Train driver -----------------------------
 def train_driver_fn(config):
