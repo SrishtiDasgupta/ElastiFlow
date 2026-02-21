@@ -539,19 +539,26 @@ class TunePipeline:
             
             logger.info(f"[{trial_id}] Training completed in {training_duration:.2f}s")
 
-            # DEBUG: Log everything about the result object
-            logger.info(f"[{trial_id}] result type: {type(result)}")
-            logger.info(f"[{trial_id}] result.metrics: {result.metrics}")
-            logger.info(f"[{trial_id}] result.metrics type: {type(result.metrics)}")
-            if hasattr(result, 'metrics_dataframe'):
-                logger.info(f"[{trial_id}] result.metrics_dataframe:\n{result.metrics_dataframe}")
-            if hasattr(result, 'error'):
-                logger.info(f"[{trial_id}] result.error: {result.error}")
+            # DEBUG: Write to /fsx/ file (logger goes to separate process, unreachable)
+            debug_path = f'/fsx/trial_debug_{trial_id}.txt'
+            try:
+                with open(debug_path, 'w') as _dbg:
+                    _dbg.write(f"trial_id: {trial_id}\n")
+                    _dbg.write(f"training_duration: {training_duration:.2f}s\n")
+                    _dbg.write(f"result type: {type(result)}\n")
+                    _dbg.write(f"result.metrics: {result.metrics}\n")
+                    _dbg.write(f"result.metrics type: {type(result.metrics)}\n")
+                    if hasattr(result, 'metrics_dataframe') and result.metrics_dataframe is not None:
+                        _dbg.write(f"metrics_dataframe columns: {list(result.metrics_dataframe.columns)}\n")
+                        _dbg.write(f"metrics_dataframe tail:\n{result.metrics_dataframe.tail(3)}\n")
+                    if hasattr(result, 'error'):
+                        _dbg.write(f"result.error: {result.error}\n")
+            except Exception:
+                pass
 
             # Extract accuracy from training result
             final_accuracy = 0.0
             if result.metrics:
-                logger.info(f"[{trial_id}] metrics keys: {list(result.metrics.keys())}")
                 final_accuracy = result.metrics.get('accuracy', 0.0)
                 if 'best_accuracy' in result.metrics:
                     final_accuracy = max(final_accuracy, result.metrics['best_accuracy'])
@@ -559,7 +566,6 @@ class TunePipeline:
             # Also check metrics_dataframe for the last reported accuracy
             if hasattr(result, 'metrics_dataframe') and result.metrics_dataframe is not None:
                 df = result.metrics_dataframe
-                logger.info(f"[{trial_id}] dataframe columns: {list(df.columns)}")
                 if 'accuracy' in df.columns and len(df) > 0:
                     final_accuracy = max(final_accuracy, df['accuracy'].iloc[-1])
 
@@ -1070,11 +1076,16 @@ if __name__ == "__main__":
         # Execute
         best_result = pipeline.run(cohesion=0.85)
 
-        # Output for next iteration — filter out None/NaN and non-HPO keys
+        # Output for next iteration — strip config/ prefix, filter to HPO keys
         output_config = best_result.get("config", {})
+        # Tune dataframe uses "config/learning_rate" etc — strip the prefix
+        cleaned = {}
+        for k, v in output_config.items():
+            clean_key = k.replace("config/", "") if k.startswith("config/") else k
+            cleaned[clean_key] = v
         hpo_keys = {"learning_rate", "momentum", "batch_size", "image_size",
                      "epoch", "epochs", "hidden", "accuracy", "next_trials", "model_name"}
-        output_config = {k: v for k, v in output_config.items()
+        output_config = {k: v for k, v in cleaned.items()
                          if k in hpo_keys and v is not None and not (isinstance(v, float) and np.isnan(v))}
 
         print(json.dumps({"config": output_config}))
