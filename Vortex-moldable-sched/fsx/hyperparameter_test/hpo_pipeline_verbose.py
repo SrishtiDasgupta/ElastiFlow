@@ -1070,13 +1070,13 @@ if __name__ == "__main__":
         # Execute
         best_result = pipeline.run(cohesion=0.85)
 
-        # Output for next iteration
+        # Output for next iteration — filter out None/NaN and non-HPO keys
         output_config = best_result.get("config", {})
-        if "amp" in output_config:
-            output_config.pop("amp")
-        if "train_backbone" in output_config:
-            output_config.pop("train_backbone")
-            
+        hpo_keys = {"learning_rate", "momentum", "batch_size", "image_size",
+                     "epoch", "epochs", "hidden", "accuracy", "next_trials", "model_name"}
+        output_config = {k: v for k, v in output_config.items()
+                         if k in hpo_keys and v is not None and not (isinstance(v, float) and np.isnan(v))}
+
         print(json.dumps({"config": output_config}))
 
     except Exception as e:

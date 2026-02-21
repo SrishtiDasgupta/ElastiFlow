@@ -227,9 +227,8 @@ echo '[INFO] HPO Completed!'
         with open(client_output_filepath, 'r') as client_output:
             for line in client_output:
                 if re.search('{"config":', line):
-                    line = line.replace("array", "np.array")
-                    line = eval(line)
-                    output['config'] = line['config']
+                    parsed = json.loads(line)
+                    output['config'] = parsed['config']
                     print(output)
                     break
 

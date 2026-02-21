@@ -133,7 +133,7 @@ class ExecuteAction(Action):
                 # Line 0 is the wf_id printed by run_hpo.py; result dict starts at line 1
                 for line in output_lines:
                     if 'config' in line:
-                        result = eval(line)
+                        result = json.loads(line)
                         break
                 next_trials = result['config']['next_trials']
                 print(result)
