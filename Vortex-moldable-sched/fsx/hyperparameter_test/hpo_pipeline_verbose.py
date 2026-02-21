@@ -539,18 +539,31 @@ class TunePipeline:
             
             logger.info(f"[{trial_id}] Training completed in {training_duration:.2f}s")
 
+            # DEBUG: Log everything about the result object
+            logger.info(f"[{trial_id}] result type: {type(result)}")
+            logger.info(f"[{trial_id}] result.metrics: {result.metrics}")
+            logger.info(f"[{trial_id}] result.metrics type: {type(result.metrics)}")
+            if hasattr(result, 'metrics_dataframe'):
+                logger.info(f"[{trial_id}] result.metrics_dataframe:\n{result.metrics_dataframe}")
+            if hasattr(result, 'error'):
+                logger.info(f"[{trial_id}] result.error: {result.error}")
+
             # Extract accuracy from training result
             final_accuracy = 0.0
             if result.metrics:
+                logger.info(f"[{trial_id}] metrics keys: {list(result.metrics.keys())}")
                 final_accuracy = result.metrics.get('accuracy', 0.0)
                 if 'best_accuracy' in result.metrics:
                     final_accuracy = max(final_accuracy, result.metrics['best_accuracy'])
-            
+
             # Also check metrics_dataframe for the last reported accuracy
             if hasattr(result, 'metrics_dataframe') and result.metrics_dataframe is not None:
                 df = result.metrics_dataframe
+                logger.info(f"[{trial_id}] dataframe columns: {list(df.columns)}")
                 if 'accuracy' in df.columns and len(df) > 0:
                     final_accuracy = max(final_accuracy, df['accuracy'].iloc[-1])
+
+            logger.info(f"[{trial_id}] FINAL extracted accuracy: {final_accuracy}")
 
             # Record end time
             end_time = time.time()
