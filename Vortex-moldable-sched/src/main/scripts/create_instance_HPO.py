@@ -167,8 +167,8 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
                 privkey = paramiko.RSAKey.from_private_key_file(key_file_path)
                 ssh.connect(private_dns, username=user, pkey=privkey)
 
-                # Upload and execute role-specific setup script
-                setup_script = setupInstanceHPO(ssh, instance_role, private_ip)
+                # Upload and execute setup script (all instances are executor-capable)
+                setup_script = setupInstanceHPO(ssh, private_ip)
 
                 if setup_script:
                     print(f"Successfully set up {instance_role} instance: {private_ip}")
@@ -188,21 +188,16 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
         print(f"Error creating instances: {e}")
         return []
 
-def setupInstanceHPO(ssh, instance_role: str, instance_ip: str):
+def setupInstanceHPO(ssh, instance_ip: str):
     """
-    Setup instance based on its role (executor or worker)
+    Setup cloud instance as executor-capable (Redis + executor process).
+    All cloud instances use the same setup script.
     """
     try:
         sftp = ssh.open_sftp()
 
-        if instance_role == 'executor':
-            # Setup executor instance
-            remote_script = '/home/ubuntu/hpo_executor_setup.sh'
-            local_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'on_demand_setup_HPO_executor.sh')
-        else:  # worker
-            # Setup worker instance
-            remote_script = '/home/ubuntu/hpo_worker_setup.sh'
-            local_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'on_demand_setup_HPO_worker.sh')
+        remote_script = '/home/ubuntu/hpo_setup.sh'
+        local_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'on_demand_setup_HPO_worker.sh')
 
         # Upload setup script
         sftp.put(local_script, remote_script)
@@ -217,7 +212,7 @@ def setupInstanceHPO(ssh, instance_role: str, instance_ip: str):
         stdout_output = stdout.read().decode()
         stderr_output = stderr.read().decode()
 
-        print(f"Setup output for {instance_role} {instance_ip}:")
+        print(f"Setup output for {instance_ip}:")
         if stdout_output:
             print(f"STDOUT: {stdout_output}")
         if stderr_output:
@@ -226,7 +221,7 @@ def setupInstanceHPO(ssh, instance_role: str, instance_ip: str):
         return True
 
     except Exception as e:
-        print(f"Error in setupInstanceHPO for {instance_role} {instance_ip}: {e}")
+        print(f"Error in setupInstanceHPO for {instance_ip}: {e}")
         return False
 
 def deleteInstanceFromIp(instances: List[str]):

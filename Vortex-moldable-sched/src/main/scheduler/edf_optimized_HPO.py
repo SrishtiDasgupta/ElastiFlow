@@ -24,7 +24,7 @@ from config.constants_HPO import (COLD_START_TIME, WORKFLOW_POLLING, SIMULATE, M
                                   DEADLINE_BUFFER, MIN_INSTANCE_COST, SPEEDUP_THRESHOLD,
                                   OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR)
 from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
-from scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
+from scripts.create_instance_HPO import createWorkerInstances
 from resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 import os
 from resource_manager.resource_manager import ResourceManager
@@ -201,24 +201,33 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         selected_instances = []
         remaining = num_hosts_requested
 
-        # PRIORITY 1: On-premise
+        # Check if on-prem can satisfy (any free slots of the right type)
+        on_prem_available = False
         for instance in instances:
             if isinstance(instance, OnPremInstance) and \
                self.getInstanceTypeForHPO(instance.name) == optimal_type:
-                slots_available = instance.getFreeSlots()
-                if slots_available >= remaining:
-                    selected_instances = [(instance, remaining)]
-                    remaining = 0
-                    print(f"EDF Moldable: Allocated {num_hosts_requested} on-prem {instance.name}")
-                    break
-                elif slots_available > 0:
-                    selected_instances = [(instance, slots_available)]
-                    remaining -= slots_available
-                    print(f"EDF Moldable: Partial on-prem {slots_available}/{num_hosts_requested}")
+                if instance.getFreeSlots() > 0:
+                    on_prem_available = True
                     break
 
-        # PRIORITY 2: Cloud reserved
-        if remaining > 0:
+        if on_prem_available:
+            # ON-PREM PATH: only allocate on-prem (skip cloud entirely)
+            for instance in instances:
+                if isinstance(instance, OnPremInstance) and \
+                   self.getInstanceTypeForHPO(instance.name) == optimal_type:
+                    slots_available = instance.getFreeSlots()
+                    if slots_available >= remaining:
+                        selected_instances = [(instance, remaining)]
+                        remaining = 0
+                        print(f"EDF Moldable: Allocated {num_hosts_requested} on-prem {instance.name}")
+                        break
+                    elif slots_available > 0:
+                        selected_instances = [(instance, slots_available)]
+                        remaining -= slots_available
+                        print(f"EDF Moldable: Partial on-prem {slots_available}/{num_hosts_requested}")
+                        break
+        else:
+            # CLOUD PATH: reserved then on-demand (skip on-prem entirely)
             for instance in instances:
                 if instance.type == 'reserved' and \
                    self.getInstanceTypeForHPO(instance.name) == optimal_type:
@@ -229,32 +238,31 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                         if remaining == 0:
                             break
 
-        # PRIORITY 3: Cloud on-demand (with budget check)
-        if remaining > 0:
-            runtime_func = getRuntime_g5 if optimal_type == 'g5' else getRuntime_g4
+            if remaining > 0:
+                runtime_func = getRuntime_g5 if optimal_type == 'g5' else getRuntime_g4
 
-            allocated_so_far = num_hosts_requested - remaining
-            total_hosts = allocated_so_far + remaining
+                allocated_so_far = num_hosts_requested - remaining
+                total_hosts = allocated_so_far + remaining
 
-            if total_hosts >= trials:
-                workers_per_trial = total_hosts // trials
-                runtime = runtime_func(workers_per_trial, model, epochs)
-            else:
-                batches = math.ceil(trials / total_hosts)
-                runtime = batches * runtime_func(1, model, epochs)
+                if total_hosts >= trials:
+                    workers_per_trial = total_hosts // trials
+                    runtime = runtime_func(workers_per_trial, model, epochs)
+                else:
+                    batches = math.ceil(trials / total_hosts)
+                    runtime = batches * runtime_func(1, model, epochs)
 
-            for instance in instances:
-                if instance.type == 'on-demand' and \
-                   self.getInstanceTypeForHPO(instance.name) == optimal_type:
-                    slots_available = min(remaining, instance.getFreeSlots())
-                    if slots_available > 0:
-                        cost = (runtime / 3600) * instance.cost_per_second * slots_available
-                        if cost < budget:
-                            selected_instances.append((instance, slots_available))
-                            remaining -= slots_available
-                            print(f"EDF Moldable: {slots_available} on-demand {optimal_type} (${cost:.2f})")
-                            if remaining == 0:
-                                break
+                for instance in instances:
+                    if instance.type == 'on-demand' and \
+                       self.getInstanceTypeForHPO(instance.name) == optimal_type:
+                        slots_available = min(remaining, instance.getFreeSlots())
+                        if slots_available > 0:
+                            cost = (runtime / 3600) * instance.cost_per_second * slots_available
+                            if cost < budget:
+                                selected_instances.append((instance, slots_available))
+                                remaining -= slots_available
+                                print(f"EDF Moldable: {slots_available} on-demand {optimal_type} (${cost:.2f})")
+                                if remaining == 0:
+                                    break
 
         allocated_hosts = num_hosts_requested - remaining
         if remaining > 0:
@@ -627,13 +635,14 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             executor_ip = on_prem_ips[0]
             print(f"HPO EDF Moldable Workflow {wf_plan['id']}: Using on-prem executor at {executor_ip}")
         else:
-            executor_ip = createExecutorInstance('g4dn.2xlarge', sim)
-
-            if not executor_ip:
-                print(f"Error: Could not create dedicated executor instance for {wf_plan['id']}")
-                return
-
-            print(f"HPO EDF Moldable Workflow {wf_plan['id']}: Created cloud executor at {executor_ip}")
+            # First allocated cloud IP acts as executor (reserved preferred)
+            cloud_ips = []
+            for name, (count, ip_list) in ips.get('reserved', {}).items():
+                cloud_ips.extend(ip_list)
+            for name, (count, ip_list) in ips.get('on-demand', {}).items():
+                cloud_ips.extend(ip_list)
+            executor_ip = cloud_ips[0]
+            print(f"HPO EDF Moldable Workflow {wf_plan['id']}: Using cloud executor at {executor_ip}")
 
         request = {
             "initial-alloc": True,

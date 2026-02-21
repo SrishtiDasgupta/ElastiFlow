@@ -2,16 +2,14 @@
 # =============================================================================
 # Reserved Cloud Instance Setup
 # Usage:
-#   ./reserved_instance_setup.sh worker          (default — GPU worker)
-#   ./reserved_instance_setup.sh executor         (worker + executor overlay)
+#   ./reserved_instance_setup.sh
 #
+# Every reserved instance is executor-capable (Redis + executor process).
 # For standalone EC2 instances (not ParallelCluster).
 # Must be run manually via SSH after instance is running.
-# Handles FSx mount, PyTorch, Ray, CIFAR-10, Vortex codebase.
+# Handles FSx mount, PyTorch, Ray, CIFAR-10, Vortex codebase, Redis, executor.
 # =============================================================================
 set -ex
-
-ROLE=${1:-worker}   # 'worker' or 'executor'
 
 # --- CONFIGURE THESE ---
 FSX_DNS="fs-04a4223998940b3ef.fsx.eu-north-1.amazonaws.com"
@@ -19,7 +17,7 @@ FSX_MOUNT_NAME="5ynhnbev"
 # ------------------------
 
 exec > >(tee ~/hpo-reserved-setup.log) 2>&1
-echo "=== HPO Reserved Instance Setup (role=${ROLE}) starting at $(date) ==="
+echo "=== HPO Reserved Instance Setup starting at $(date) ==="
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -112,49 +110,43 @@ else
     echo "CIFAR-10 already exists"
 fi
 
-# --- Executor overlay (only if role=executor) ---
-if [ "${ROLE}" = "executor" ]; then
-    echo "=== Setting up executor overlay ==="
+# --- Install + start Redis (all instances are executor-capable) ---
+echo "=== Setting up Redis + executor ==="
 
-    # Install + start Redis
-    sudo apt-get install -y lsb-release curl gpg
-    curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor --yes -o /usr/share/keyrings/redis-archive-keyring.gpg
-    sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
-    echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -sc) main" \
-        | sudo tee /etc/apt/sources.list.d/redis.list
-    sudo apt-get update -y
-    sudo apt-get install -y redis-server
-    sudo systemctl enable redis-server
-    sudo systemctl start redis-server
+sudo apt-get install -y lsb-release curl gpg
+curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor --yes -o /usr/share/keyrings/redis-archive-keyring.gpg
+sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -sc) main" \
+    | sudo tee /etc/apt/sources.list.d/redis.list
+sudo apt-get update -y
+sudo apt-get install -y redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
 
-    sleep 2
-    if sudo systemctl is-active --quiet redis-server; then
-        echo "Redis server running"
-    else
-        echo "WARNING: Redis not started via systemd, trying manual start"
-        sudo redis-server --daemonize yes
-    fi
-
-    # Start executor
-    source ~/rayenv/bin/activate
-    cd ~/Vortex-moldable-sched/src/main
-    EXECUTOR_IP=$(hostname -I | awk '{print $1}')
-    nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
-    echo "Executor started on ${EXECUTOR_IP}"
+sleep 2
+if sudo systemctl is-active --quiet redis-server; then
+    echo "Redis server running"
+else
+    echo "WARNING: Redis not started via systemd, trying manual start"
+    sudo redis-server --daemonize yes
 fi
 
-# --- Create ready marker ---
-echo "HPO_${ROLE^^}_READY:$(date)" > ~/hpo_${ROLE}_ready.marker
+# Start executor
+source ~/rayenv/bin/activate
+cd ~/Vortex-moldable-sched/src/main
+EXECUTOR_IP=$(hostname -I | awk '{print $1}')
+nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
+echo "Executor started on ${EXECUTOR_IP}"
 
-echo "=== HPO Reserved Instance Setup (role=${ROLE}) completed at $(date) ==="
+# --- Create ready marker ---
+echo "HPO_READY:$(date)" > ~/hpo_ready.marker
+
+echo "=== HPO Reserved Instance Setup completed at $(date) ==="
 echo ""
 echo "Summary:"
-echo "  Role:     ${ROLE}"
 echo "  Venv:     ~/rayenv"
 echo "  Vortex:   ~/Vortex-moldable-sched"
 echo "  CIFAR-10: ~/cifar10"
 echo "  FSx:      /fsx"
-if [ "${ROLE}" = "executor" ]; then
-    echo "  Executor: running (log: ~/executor.out)"
-    echo "  Redis:    running on default port"
-fi
+echo "  Executor: running (log: ~/executor.out)"
+echo "  Redis:    running on default port"
