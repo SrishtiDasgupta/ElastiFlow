@@ -19,7 +19,8 @@ vars:
       "batch_size": 32,
       "epochs": 8,
       "next_trials": 4,
-      "model": "convnext_large"
+      "model": "convnext_large",
+      "image_size": 64
     }
 
 actions:

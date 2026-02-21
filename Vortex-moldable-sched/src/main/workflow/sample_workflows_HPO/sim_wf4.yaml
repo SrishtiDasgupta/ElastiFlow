@@ -19,7 +19,8 @@ vars:
       "batch_size": 128,
       "epochs": 10,
       "next_trials": 8,
-      "model": "vgg19"
+      "model": "vgg19",
+      "image_size": 64
     }
 
 actions:

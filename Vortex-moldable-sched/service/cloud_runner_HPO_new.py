@@ -364,7 +364,7 @@ class CloudRunnerHPO:
         momentum = self.cohesion.get('momentum', 0.9)
         batch_size = self.cohesion.get('batch_size', 64)
         hidden = self.cohesion.get('hidden', 10)
-        image_size = self.cohesion.get('image_size', 160)
+        image_size = self.cohesion.get('image_size', 64)
         amp = self.cohesion.get('amp', True)
         train_backbone = self.cohesion.get('train_backbone', False)
         data_dir = self.cohesion.get('data_dir', os.path.expanduser("~/cifar10"))

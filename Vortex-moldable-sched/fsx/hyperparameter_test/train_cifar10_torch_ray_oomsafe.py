@@ -124,7 +124,7 @@ def train_cifar10_torch(config):
     out_dim = int(config.get("hidden", 10))  # CIFAR-10 classes
     batch_size = int(config.get("batch_size", 64))
     data_dir = config.get("data_dir", os.path.expanduser("~/cifar10"))
-    image_size = int(config.get("image_size", 160))  # smaller than 224 → VRAM win
+    image_size = int(config.get("image_size", 64))  # 64 for CIFAR-10 on xlarge nodes
     amp = bool(config.get("amp", True))  # enable AMP
     train_backbone = bool(
         config.get("train_backbone", False)

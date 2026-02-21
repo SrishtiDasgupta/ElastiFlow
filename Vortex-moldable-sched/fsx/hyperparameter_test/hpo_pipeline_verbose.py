@@ -970,7 +970,7 @@ def get_default_config():
         "momentum": 0.9,
         "hidden": 10,
         "batch_size": 64,
-        "image_size": 160,
+        "image_size": 64,
         "amp": True,
         "train_backbone": False,
         "data_dir": os.path.expanduser("~/cifar10"),
