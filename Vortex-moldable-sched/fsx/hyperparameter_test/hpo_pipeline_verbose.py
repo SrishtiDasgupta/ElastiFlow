@@ -765,7 +765,7 @@ class TunePipeline:
                     if self.metric in df.columns:
                         phase_best_idx = df[self.metric].idxmax() if self.mode == 'max' else df[self.metric].idxmin()
                         phase_best_score = df.loc[phase_best_idx, self.metric]
-                        if phase_best_score > best_score:
+                        if phase_best_score >= best_score:
                             best_score = phase_best_score
                             best_config = df.loc[phase_best_idx].to_dict()
                 

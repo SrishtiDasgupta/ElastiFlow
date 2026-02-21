@@ -68,10 +68,10 @@ class PlclRunnerHPO(RunnerBase):
         """
 
         self.wf_id = self.request['wf_id']
-        self.learning_rate = self.request['cohesion']['learning_rate']
-        self.momentum = self.request['cohesion']['momentum']
+        self.learning_rate = self.request['cohesion'].get('learning_rate', 0.01)
+        self.momentum = self.request['cohesion'].get('momentum', 0.9)
         self.epochs = self.request['cohesion'].get('epochs', self.request['cohesion'].get('epoch', 4))
-        self.next_trials = self.request['cohesion']['next_trials']
+        self.next_trials = self.request['cohesion'].get('next_trials', 4)
         self.nodes = len(self.request['hosts']['on-prem'])
 
         # variables required for further function calls

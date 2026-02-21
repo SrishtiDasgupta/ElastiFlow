@@ -300,6 +300,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         trials_per_instance = 3
         request['count'] = None
         min_needed_trials = request['chains']
+        min_needed_instances = min_needed_trials  # default: 1 instance per trial
 
         # Determine runtime function
         if current_instance_type.startswith('g4dn'):
