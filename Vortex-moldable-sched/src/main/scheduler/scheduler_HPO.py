@@ -67,6 +67,8 @@ class Scheduler_HPO(ABC):
                 self.resource_manager.returnResources(data.get('wf-id'))
                 self.metrics.updateDataframe(data.get('wf-id'), {'exec_start_time': data.get('start-time'), 'finish_time': data.get('finish-time'), 'complete': data.get('complete')})
                 print(f'{data.get("wf-id")} workflow freed at {getTime(sim)}')
+                with open('workflow_status.log', 'a') as f:
+                    f.write(f'{data.get("wf-id")} COMPLETED at {getTime(sim)}\n')
                 removeElement(mb, self.finish_queue)
             (sim or time).sleep(60) # NOTE: polling interval
 

@@ -144,11 +144,22 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, default=8080, help='Scheduler port (default: 8080)')
     parser.add_argument('--delay', type=int, default=0, help='Fixed delay between hand-crafted submissions (default: 0)')
     parser.add_argument('--seed', type=int, default=None, help='Random seed for Poisson delays')
+    parser.add_argument('--end', action='store_true', help='Only send END signal (no workflows)')
 
     args = parser.parse_args()
 
     if args.seed is not None:
         np.random.seed(args.seed)
+
+    if args.end:
+        # Only send END signal
+        print(f'Sending END signal to {args.host}:{args.port}')
+        end_wf = fetchWorkflow('end')
+        send_workflow(end_wf, args.host, args.port)
+        print('Scheduler will compute metrics and exit.')
+        exit(0)
+
+    workflows_submitted = 0
 
     if args.count is not None:
         # Generated workflow mode
@@ -171,6 +182,7 @@ if __name__ == "__main__":
                 model = workflow.get('config', {}).get('mesh', 'unknown')
                 print(f'Submitting data{i}.yaml (id: {workflow["id"]}, model: {model})')
                 send_workflow(workflow, args.host, args.port)
+                workflows_submitted += 1
             else:
                 print(f'  Failed to load data{i}.yaml')
 
@@ -188,6 +200,7 @@ if __name__ == "__main__":
             if workflow:
                 print(f'Submitting sim_wf{wf_i+1}.yaml (id: {workflow["id"]})')
                 send_workflow(workflow, args.host, args.port)
+                workflows_submitted += 1
             else:
                 print(f'  Failed to load sim_wf{wf_i+1}.yaml')
 
@@ -205,8 +218,13 @@ if __name__ == "__main__":
             if workflow:
                 print(f'Submitting sim_wf{wf_i+1}.yaml (id: {workflow["id"]}, chains: {workflow["constraints"]["chains"]})')
                 send_workflow(workflow, args.host, args.port)
+                workflows_submitted += 1
             else:
                 print(f'  Failed to load sim_wf{wf_i+1}.yaml')
     else:
         parser.print_help()
         exit(1)
+
+    print(f'\nAll {workflows_submitted} workflow(s) submitted.')
+    print(f'Check progress:  cat workflow_status.log')
+    print(f'Send END when done:  PYTHONPATH=. python3 scripts/dispatcher_HPO.py --end --host {args.host}')
