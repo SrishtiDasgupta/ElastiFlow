@@ -131,13 +131,26 @@ class ExecuteAction(Action):
                 print(f"{self.wf_id} Workflow iteration {self.workflow_iterator} finished at {time.time()}")
                 output_lines = result.stdout.splitlines()  # Split the output into lines
                 # Line 0 is the wf_id printed by run_hpo.py; result dict starts at line 1
+                parsed_result = None
                 for line in output_lines:
-                    if '{"config"' in line:
+                    line = line.strip()
+                    if line.startswith('{'):
                         try:
-                            result = json.loads(line)
-                            break
+                            parsed_result = json.loads(line)
+                            if 'config' in parsed_result:
+                                break
                         except json.JSONDecodeError:
                             continue
+                if parsed_result is None or 'config' not in parsed_result:
+                    # Log the raw output for debugging
+                    print(f"[ERROR] No valid config in run_hpo.py output:")
+                    for line in output_lines:
+                        print(f"  | {line}")
+                    if parsed_result and 'error' in parsed_result:
+                        print(f"[ERROR] Runner error: {parsed_result['error']}")
+                    setWorkflowComplete(self.wf_id, True)
+                    return
+                result = parsed_result
                 next_trials = result['config']['next_trials']
                 print(result)
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
