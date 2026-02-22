@@ -33,7 +33,7 @@ class CloudRunnerHPO:
 
     def __init__(self, request):
         self.request = request
-        self.key_file_path = '/fsx/Nisarg-HPC.pem'
+        self.key_file_path = os.path.expanduser('~/.ssh/hpo-exp.pem')
         self.user = 'ubuntu'
         self.region = 'eu-north-1'
         self.ec2 = boto3.client('ec2', region_name=self.region)
