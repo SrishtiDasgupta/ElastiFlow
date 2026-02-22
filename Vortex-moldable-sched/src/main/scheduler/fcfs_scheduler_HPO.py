@@ -274,14 +274,29 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         """
         Create actual on-demand worker instances for allocated virtual slots
         ResourceManager.allocateResources() returns empty IP lists for on-demand,
-        this method creates the actual instances and updates the IP lists
+        this method creates the actual instances and updates the IP lists.
+        Multiple instance types are created in parallel.
         """
-        for instance_type, (count, ip_list) in ips.get('on-demand', {}).items():
-            if count > 0 and len(ip_list) == 0:
-                print(f"Creating {count} on-demand {instance_type} worker instances...")
-                worker_ips = createWorkerInstances(instance_type, count, sim)
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        to_create = {itype: count for itype, (count, ip_list) in ips.get('on-demand', {}).items()
+                     if count > 0 and len(ip_list) == 0}
+
+        if not to_create:
+            return ips
+
+        def _create(instance_type, count):
+            print(f"Creating {count} on-demand {instance_type} worker instances...")
+            worker_ips = createWorkerInstances(instance_type, count, sim)
+            print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
+            return instance_type, count, worker_ips
+
+        with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
+            futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
+            for future in as_completed(futures):
+                instance_type, count, worker_ips = future.result()
                 ips['on-demand'][instance_type] = (count, worker_ips)
-                print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
+
         return ips
 
     def sendWorkflowForExecutionHPO(self, wf_plan, ips, sim, deadline):

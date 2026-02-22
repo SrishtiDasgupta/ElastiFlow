@@ -172,28 +172,27 @@ class CloudRunnerHPO:
             return False
 
     def start_ray_workers(self) -> bool:
-        """Start Ray workers on remaining worker instances"""
+        """Start Ray workers on remaining worker instances (in parallel)"""
         if not self.ray_workers:
             self.logger.info("No additional Ray workers to start")
             return True
 
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
         ray_address = f"{self.ray_head_ip}:{self.ray_port}"
 
-        for worker_ip in self.ray_workers:
+        def _start_one(worker_ip):
             try:
-                # Get instance details
                 private_dns = self.get_private_dns(worker_ip)
                 if not private_dns:
-                    continue
+                    return worker_ip, False
 
-                # Connect via SSH
                 ssh = self.create_ssh_connection(private_dns)
                 if not ssh:
-                    continue
+                    return worker_ip, False
 
                 # Stop any existing Ray processes
-                stop_command = "ray stop --force"
-                ssh.exec_command(stop_command)
+                ssh.exec_command("ray stop --force")
                 time.sleep(2)
 
                 # Start Ray worker
@@ -216,12 +215,21 @@ class CloudRunnerHPO:
                     self.logger.warning(f"Ray worker {worker_ip} warnings: {error}")
 
                 ssh.close()
-                time.sleep(3)
+                return worker_ip, True
 
             except Exception as e:
                 self.logger.error(f"Error starting Ray worker {worker_ip}: {e}")
-                continue
+                return worker_ip, False
 
+        with ThreadPoolExecutor(max_workers=len(self.ray_workers)) as pool:
+            futures = [pool.submit(_start_one, ip) for ip in self.ray_workers]
+            for future in as_completed(futures):
+                ip, ok = future.result()
+                if not ok:
+                    self.logger.warning(f"Ray worker {ip} may not have started")
+
+        # Single settling delay after all workers have joined
+        time.sleep(5)
         return True
 
     def verify_ray_head(self) -> bool:

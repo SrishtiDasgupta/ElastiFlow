@@ -6,6 +6,7 @@ import paramiko
 import time
 import random
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import HPO-specific constants
 from config.constants_HPO import SIMULATE, COLD_START_TIME
@@ -64,6 +65,58 @@ def createInstance(name: str, count: int = 1, sim=None) -> List[str]:
     """
     return createWorkerInstances(name, count, sim)
 
+def _setup_single_instance(instance, instance_role):
+    """Wait for one instance to be running, SSH-ready, and set up. Returns IP or None."""
+    instance.wait_until_running()
+    instance.reload()
+
+    private_ip = instance.private_ip_address
+    private_dns = instance.private_dns_name
+
+    print(f"Instance {instance.id} running: {private_ip} ({instance_role})")
+
+    # Poll SSH
+    for attempt in range(20):
+        try:
+            script = f"""if nc -zv {private_ip} 22 2>&1 | grep -q succeeded;
+            then
+                echo True
+            else
+                echo False
+            fi"""
+
+            out = subprocess.run(script, shell=True, capture_output=True, text=True)
+            if 'True' in out.stdout:
+                print(f"SSH ready on {private_ip}")
+                break
+        except Exception as e:
+            print(f"SSH check error for {private_ip}: {e}")
+        print(f"Waiting for SSH on {private_ip}... (attempt {attempt + 1})")
+        time.sleep(10)
+    else:
+        print(f"Warning: SSH not ready after 20 attempts for {private_ip}")
+        return None
+
+    # Setup
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(private_dns, username=user, key_filename=key_file_path)
+
+        ok = setupInstanceHPO(ssh, private_ip)
+        ssh.close()
+
+        if ok:
+            print(f"Successfully set up {instance_role} instance: {private_ip}")
+        else:
+            print(f"Warning: Setup may have failed for {instance_role} instance: {private_ip}")
+        return private_ip  # Return IP even if setup had warnings — non-fatal
+
+    except Exception as e:
+        print(f"Error setting up instance {private_ip}: {e}")
+        return None
+
+
 def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
     """
     Enhanced instance launch for HPO with role-specific setup
@@ -114,71 +167,16 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
             SubnetId='subnet-016c0e4a31d8955d7'
         )
 
-        # Wait for instances to be running and setup
-        for instance in instances:
-            instance.wait_until_running()
-            instance.reload()
-
-            print(f"Instance ID: {instance.id}")
-            print(f"Private IP: {instance.private_ip_address}")
-            print(f"Role: {instance_role}")
-
-            private_ip = instance.private_ip_address
-            private_dns = instance.private_dns_name
-            instance_details.append(private_ip)
-
-            # Wait for SSH to be available
-            ssh_ready = False
-            max_attempts = 20
-            attempt = 0
-
-            while not ssh_ready and attempt < max_attempts:
-                try:
-                    script = f"""if nc -zv {private_ip} 22 2>&1 | grep -q succeeded;
-                    then
-                        echo True
-                    else
-                        echo False
-                    fi"""
-
-                    out = subprocess.run(script, shell=True, capture_output=True, text=True)
-                    ssh_ready = 'True' in out.stdout
-
-                    if not ssh_ready:
-                        print(f"Waiting for SSH on {private_ip}... (attempt {attempt + 1})")
-                        time.sleep(10)
-                        attempt += 1
-                    else:
-                        print(f"SSH ready on {private_ip}")
-
-                except Exception as e:
-                    print(f"SSH check error: {e}")
-                    time.sleep(10)
-                    attempt += 1
-
-            if not ssh_ready:
-                print(f"Warning: SSH not ready after {max_attempts} attempts for {private_ip}")
-                continue
-
-            # Setup instance based on role
-            try:
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(private_dns, username=user, key_filename=key_file_path)
-
-                # Upload and execute setup script (all instances are executor-capable)
-                setup_script = setupInstanceHPO(ssh, private_ip)
-
-                if setup_script:
-                    print(f"Successfully set up {instance_role} instance: {private_ip}")
-                else:
-                    print(f"Warning: Setup may have failed for {instance_role} instance: {private_ip}")
-
-                ssh.close()
-
-            except Exception as e:
-                print(f"Error setting up instance {private_ip}: {e}")
-                continue
+        # Wait for all instances in parallel (SSH-wait + setup are independent per instance)
+        with ThreadPoolExecutor(max_workers=len(instances)) as pool:
+            futures = {
+                pool.submit(_setup_single_instance, inst, instance_role): inst
+                for inst in instances
+            }
+            for future in as_completed(futures):
+                ip = future.result()
+                if ip:
+                    instance_details.append(ip)
 
         print(f"Created {len(instance_details)} {instance_role} instances: {instance_details}")
         return instance_details
