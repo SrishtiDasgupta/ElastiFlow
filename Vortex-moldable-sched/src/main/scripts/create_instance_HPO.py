@@ -16,7 +16,7 @@ region = 'eu-north-1'  # Stockholm region for HPO testing
 session = boto3.Session(region_name=region)
 ec2 = session.resource('ec2')
 user = 'ubuntu'
-key_file_path = '/fsx/hpo-exp.pem'
+key_file_path = os.path.expanduser('~/.ssh/hpo-exp.pem')
 
 def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', sim=None) -> str:
     """
