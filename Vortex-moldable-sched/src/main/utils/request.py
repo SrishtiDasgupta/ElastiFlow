@@ -8,7 +8,10 @@ class ExecutorRequest(Enum):
     REQUEST_RESOURCE = 1
     FREE_RESOURCE = 2
 
-def getConfig(key, config = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/resources.yaml') -> str:
+import os as _os
+_DEFAULT_CONFIG = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'config', 'resources.yaml')
+
+def getConfig(key, config = _DEFAULT_CONFIG) -> str:
     with open(config, 'r') as file:
         config = yaml.safe_load(file)
     return config[key]
