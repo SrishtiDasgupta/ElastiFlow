@@ -164,8 +164,7 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
             try:
                 ssh = paramiko.SSHClient()
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                privkey = paramiko.RSAKey.from_private_key_file(key_file_path)
-                ssh.connect(private_dns, username=user, pkey=privkey)
+                ssh.connect(private_dns, username=user, key_filename=key_file_path)
 
                 # Upload and execute setup script (all instances are executor-capable)
                 setup_script = setupInstanceHPO(ssh, private_ip)

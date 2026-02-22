@@ -527,8 +527,7 @@ class CloudRunnerHPO:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            privkey = paramiko.RSAKey.from_private_key_file(self.key_file_path)
-            ssh.connect(private_dns, username=self.user, pkey=privkey, timeout=30)
+            ssh.connect(private_dns, username=self.user, key_filename=self.key_file_path, timeout=30)
 
             return ssh
 
