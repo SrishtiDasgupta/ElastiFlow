@@ -83,33 +83,43 @@ def executeWorkflowHPO(data, sim=None):
         print(f"[ERROR] Workflow execution failed: {e}")
         import traceback
         traceback.print_exc()
-        raise
+        new_hosts = hosts  # Use original hosts for cleanup
+        isComplete = False
 
     # Tell scheduler workflow execution is complete
-    if sim:
-        sim.sleep(7.7)  # Executor overhead (simulation only)
+    try:
+        if sim:
+            sim.sleep(7.7)  # Executor overhead (simulation only)
 
-    request = {
-        "wf-id": workflow.id,
-        "hosts": new_hosts,
-        "start-time": start_time,
-        "finish-time": getTime(sim),
-        "complete": isComplete
-    }
+        request = {
+            "wf-id": workflow.id,
+            "hosts": new_hosts,
+            "start-time": start_time,
+            "finish-time": getTime(sim),
+            "complete": isComplete
+        }
 
-    print(f"HPO Workflow {workflow.id} complete at {request['finish-time']}")
+        print(f"HPO Workflow {workflow.id} complete at {request['finish-time']}")
 
-    if sim:
-        sim.sync().send(sim, 'completed_jobs_mb', str(request))
-    else:
-        sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
-
-    # Kill newly created on-demand instances (workers only, not executor)
-    # Note: Executor instance will be terminated by scheduler after this thread exits
-    for node in new_hosts.get('on-demand', {}):
-        if isinstance(new_hosts['on-demand'][node], tuple):
-            # Format: (count, [ips])
-            deleteInstanceFromIp(new_hosts['on-demand'][node][1])
+        if sim:
+            sim.sync().send(sim, 'completed_jobs_mb', str(request))
+        else:
+            sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
+    except Exception as e:
+        print(f"[ERROR] Failed to notify scheduler: {e}")
+    finally:
+        # ALWAYS clean up on-demand instances, even if notification failed
+        # Note: JSON serialization converts tuples to lists, so check both
+        if not sim and not SIMULATE:
+            for node in new_hosts.get('on-demand', {}):
+                val = new_hosts['on-demand'][node]
+                if isinstance(val, (tuple, list)) and len(val) >= 2:
+                    ips = val[1]
+                    print(f"[CLEANUP] Terminating on-demand instances: {ips}")
+                    try:
+                        deleteInstanceFromIp(ips)
+                    except Exception as e:
+                        print(f"[ERROR] Termination failed for {ips}: {e}")
 
     print(f"HPO Workflow {workflow.id} thread exiting")
 

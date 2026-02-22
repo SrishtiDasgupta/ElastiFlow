@@ -404,14 +404,13 @@ class CloudRunnerHPO:
                     self.logger.info(f"Parsed HPO result: {result}")
                     return result
 
-            # Fallback: create minimal result
-            self.logger.warning("Could not parse HPO results, using fallback")
+            # No parseable result — fail clearly instead of masking with fake data
+            self.logger.error(f"No parseable HPO result in pipeline output ({len(lines)} lines)")
+            self.logger.error(f"Pipeline output (first 30 lines):\n" + "\n".join(lines[:30]))
             return {
+                'error': 'No parseable result from pipeline',
                 'config': {
-                    'learning_rate': 0.01,
-                    'momentum': 0.9,
-                    'batch_size': 64,
-                    'next_trials': 2  # Reduce trials for next iteration
+                    'next_trials': 0  # Stop workflow immediately
                 }
             }
 

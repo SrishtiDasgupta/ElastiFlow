@@ -117,7 +117,21 @@ class ExecuteAction(Action):
             result = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
 
             print(f"[DEBUG] Subprocess completed successfully")
-            print(f"[DEBUG] STDOUT (first 500 chars): {result.stdout[:500]}")           
+            print(f"[DEBUG] STDOUT (first 500 chars): {result.stdout[:500]}")
+
+            # Write full subprocess output to persistent log for diagnostics
+            try:
+                log_dir = "/fsx/hpo_logs"
+                os.makedirs(log_dir, exist_ok=True)
+                log_path = os.path.join(log_dir, f"{self.wf_id}_iter{self.workflow_iterator}.log")
+                with open(log_path, 'w') as f:
+                    f.write(f"=== COMMAND ===\n{' '.join(command)}\n\n")
+                    f.write(f"=== STDOUT ===\n{result.stdout}\n\n")
+                    f.write(f"=== STDERR ===\n{result.stderr}\n")
+                print(f"[DEBUG] Full output written to {log_path}")
+            except Exception as log_err:
+                print(f"[WARN] Could not write log file: {log_err}")
+
             if sim or SIMULATE:
                 result = eval(result.stdout)
                 runtime = float(result['runtime'])
@@ -153,6 +167,16 @@ class ExecuteAction(Action):
                 result = parsed_result
                 next_trials = result['config']['next_trials']
                 print(result)
+
+                # Append per-iteration result to JSONL file for diagnostics
+                try:
+                    results_path = os.path.join("/fsx/hpo_logs", f"{self.wf_id}_results.jsonl")
+                    os.makedirs("/fsx/hpo_logs", exist_ok=True)
+                    with open(results_path, 'a') as f:
+                        f.write(json.dumps({"iteration": self.workflow_iterator, "result": result, "ts": time.time()}) + "\n")
+                except Exception as log_err:
+                    print(f"[WARN] Could not write results JSONL: {log_err}")
+
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
             if not SIMULATE and len(args['hosts'].get('on-prem', [])) != 0:       
                 port = args['port']
