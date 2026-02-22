@@ -14,7 +14,7 @@ import pandas as pd
 import time
 
 from config.constants_HPO import RESOURCE_UTILIZATION_POLLING, TOTAL_WORKFLOWS
-from resource_manager.instance import CloudReservedInstance, OnPremInstance
+from resource_manager.instance import CloudReservedInstance, CloudOnDemandInstance, OnPremInstance
 from resource_manager.resource_manager import ResourceManager
 
 
@@ -205,22 +205,29 @@ class MetricsHPO:
         """
         Continuously collect resource utilization data.
 
-        Args:
-            sim: Simulus simulator instance
-            rm: ResourceManager instance
+        Tracks (timestamp, onprem_free, cloud_free, cloud_capacity) where:
+        - cloud_capacity = reserved total + on-demand in-use (dynamic)
         """
         while self.collectFlag:
             resources = rm.getResources()
             onprem_free, cloud_free = 0, 0
+            cloud_capacity = 0
 
             for instance in resources:
                 if isinstance(instance, OnPremInstance):
                     onprem_free += instance.getFreeSlots()
                 elif isinstance(instance, CloudReservedInstance):
                     cloud_free += instance.getFreeSlots()
+                    # Exact capacity = free IPs + allocated IPs
+                    cloud_capacity += len(instance.free_slots) + len(instance.allocated_slots)
+                elif isinstance(instance, CloudOnDemandInstance):
+                    # On-demand: free_slots starts at 0, goes negative when allocated
+                    # Allocated instances = -free_slots (dynamic capacity, always in use)
+                    od_in_use = max(0, -instance.getFreeSlots())
+                    cloud_capacity += od_in_use
 
             timestamp = (sim and sim.now) or time.time()
-            self.free_resources.append((timestamp, onprem_free, cloud_free))
+            self.free_resources.append((timestamp, onprem_free, cloud_free, cloud_capacity))
 
             (sim or time).sleep(RESOURCE_UTILIZATION_POLLING)
 
@@ -228,8 +235,9 @@ class MetricsHPO:
         """
         Compute average resource utilization percentage.
 
-        Dynamically computes total from maximum observed free resources
-        (equals total capacity). Same approach as MetricsLA.
+        Uses explicit cloud_capacity (reserved total + on-demand in-use) rather
+        than inferring total from max(free), which fails for dynamic on-demand.
+        On-prem total is still inferred from max(free) since it's static.
 
         Returns:
             Average utilization percentage (0-100)
@@ -238,43 +246,41 @@ class MetricsHPO:
         if n == 0:
             return 0.0
 
-        # Dynamically determine total resources from max observed free
+        # On-prem total = max observed free (static pool, equals total when idle)
         max_onprem = max(entry[1] for entry in self.free_resources)
-        max_cloud = max(entry[2] for entry in self.free_resources)
-        total_resources = max_onprem + max_cloud
 
-        if total_resources == 0:
-            return 0.0
-
-        # Find start and stop indices where resources are actually in use
-        start_idx = 0
-        stop_idx = n - 1
-
+        # Find active period (any resources in use)
+        start_idx, stop_idx = None, None
         for i in range(n):
-            free = self.free_resources[i][1] + self.free_resources[i][2]
-            if free < total_resources:
-                start_idx = i
-                break
-
-        for i in range(n - 1, -1, -1):
-            free = self.free_resources[i][1] + self.free_resources[i][2]
-            if free < total_resources:
+            entry = self.free_resources[i]
+            cloud_cap = entry[3] if len(entry) >= 4 else 0
+            total_cap = max_onprem + cloud_cap
+            total_free = entry[1] + entry[2]
+            if total_cap > 0 and total_free < total_cap:
+                if start_idx is None:
+                    start_idx = i
                 stop_idx = i
-                break
 
-        total_free = 0
-        for i in range(start_idx, stop_idx + 1):
-            total_free += self.free_resources[i][1] + self.free_resources[i][2]
-
-        num_samples = stop_idx - start_idx + 1
-        if num_samples == 0:
+        if start_idx is None:
             return 0.0
 
-        average_free = total_free / num_samples
-        average_used = total_resources - average_free
-        utilization_pct = (average_used / total_resources) * 100
+        total_util = 0.0
+        count = 0
+        for i in range(start_idx, stop_idx + 1):
+            entry = self.free_resources[i]
+            cloud_cap = entry[3] if len(entry) >= 4 else 0
+            total_cap = max_onprem + cloud_cap
+            if total_cap == 0:
+                continue
+            total_free = entry[1] + entry[2]
+            used = total_cap - total_free
+            total_util += used / total_cap
+            count += 1
 
-        return utilization_pct
+        if count == 0:
+            return 0.0
+
+        return (total_util / count) * 100
 
     def _infer_scheduler_type(self, file_prefix: str) -> str:
         """
@@ -320,7 +326,11 @@ class MetricsHPO:
 
         # Save resource utilization data
         resource_filename = f'{file_prefix}resources.csv' if file_prefix else 'resources.csv'
-        resource_df = pd.DataFrame(self.free_resources, columns=['Timestamp', 'On-prem', 'Cloud'])
+        if self.free_resources and len(self.free_resources[0]) >= 4:
+            resource_df = pd.DataFrame(self.free_resources,
+                                       columns=['Timestamp', 'On-prem', 'Cloud', 'Cloud_Capacity'])
+        else:
+            resource_df = pd.DataFrame(self.free_resources, columns=['Timestamp', 'On-prem', 'Cloud'])
         resource_df.to_csv(resource_filename)
 
         # Initialize accumulators
@@ -386,17 +396,21 @@ class MetricsHPO:
                 wasted_cost += self.computeCost(wf_id, wf_data['finish_time'])
                 wasted_time += wf_data['finish_time'] - wf_data.get('exec_start_time', wf_data['finish_time'])
 
+        # Use actual submitted count, not hardcoded TOTAL_WORKFLOWS
+        total_submitted = len(self.df)
+        incomplete = total_submitted - executed_workflows
+
         # Print results
-        print(f'\nTotal workflows: {TOTAL_WORKFLOWS}')
+        print(f'\nTotal workflows: {total_submitted}')
         print(f'Executed workflows: {executed_workflows}')
-        print(f'Incomplete workflows: {TOTAL_WORKFLOWS - executed_workflows}')
+        print(f'Incomplete workflows: {incomplete}')
 
         # Prepare summary lines for .out file
         summary_lines = []
         summary_lines.append(f'Scheduler: {scheduler_type}')
-        summary_lines.append(f'Total workflows = {TOTAL_WORKFLOWS}')
+        summary_lines.append(f'Total workflows = {total_submitted}')
         summary_lines.append(f'Executed workflows = {executed_workflows}')
-        summary_lines.append(f'Incomplete workflows = {TOTAL_WORKFLOWS - executed_workflows}')
+        summary_lines.append(f'Incomplete workflows = {incomplete}')
 
         if executed_workflows > 0:
             avg_flowtime = round(makespan / executed_workflows, 4)
@@ -404,9 +418,9 @@ class MetricsHPO:
             avg_wait_time = round(waitTime / executed_workflows, 4)
             avg_utilization = round(self.computeResourceUtilization(), 4)
 
-            deadline_rate = round((deadline_miss + TOTAL_WORKFLOWS - executed_workflows) / TOTAL_WORKFLOWS, 4)
-            budget_rate = round(budget_miss / TOTAL_WORKFLOWS, 4)
-            overall_rate = round((overall_miss + TOTAL_WORKFLOWS - executed_workflows) / TOTAL_WORKFLOWS, 4)
+            deadline_rate = round((deadline_miss + incomplete) / total_submitted, 4) if total_submitted > 0 else 0.0
+            budget_rate = round(budget_miss / total_submitted, 4) if total_submitted > 0 else 0.0
+            overall_rate = round((overall_miss + incomplete) / total_submitted, 4) if total_submitted > 0 else 0.0
 
             print(f'\n--- Performance Metrics ---')
             print(f'Average Flowtime: {avg_flowtime} seconds')
@@ -444,7 +458,7 @@ class MetricsHPO:
                     print(f'    Deadline misses: {dl_miss}, Budget misses: {bg_miss}')
                     summary_lines.append(f'{model}: count={n}, avg_flowtime={avg_ft}, avg_cost={avg_c}, deadline_miss={dl_miss}, budget_miss={bg_miss}')
 
-            if TOTAL_WORKFLOWS - executed_workflows > 0:
+            if incomplete > 0:
                 wasted_time_hours = round(wasted_time / 3600, 2)
                 wasted_cost_total = round(wasted_cost, 2)
                 print(f'\n--- Incomplete Workflow Costs ---')
