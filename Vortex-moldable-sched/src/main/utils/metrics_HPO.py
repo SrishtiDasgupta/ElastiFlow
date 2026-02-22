@@ -143,11 +143,14 @@ class MetricsHPO:
         instances = self.df[id]['instances']  # {obj: [(count, start, end), ...]}
         for instance in instances:
             instance_list = instances[instance]
+            cost_per_hour = instance.getCostPerSecond()  # Misnamed: actually $/hour
             for count, start_time, finish_time in instance_list:
                 if start_time:  # Newly added resource
-                    cost += instance.getCostPerSecond() * count * (wf_finish_time - start_time)
+                    hours = (wf_finish_time - start_time) / 3600
+                    cost += cost_per_hour * count * hours
                 if finish_time:  # Freed resource
-                    cost -= instance.getCostPerSecond() * count * (wf_finish_time - finish_time)
+                    hours = (wf_finish_time - finish_time) / 3600
+                    cost -= cost_per_hour * count * hours
         return cost
 
     def recordScaleUpAttempt(self, success, reason=None, instances_added=0, cores_added=0, workflow_id=None):
