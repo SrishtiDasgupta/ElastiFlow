@@ -120,28 +120,48 @@ class CloudRunnerHPO:
         self.logger.info(f"Extracted {len(worker_ips)} worker IPs: {worker_ips}")
         return worker_ips
 
+    def _stop_ray_and_wait(self, ssh, ip, port=None):
+        """Stop Ray on a node, wait for the process to actually exit, and verify the port is free."""
+        # Use rayenv ray so the correct binary is found
+        stop_cmd = "source ~/rayenv/bin/activate && ray stop --force"
+        stdin, stdout, stderr = ssh.exec_command(stop_cmd)
+        stdout.read()  # Block until command finishes
+        stderr.read()
+
+        if port is None:
+            # Worker — just wait for process exit
+            time.sleep(3)
+            return True
+
+        # Head — poll until the port is free (up to 30s)
+        for attempt in range(6):
+            time.sleep(5)
+            if not _can_connect(ip, port, timeout=1.5):
+                self.logger.info(f"Ray port {port} on {ip} is free after stop")
+                return True
+            self.logger.info(f"Waiting for Ray port {port} on {ip} to close... (attempt {attempt + 1})")
+
+        self.logger.warning(f"Ray port {port} on {ip} still open after stop — proceeding anyway")
+        return False
+
     def start_ray_head(self) -> bool:
         """Start Ray head on the first worker instance"""
         try:
-            # Get instance details
             private_dns = self.get_private_dns(self.ray_head_ip)
             if not private_dns:
                 return False
 
-            # Connect via SSH
             ssh = self.create_ssh_connection(private_dns)
             if not ssh:
                 return False
 
-            # Stop any existing Ray processes
-            stop_command = "ray stop --force"
-            ssh.exec_command(stop_command)
-            time.sleep(3)
+            # Stop existing Ray and wait for port to be free
+            self._stop_ray_and_wait(ssh, self.ray_head_ip, port=self.ray_port)
 
             # Start Ray head
             start_command = f"""
             cd /fsx/hyperparameter_test && \
-            source /home/ubuntu/rayenv/bin/activate &&  \
+            source /home/ubuntu/rayenv/bin/activate && \
             ray start --head \
                 --port={self.ray_port} \
                 --redis-password='{self.ray_password}' \
@@ -151,7 +171,6 @@ class CloudRunnerHPO:
 
             stdin, stdout, stderr = ssh.exec_command(start_command)
 
-            # Check for successful startup
             output = stdout.read().decode()
             error = stderr.read().decode()
 
@@ -164,7 +183,6 @@ class CloudRunnerHPO:
             # Wait for Ray head to be ready
             time.sleep(10)
 
-            # Verify Ray head is running
             return self.verify_ray_head()
 
         except Exception as e:
@@ -191,9 +209,8 @@ class CloudRunnerHPO:
                 if not ssh:
                     return worker_ip, False
 
-                # Stop any existing Ray processes
-                ssh.exec_command("ray stop --force")
-                time.sleep(2)
+                # Stop existing Ray and wait for process exit
+                self._stop_ray_and_wait(ssh, worker_ip)
 
                 # Start Ray worker
                 start_command = f"""
@@ -437,9 +454,10 @@ class CloudRunnerHPO:
                 private_dns = self.get_private_dns(worker_ip)
                 ssh = self.create_ssh_connection(private_dns)
 
-                # Stop Ray
-                stop_command = "ray stop --force"
-                ssh.exec_command(stop_command)
+                # Stop Ray using rayenv binary
+                stop_command = "source ~/rayenv/bin/activate && ray stop --force"
+                stdin, stdout, stderr = ssh.exec_command(stop_command)
+                stdout.read()  # Wait for completion
 
                 ssh.close()
                 self.logger.info(f"Ray stopped on {worker_ip}")
