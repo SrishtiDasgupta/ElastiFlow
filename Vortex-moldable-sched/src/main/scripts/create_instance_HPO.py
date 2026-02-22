@@ -16,7 +16,7 @@ region = 'eu-north-1'  # Stockholm region for HPO testing
 session = boto3.Session(region_name=region)
 ec2 = session.resource('ec2')
 user = 'ubuntu'
-key_file_path = '/fsx/Nisarg-HPC.pem'
+key_file_path = '/fsx/hpo-exp.pem'
 
 def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', sim=None) -> str:
     """
@@ -74,7 +74,7 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
     try:
         # Create instances with appropriate tags and 64 GB root volume
         instances = ec2.create_instances(
-            ImageId='ami-04542995864e26699',  # HPO-optimized AMI
+            ImageId='ami-0f7f72d078ea0a900',  # HPO-optimized AMI
             BlockDeviceMappings=[
                 {
                     'DeviceName': '/dev/sda1',  # Root device for Ubuntu AMIs
@@ -109,9 +109,9 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
             InstanceType=instanceName,
             MinCount=count,
             MaxCount=count,
-            KeyName='Nisarg-HPC',
-            SecurityGroupIds=['sg-00da4b839f250187d'],
-            SubnetId='subnet-03e7330f6288164e3'
+            KeyName='hpo-exp',
+            SecurityGroupIds=['sg-0d61f6325a433891b'],
+            SubnetId='subnet-016c0e4a31d8955d7'
         )
 
         # Wait for instances to be running and setup
