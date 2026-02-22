@@ -13,7 +13,7 @@ sudo mkdir -p /etc/needrestart/conf.d/
 echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
 
 # Setup FSx Lustre client
-wget -o - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
+wget -O - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
 
 yes | sudo bash -c 'echo "deb [signed-by=/usr/share/keyrings/fsx-ubuntu-public-key.gpg] https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu jammy main" > /etc/apt/sources.list.d/fsxlustreclientrepo.list && yes | apt-get update >> ~/setup.out'
 
@@ -32,13 +32,21 @@ else
     echo "AWS CLI is already installed"
 fi
 
-# Copy AWS credentials
-cp -r /fsx/.aws ~
+# Copy AWS credentials (skip if not present — IAM role provides credentials)
+if [ -d "/fsx/.aws" ]; then
+    cp -r /fsx/.aws ~
+else
+    echo "No /fsx/.aws found — using IAM role for AWS credentials"
+fi
 
 cd /fsx
 
-# Run HPO-specific instance setup (includes GPU drivers, PyTorch, Ray, etc.)
-./instance_setup_hpo.sh >> ~/setup.out
+# Run HPO-specific instance setup if present (includes GPU drivers, PyTorch, Ray, etc.)
+if [ -f "./instance_setup_hpo.sh" ]; then
+    ./instance_setup_hpo.sh >> ~/setup.out
+else
+    echo "No instance_setup_hpo.sh found — assuming AMI already has GPU drivers/PyTorch"
+fi
 
 echo "HPO instance setup completed"
 
@@ -89,13 +97,14 @@ pip3 install torch torchvision ray boto3 paramiko redis PyYAML pandas scikit-lea
 
 echo "Python dependencies installed"
 
-# Copy HPO-specific scripts and data
-sudo cp -r /fsx/hyperparametr_test/ ~/
+# Copy HPO-specific scripts and data to home (optional — cloud_runner uses /fsx/ directly)
+if [ -d "/fsx/hyperparameter_test/" ]; then
+    sudo cp -r /fsx/hyperparameter_test/ ~/
+fi
 
 # Setup CIFAR-10 dataset if not exists
-if [ ! -d "~/cifar10" ]; then
+if [ ! -d "$HOME/cifar10" ]; then
     echo "Setting up CIFAR-10 dataset..."
-    cd ~/hyperparametr_test
     python3 -c "
 import torchvision
 import torchvision.transforms as transforms
@@ -106,7 +115,6 @@ transform = transforms.Compose([transforms.ToTensor()])
 dataset = torchvision.datasets.CIFAR10(root=os.path.expanduser('~/cifar10'), train=True, download=True, transform=transform)
 print('CIFAR-10 dataset downloaded successfully')
 "
-    cd ~
 fi
 
 echo "Starting HPO Executor on ${WORKER_IP}..."
