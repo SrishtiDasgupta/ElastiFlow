@@ -41,14 +41,19 @@ fi
 
 cd /fsx
 
-# Run HPO-specific instance setup if present (includes GPU drivers, PyTorch, Ray, etc.)
-if [ -f "./instance_setup_hpo.sh" ]; then
-    ./instance_setup_hpo.sh >> ~/setup.out
-else
-    echo "No instance_setup_hpo.sh found — assuming AMI already has GPU drivers/PyTorch"
-fi
+# --- Python venv with PyTorch + Ray (must match reserved_instance_setup.sh) ---
+echo "Creating ~/rayenv Python venv..."
+sudo apt-get update -y >> ~/setup.out 2>&1
+sudo apt-get install -y python3.10-venv >> ~/setup.out 2>&1
 
-echo "HPO instance setup completed"
+python3 -m venv ~/rayenv
+source ~/rayenv/bin/activate
+pip install --upgrade pip >> ~/setup.out 2>&1
+pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu128 >> ~/setup.out 2>&1
+pip install "ray[default]" "ray[tune]" >> ~/setup.out 2>&1
+pip install numpy pandas filelock boto3 paramiko pyyaml redis scikit-learn >> ~/setup.out 2>&1
+
+echo "PyTorch + Ray venv created at ~/rayenv"
 
 cd ~
 
@@ -59,43 +64,27 @@ cd Vortex-moldable-sched/src/main
 
 # Install and start Redis server (required for executor queue)
 echo "Installing Redis server..."
-sudo apt-get update >> ~/setup.out 2>&1
+sudo apt-get install -y lsb-release curl gpg >> ~/setup.out 2>&1
+curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor --yes -o /usr/share/keyrings/redis-archive-keyring.gpg
+sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -sc) main" \
+    | sudo tee /etc/apt/sources.list.d/redis.list
+sudo apt-get update -y >> ~/setup.out 2>&1
 sudo apt-get install -y redis-server >> ~/setup.out 2>&1
 
-# Start Redis service (try both possible service names)
+# Start Redis service
 echo "Starting Redis server..."
-if sudo systemctl list-unit-files | grep -q "redis-server.service"; then
-    REDIS_SERVICE="redis-server"
-elif sudo systemctl list-unit-files | grep -q "redis.service"; then
-    REDIS_SERVICE="redis"
-else
-    echo "WARNING: Could not find Redis service name, trying 'redis'"
-    REDIS_SERVICE="redis"
-fi
-
-echo "Using Redis service name: ${REDIS_SERVICE}"
-sudo systemctl enable ${REDIS_SERVICE} >> ~/setup.out 2>&1
-sudo systemctl start ${REDIS_SERVICE} >> ~/setup.out 2>&1
+sudo systemctl enable redis-server >> ~/setup.out 2>&1
+sudo systemctl start redis-server >> ~/setup.out 2>&1
 
 # Verify Redis is running
 sleep 2
-if sudo systemctl is-active --quiet ${REDIS_SERVICE}; then
+if sudo systemctl is-active --quiet redis-server; then
     echo "Redis server started successfully"
 else
-    echo "WARNING: Redis server may not have started properly"
-    # Try starting manually if systemd fails
-    echo "Attempting to start Redis manually..."
+    echo "WARNING: Redis not started via systemd, trying manual start"
     sudo redis-server --daemonize yes >> ~/setup.out 2>&1
 fi
-
-# Install Python dependencies for HPO Executor
-echo "Installing Python dependencies for HPO..."
-pip3 install --upgrade pip >> ~/setup.out 2>&1
-
-# Install required packages (executor + worker libraries)
-pip3 install torch torchvision ray boto3 paramiko redis PyYAML pandas scikit-learn >> ~/setup.out 2>&1
-
-echo "Python dependencies installed"
 
 # Copy HPO-specific scripts and data to home (optional — cloud_runner uses /fsx/ directly)
 if [ -d "/fsx/hyperparameter_test/" ]; then
@@ -103,6 +92,7 @@ if [ -d "/fsx/hyperparameter_test/" ]; then
 fi
 
 # Setup CIFAR-10 dataset if not exists
+source ~/rayenv/bin/activate
 if [ ! -d "$HOME/cifar10" ]; then
     echo "Setting up CIFAR-10 dataset..."
     python3 -c "
@@ -119,9 +109,9 @@ fi
 
 echo "Starting HPO Executor on ${WORKER_IP}..."
 
-# Start the HPO-specific executor
+# Start the HPO-specific executor (use rayenv python)
 cd ~/Vortex-moldable-sched/src/main
-nohup python3 executor_HPO.py --ip ${WORKER_IP} > ~/executor.out 2>&1 &
+nohup ~/rayenv/bin/python3 executor_HPO.py --ip ${WORKER_IP} > ~/executor.out 2>&1 &
 
 echo "HPO Executor started successfully"
 
