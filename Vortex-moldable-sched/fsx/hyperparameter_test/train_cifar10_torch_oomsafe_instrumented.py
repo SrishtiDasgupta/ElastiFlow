@@ -453,7 +453,8 @@ def train_driver_fn(config):
         ),
     )
     result = trainer.fit()
-    final_acc = result.metrics.get("accuracy") or result.metrics.get("best_accuracy")
+    metrics = result.metrics or {}
+    final_acc = metrics.get("accuracy") or metrics.get("best_accuracy") or 0.0
     tune.report({"accuracy": final_acc})
 
 # ----------------------------- __main__ -----------------------------
