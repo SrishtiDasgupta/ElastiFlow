@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# Profile all 36 combinations on g4dn.xlarge cluster at IMAGE_SIZE=32
+# Profile all 36 combinations on g4dn.xlarge cluster at IMAGE_SIZE=64
 #
 # Grid: 3 models x 3 worker counts x 4 epoch counts = 36 runs
 # Run from the Ray HEAD NODE with 4-node Ray cluster already active
@@ -9,30 +9,26 @@
 #   cd /fsx/hyperparameter_test
 #   bash profile_all_g4.sh
 #
-# Output: /fsx/hyperparameter_test/g4_img32.jsonl (consolidated)
+# Output: /fsx/hyperparameter_test/g4_img64.jsonl (consolidated)
 # ============================================================================
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TRAIN_SCRIPT="$SCRIPT_DIR/train_cifar10_torch_oomsafe_instrumented.py"
-OUTPUT_FILE="$SCRIPT_DIR/g4_img32.jsonl"
-IMAGE_SIZE=32
+OUTPUT_FILE="$SCRIPT_DIR/g4_img64.jsonl"
+MEASUREMENT_DIR="$SCRIPT_DIR/measurements"
+IMAGE_SIZE=64
 INSTANCE_TYPE="g4dn.xlarge"
 
 MODELS=("vgg19" "wide_resnet101_2" "convnext_large")
 WORKERS=(1 2 4)
 EPOCHS=(3 6 9 12)
 
-# Clear previous output
+# Clear previous output and measurement dir
 > "$OUTPUT_FILE"
-
-# Clear any stale measurement files on ALL nodes
-echo "=== Clearing stale measurement files on all nodes ==="
-rm -f /tmp/overhead_measurements_*.jsonl
-for node in $(ray get-worker-ips ~/ray_results/cluster.yaml 2>/dev/null || true); do
-    ssh -o StrictHostKeyChecking=no "$node" "rm -f /tmp/overhead_measurements_*.jsonl" 2>/dev/null || true
-done
+rm -rf "$MEASUREMENT_DIR"
+mkdir -p "$MEASUREMENT_DIR"
 
 TOTAL=$((${#MODELS[@]} * ${#WORKERS[@]} * ${#EPOCHS[@]}))
 COUNT=0
@@ -41,6 +37,7 @@ FAILED=0
 echo "=== Starting profiling: $TOTAL combinations ==="
 echo "=== Image size: $IMAGE_SIZE, Instance: $INSTANCE_TYPE ==="
 echo "=== Output: $OUTPUT_FILE ==="
+echo "=== Measurements dir: $MEASUREMENT_DIR (shared via FSx) ==="
 echo ""
 
 for model in "${MODELS[@]}"; do
@@ -49,24 +46,25 @@ for model in "${MODELS[@]}"; do
             COUNT=$((COUNT + 1))
             echo "--- [$COUNT/$TOTAL] model=$model workers=$workers epochs=$epochs ---"
 
-            # Clear measurement files before each run (head node)
-            rm -f /tmp/overhead_measurements_*.jsonl
+            # Clear measurement dir before each run
+            rm -f "$MEASUREMENT_DIR"/overhead_measurements_*.jsonl
 
-            # Run profiling
+            # Run profiling — OVERHEAD_LOG_DIR points to shared FSx path
             MEASURE=1 \
             MODEL_NAME="$model" \
             EPOCHS="$epochs" \
             HOSTS="$workers" \
             IMAGE_SIZE="$IMAGE_SIZE" \
             INSTANCE_TYPE="$INSTANCE_TYPE" \
+            OVERHEAD_LOG_DIR="$MEASUREMENT_DIR" \
             BATCH_SIZE=64 \
             NUM_SAMPLES=1 \
                 python3 "$TRAIN_SCRIPT" 2>&1 | tail -5
 
-            # Collect result from head node's /tmp/
-            if ls /tmp/overhead_measurements_*.jsonl 1>/dev/null 2>&1; then
-                # Take the last line (most recent entry) from the measurement file
-                tail -1 /tmp/overhead_measurements_*.jsonl >> "$OUTPUT_FILE"
+            # Collect result from shared FSx measurement dir
+            if ls "$MEASUREMENT_DIR"/overhead_measurements_*.jsonl 1>/dev/null 2>&1; then
+                # Take the last line (most recent entry)
+                tail -1 "$MEASUREMENT_DIR"/overhead_measurements_*.jsonl >> "$OUTPUT_FILE"
                 TRAINING_TIME=$(python3 -c "
 import json
 with open('$OUTPUT_FILE') as f:
@@ -76,18 +74,8 @@ with open('$OUTPUT_FILE') as f:
 " 2>/dev/null || echo "?")
                 echo "    => Training time: $TRAINING_TIME"
             else
-                echo "    => WARNING: No measurement file found on head node!"
-                # Try to collect from worker nodes
-                for node in $(ray get-worker-ips ~/ray_results/cluster.yaml 2>/dev/null || true); do
-                    scp -o StrictHostKeyChecking=no "$node":/tmp/overhead_measurements_*.jsonl /tmp/ 2>/dev/null || true
-                done
-                if ls /tmp/overhead_measurements_*.jsonl 1>/dev/null 2>&1; then
-                    tail -1 /tmp/overhead_measurements_*.jsonl >> "$OUTPUT_FILE"
-                    echo "    => Collected from worker node"
-                else
-                    echo "    => FAILED: Could not collect measurement!"
-                    FAILED=$((FAILED + 1))
-                fi
+                echo "    => FAILED: No measurement file found!"
+                FAILED=$((FAILED + 1))
             fi
 
             echo ""

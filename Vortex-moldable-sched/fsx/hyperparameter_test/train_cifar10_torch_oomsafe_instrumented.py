@@ -400,7 +400,8 @@ def train_cifar10_torch(config):
         }
         
         # Write comprehensive overhead data
-        overhead_log_file = f'/tmp/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
+        overhead_log_dir = os.environ.get('OVERHEAD_LOG_DIR', '/tmp')
+        overhead_log_file = f'{overhead_log_dir}/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
         with open(overhead_log_file, 'a') as f:
             f.write(json.dumps(overhead_data) + '\n')
         
@@ -426,10 +427,11 @@ def train_cifar10_torch(config):
             "partial_measurement": True
         }
         
-        overhead_log_file = f'/tmp/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
+        overhead_log_dir = os.environ.get('OVERHEAD_LOG_DIR', '/tmp')
+        overhead_log_file = f'{overhead_log_dir}/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
         with open(overhead_log_file, 'a') as f:
             f.write(json.dumps(overhead_data) + '\n')
-        
+
         raise
 
 # ----------------------------- Ray Train driver -----------------------------
