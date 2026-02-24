@@ -400,7 +400,8 @@ def train_cifar10_torch(config):
         }
         
         # Write comprehensive overhead data
-        overhead_log_dir = os.environ.get('OVERHEAD_LOG_DIR', '/tmp')
+        overhead_log_dir = config.get('overhead_log_dir', '/tmp')
+        os.makedirs(overhead_log_dir, exist_ok=True)
         overhead_log_file = f'{overhead_log_dir}/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
         with open(overhead_log_file, 'a') as f:
             f.write(json.dumps(overhead_data) + '\n')
@@ -427,7 +428,8 @@ def train_cifar10_torch(config):
             "partial_measurement": True
         }
         
-        overhead_log_dir = os.environ.get('OVERHEAD_LOG_DIR', '/tmp')
+        overhead_log_dir = config.get('overhead_log_dir', '/tmp')
+        os.makedirs(overhead_log_dir, exist_ok=True)
         overhead_log_file = f'{overhead_log_dir}/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
         with open(overhead_log_file, 'a') as f:
             f.write(json.dumps(overhead_data) + '\n')
@@ -477,6 +479,7 @@ if __name__ == "__main__":
 
     if MEASURE:
         num_samples = 1  # 1 trial only
+        measure_log_dir = os.environ.get('OVERHEAD_LOG_DIR', '/fsx/hyperparameter_test/measurements')
         param_space = {
             "epoch": fixed_epochs,
             "learning_rate": 5e-3,
@@ -489,6 +492,7 @@ if __name__ == "__main__":
             "model_name": model_name,
             "data_dir": os.path.expanduser("~/cifar10"),
             "num_workers": total_hosts,
+            "overhead_log_dir": measure_log_dir,
         }
         stop_cond = None
     else:
