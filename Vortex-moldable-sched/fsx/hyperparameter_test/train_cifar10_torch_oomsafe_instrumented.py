@@ -12,7 +12,7 @@ import torchvision.transforms as T
 from torch.utils.data import DataLoader
 
 from ray import tune
-from ray.air import session
+import ray.train
 from ray.train import ScalingConfig
 from ray.train import RunConfig as AirRunConfig
 from ray.train.torch import TorchTrainer, prepare_model, prepare_data_loader, TorchConfig
@@ -361,7 +361,7 @@ def train_cifar10_torch(config):
             best = max(best, acc)
             
             # Report enhanced metrics
-            session.report({
+            ray.train.report({
                 "epoch": ep,
                 "accuracy": acc,
                 "best_accuracy": best,
@@ -406,7 +406,7 @@ def train_cifar10_torch(config):
             f.write(json.dumps(overhead_data) + '\n')
         
         # Final summary report
-        session.report({
+        ray.train.report({
             "trial_summary": True,
             "total_coordination_overhead_s": total_coordination_overhead,
             "avg_coordination_overhead_per_epoch_s": avg_overhead_per_epoch,
