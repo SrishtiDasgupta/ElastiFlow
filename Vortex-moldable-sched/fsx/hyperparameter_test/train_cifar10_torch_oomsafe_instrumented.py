@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from ray import tune
 from ray.air import session
 from ray.train import ScalingConfig
-from ray.air.config import RunConfig as AirRunConfig
+from ray.train import RunConfig as AirRunConfig
 from ray.train.torch import TorchTrainer, prepare_model, prepare_data_loader, TorchConfig
 
 # ---- Recommended for fragmentation reduction (optional but helps) ----
