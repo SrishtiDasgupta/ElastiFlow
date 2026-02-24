@@ -31,13 +31,8 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         super().__init__(queue, finish_queue, resource_request_queue)
 
     def getHPOInstanceCost(self, instance):
-        """Get cost per trial for HPO instances"""
-        if 'g4dn' in instance.name:
-            return 0.798 / 3600  # g4dn.2xlarge cost per second
-        elif 'g5' in instance.name:
-            return 1.28 / 3600   # g5.2xlarge cost per second
-        else:
-            return 0.90 / 3600   # on-premise equivalent
+        """Get cost per hour for HPO instances (from resources YAML)"""
+        return instance.cost_per_second  # $/hour from YAML (field is misnamed)
 
     def run(self, sim = None, wf_mb = None, resource_request_mb = None):
 

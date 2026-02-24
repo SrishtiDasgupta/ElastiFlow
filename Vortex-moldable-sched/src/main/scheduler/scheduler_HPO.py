@@ -188,7 +188,7 @@ class Scheduler_HPO(ABC):
         if isinstance(instance, OnPremInstance):
             # Use HPO runtime function - assume g5 for on-prem
             runtime = getRuntime_g5(1, model, request['tinyda-iterations'])
-            cost_per_iteration = instance.cost_per_second * runtime
+            cost_per_iteration = (runtime / 3600) * instance.cost_per_second  # cost_per_second is $/hour
             instance_cost = getEstimate(cost_per_iteration, 1)  # Already includes tinyda-iterations in runtime
             to_be_used = min(instance.getFreeSlots(), request['count'], int(budget / instance_cost))
             return [(instance, to_be_used)]
@@ -205,7 +205,7 @@ class Scheduler_HPO(ABC):
             else:  # g4dn
                 runtime = getRuntime_g4(1, model, request['tinyda-iterations'])
 
-            cost_per_iteration = instance.cost_per_second * runtime
+            cost_per_iteration = (runtime / 3600) * instance.cost_per_second  # cost_per_second is $/hour
             instance_cost = getEstimate(cost_per_iteration, 1)  # Already includes tinyda-iterations
             to_be_used = min(request['count']-acquired_count, instance.getFreeSlots(), int(budget/instance_cost))
 

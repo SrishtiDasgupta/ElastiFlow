@@ -55,7 +55,7 @@ def model_distribution(num_workflows):
     result = np.repeat(models, counts)
     np.random.shuffle(result)
 
-    return result
+    return [str(m) for m in result]  # Convert np.str_ to plain str for YAML
 
 
 def budget_and_deadline_generation(model_counts, model_arr):

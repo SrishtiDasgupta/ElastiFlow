@@ -36,7 +36,7 @@ TOTAL_RESOURCES = TOTAL_ON_PREMISE + TOTAL_CLOUD_RESERVED + TOTAL_CLOUD_ONDEMAND
 
 # Workflow configurations to test
 WORKFLOW_CONFIGS = [5, 10, 15, 20]  # Different scales for evaluation
-PRIMARY_WORKFLOWS = 10  # Sweet spot for demonstrating improvements
+PRIMARY_WORKFLOWS = 15  # Sweet spot for demonstrating improvements
 
 # ====================================================================================
 # MEASURED OVERHEADS - From g4.jsonl and g5.jsonl Data
@@ -66,14 +66,16 @@ RAY_COORDINATION_OVERHEAD = 0.00  # Previously assumed 15%, measured as ~0.00000
 # RUNTIME DATA - Base Training Times (seconds)
 # ====================================================================================
 
-# g4dn.2xlarge runtimes for 12 epochs, 1 GPU (slowest instance for deadline)
+# g4dn.xlarge runtimes for 12 epochs, 1 GPU (Tesla T4 — slowest instance for deadline)
+# Same GPU as g4dn.2xlarge; training is single-GPU so runtimes are identical
 G4DN_RUNTIMES_12EP = {
     'vgg19': 987.16,
     'wide_resnet101_2': 1268.69,
     'convnext_large': 2077.30
 }
 
-# g5.2xlarge runtimes for 12 epochs, 1 GPU (expensive instance for budget)  
+# g5.xlarge runtimes for 12 epochs, 1 GPU (A10G — expensive instance for budget)
+# Same GPU as g5.2xlarge; training is single-GPU so runtimes are identical
 G5_RUNTIMES_12EP = {
     'vgg19': 454.85,
     'wide_resnet101_2': 594.36,
@@ -87,14 +89,14 @@ G5_RUNTIMES_12EP = {
 INSTANCE_COSTS = {
     # On-premise (calculated TCO from thesis methodology)
     'on_premise_g5': 0.90,  # $0.90/hour based on 3-year TCO
-    
-    # Cloud Reserved Instances (3-year commitment)
-    'cloud_reserved_g4dn': 0.503,
-    'cloud_reserved_g5': 0.80,
-    
-    # Cloud On-Demand Instances
-    'cloud_ondemand_g4dn': 0.798,
-    'cloud_ondemand_g5': 1.28  # Most expensive for budget calculation
+
+    # Cloud Reserved Instances (xlarge, 1-year no-upfront)
+    'cloud_reserved_g4dn': 0.227,  # g4dn.xlarge reserved $/hour
+    'cloud_reserved_g5': 0.435,    # g5.xlarge reserved $/hour
+
+    # Cloud On-Demand Instances (xlarge)
+    'cloud_ondemand_g4dn': 0.526,  # g4dn.xlarge on-demand $/hour
+    'cloud_ondemand_g5': 1.006     # g5.xlarge on-demand $/hour (most expensive for budget)
 }
 
 # ====================================================================================
