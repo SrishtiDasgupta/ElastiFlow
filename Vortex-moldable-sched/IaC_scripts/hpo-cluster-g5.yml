@@ -1,0 +1,50 @@
+Region: eu-north-1
+
+Image:
+  Os: ubuntu2204
+
+HeadNode:
+  InstanceType: t3.medium
+  Networking:
+    SubnetId: subnet-016c0e4a31d8955d7
+    SecurityGroups:
+      - sg-0d61f6325a433891b
+  Ssh:
+    KeyName: hpo-exp
+  LocalStorage:
+    RootVolume:
+      Size: 50
+      VolumeType: gp3
+
+Scheduling:
+  Scheduler: slurm
+  SlurmQueues:
+    - Name: gpu-compute
+      CapacityType: ONDEMAND
+      ComputeResources:
+        - Name: g5-nodes
+          InstanceType: g5.xlarge
+          MinCount: 4
+          MaxCount: 4
+      Networking:
+        SubnetIds:
+          - subnet-016c0e4a31d8955d7
+        SecurityGroups:
+          - sg-0d61f6325a433891b
+        PlacementGroup:
+          Enabled: true
+      ComputeSettings:
+        LocalStorage:
+          RootVolume:
+            Size: 100
+            VolumeType: gp3
+      CustomActions:
+        OnNodeConfigured:
+          Script: s3://hpoexp/slurm_compute_setup.sh
+
+SharedStorage:
+  - MountDir: /fsx
+    Name: fsx-hpo
+    StorageType: FsxLustre
+    FsxLustreSettings:
+      FileSystemId: fs-04a4223998940b3ef
