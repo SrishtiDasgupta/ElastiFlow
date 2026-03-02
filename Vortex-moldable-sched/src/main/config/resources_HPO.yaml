@@ -7,30 +7,30 @@ executor-incoming-port: 8089
 
 fsx-cost: 8.38e-05
 
-# Slurm cluster (ParallelCluster) — 4x g4dn.xlarge
+# Hybrid environment: Slurm (4x g4dn.xlarge) + cloud reserved + on-demand
 on-prem:
   - name: on-prem
     ip: [172.31.6.114] # Slurm head node IP (executor)
     slots: 4 # 4 compute nodes
     cores: 4 # g4dn.xlarge vCPUs
-    runtime: 540
+    runtime: 343 # avg 12-epoch runtime at img64 (266+356+408)/3
     reserved-cost: 0.526 # g4dn.xlarge on-demand $/hour
 
 cloud:
   - name: g4dn.xlarge
-    ip: []
+    ip: [172.31.0.209, 172.31.9.217] # 2 reserved g4dn.xlarge
     cores: 4
-    runtime: 540
-    reserved-slots: 0
-    on-demand-slots: 0
+    runtime: 343 # avg 12-epoch runtime at img64
+    reserved-slots: 2
+    on-demand-slots: 2
     on-demand-cost: 0.526
     reserved-cost: 0.227
 
   - name: g5.xlarge
-    ip: []
+    ip: [172.31.0.120, 172.31.8.91] # 2 reserved g5.xlarge
     cores: 4
-    runtime: 265
-    reserved-slots: 0
-    on-demand-slots: 0
+    runtime: 247 # avg 12-epoch runtime at img64
+    reserved-slots: 2
+    on-demand-slots: 2
     on-demand-cost: 1.006
     reserved-cost: 0.435
