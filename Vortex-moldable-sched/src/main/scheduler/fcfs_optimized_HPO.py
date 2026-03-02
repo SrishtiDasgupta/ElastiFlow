@@ -353,6 +353,28 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         if ips:
             ips = self.createOnDemandWorkers(ips, sim)
 
+        # Record scale-up metrics
+        if alloc_instances:
+            instances_added = sum(count for _, count in alloc_instances)
+            cores_added = sum(count * inst.cores for inst, count in alloc_instances)
+            self.metrics.recordScaleUpAttempt(
+                success=True,
+                instances_added=instances_added,
+                cores_added=cores_added,
+                workflow_id=wf_id
+            )
+        else:
+            # Determine failure reason
+            free_compute = any(r.getFreeSlots() > 0 for r in free_resources)
+            if not free_compute:
+                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_compute', workflow_id=wf_id)
+            elif available_budget <= 0:
+                self.metrics.recordScaleUpAttempt(success=False, reason='budget_exhausted', workflow_id=wf_id)
+            elif available_time <= 0:
+                self.metrics.recordScaleUpAttempt(success=False, reason='time_exhausted', workflow_id=wf_id)
+            else:
+                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_compute', workflow_id=wf_id)
+
         self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
 
     def checkNewResourcesHPO(self, resources, current_resources, budget, available_runtime, request, model, instance_type_filter, sim):
@@ -462,6 +484,14 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                 if freed_count == request['count']:
                     break
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
+
+            # Record scale-down metrics
+            cores_freed = sum(inst.cores * count for inst, count, _ in to_free_instances)
+            self.metrics.recordScaleDownAttempt(
+                success=True,
+                instances_removed=freed_count,
+                cores_removed=cores_freed
+            )
 
         self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
 
