@@ -19,7 +19,7 @@ Scheduling:
       CapacityType: ONDEMAND
       ComputeResources:
         - Name: g4dn-nodes
-          InstanceType: g4dn.xlarge
+          InstanceType: g5.xlarge
           MinCount: 0
           MaxCount: 4
       Networking:

@@ -45,18 +45,18 @@ PRIMARY_WORKFLOWS = 15  # Sweet spot for demonstrating improvements
 # Cold start time for on-demand instances (from thesis Section 5.3)
 COLD_START_TIME = 400.52  # seconds
 
-# Setup overheads per model (from instrumentation data)
+# Setup overheads per model (from g4_img64.jsonl instrumentation data)
 SETUP_OVERHEAD = {
-    'vgg19': 3.74,           # seconds
-    'wide_resnet101_2': 6.48,  # seconds  
-    'convnext_large': 10.19     # seconds
+    'vgg19': 5.78,             # seconds (avg across all g4 runs)
+    'wide_resnet101_2': 5.22,  # seconds
+    'convnext_large': 12.91    # seconds
 }
 
-# DDP overhead for multi-GPU (from measurements)
+# DDP overhead for multi-GPU (from measurements — negligible)
 DDP_OVERHEAD_PER_GPU = {
     1: 0.0,   # No DDP for single GPU
-    2: 3.5,   # seconds for 2 GPUs
-    4: 7.2    # seconds for 4 GPUs
+    2: 0.9,   # seconds for 2 GPUs
+    4: 0.8    # seconds for 4 GPUs
 }
 
 # Ray coordination overhead (from measurements: essentially 0%)
@@ -67,19 +67,19 @@ RAY_COORDINATION_OVERHEAD = 0.00  # Previously assumed 15%, measured as ~0.00000
 # ====================================================================================
 
 # g4dn.xlarge runtimes for 12 epochs, 1 GPU (Tesla T4 — slowest instance for deadline)
-# Same GPU as g4dn.2xlarge; training is single-GPU so runtimes are identical
+# Measured from g4_img64.jsonl at IMAGE_SIZE=64, batch_size=64
 G4DN_RUNTIMES_12EP = {
-    'vgg19': 987.16,
-    'wide_resnet101_2': 1268.69,
-    'convnext_large': 2077.30
+    'vgg19': 266.02,
+    'wide_resnet101_2': 355.88,
+    'convnext_large': 408.32
 }
 
 # g5.xlarge runtimes for 12 epochs, 1 GPU (A10G — expensive instance for budget)
-# Same GPU as g5.2xlarge; training is single-GPU so runtimes are identical
+# Measured from g5_img64.jsonl at IMAGE_SIZE=64, batch_size=64
 G5_RUNTIMES_12EP = {
-    'vgg19': 454.85,
-    'wide_resnet101_2': 594.36,
-    'convnext_large': 925.22
+    'vgg19': 198.00,
+    'wide_resnet101_2': 267.62,
+    'convnext_large': 275.45
 }
 
 # ====================================================================================
@@ -194,33 +194,19 @@ AVG_INTERARRIVAL_TIME = 720  # seconds between HPO workflow submissions
 # EXPECTED IMPROVEMENTS WITH OPTIMIZED PARAMETERS
 # ====================================================================================
 """
-With these optimized parameters (3-5 iterations, 3-9 epochs, 2-4 trials):
+With image_size=64 profiling (3-5 iterations, 3-9 epochs, 2-4 trials):
 
-5 workflows (weak signal):
-- Cost reduction: ~10%
-- Makespan reduction: ~15%
-- Wait time reduction: ~30%
+Budget per workflow (average, using g5 on-demand worst case + cold start):
+- VGG19: ~$12.16
+- Wide_ResNet: ~$13.55
+- ConvNeXt: ~$13.86
 
-10 workflows (moderate signal):
-- Cost reduction: ~18%
-- Makespan reduction: ~25%
-- Wait time reduction: ~50%
+Deadline per workflow (average, using g4dn worst case + cold start + 2x contention):
+- VGG19: ~9.0 hours
+- Wide_ResNet: ~10.2 hours
+- ConvNeXt: ~11.0 hours
 
-15 workflows (strong signal):
-- Cost reduction: ~20-25%
-- Makespan reduction: ~30-35%
-- Wait time reduction: ~60-70%
-- Deadline miss reduction: ~15-20%
-
-Budget per workflow (average):
-- VGG19: ~$22 (vs $195 with old params)
-- Wide_ResNet: ~$28 (vs $251 with old params)
-- ConvNeXt: ~$34 (vs $304 with old params)
-
-Deadline per workflow (average):
-- VGG19: ~7.8 hours (vs 24.7 hours with old params)
-- Wide_ResNet: ~9.3 hours (vs 33.6 hours with old params)  
-- ConvNeXt: ~13.9 hours (vs 44.2 hours with old params)
+Profiling data sources: HPO/g4_img64.jsonl, HPO/g5_img64.jsonl (36 entries each)
 """
 
 # Print summary when module is imported
@@ -245,13 +231,52 @@ if __name__ == "__main__":
 """
 ## HPO Constraint Base Values Explanation
 
-The HPO constraint calculations use empirically-derived base values representing worst-case scenarios for cost and runtime per complete trial.
-The cost values (0.375, 0.449, and 0.553 USD per trial for vgg19, wide_resnet101_2, and convnext_large respectively) are calculated using the most expensive instance configuration
-(g5.2xlarge on-demand at $1.28/hour) running a single GPU for 12 epochs, with added overheads for cold start time (400.52 seconds) and
-Ray coordination overhead (15% multiplier). For example, vgg19's base cost derives from its 470-second runtime for 12 epochs,
-which becomes 1001 seconds with overheads, resulting in (1001/3600) × 1.28 = 0.356 USD per trial.
-Similarly, the runtime values (1840, 2305, and 2840 seconds per trial) represent worst-case execution times using the slowest instance (g4dn.2xlarge) with the same overhead calculations.
-These base values are then multiplied by the constraint formula factors: budget constraints include parallel trials (cost_per_trial × epochs × iterations × parallel_trials)
-since cost accumulates across all simultaneous work, while deadline constraints exclude parallel trials (runtime_per_trial × epochs × iterations × scaling_factor)
-since parallel work doesn't extend wall-clock time. This approach ensures conservative bounds that accommodate novice users while providing optimization opportunities for moldable scheduling algorithms.
+The HPO constraint calculations use empirically-derived base values representing worst-case
+scenarios for cost and runtime per complete trial. All values measured at IMAGE_SIZE=64,
+batch_size=64, single GPU per trial (profiling data: HPO/g4_img64.jsonl, HPO/g5_img64.jsonl).
+
+### Cost Base Values (Budget Calculation)
+The cost values are calculated using the most expensive instance configuration
+(g5.xlarge on-demand at $1.006/hour) running a single GPU for 12 epochs, with added overheads
+for cold start time (400.52 seconds for on-demand instances) and setup overhead per model.
+Ray coordination overhead is negligible (~0.000003% measured, effectively 0%).
+
+Example calculation for vgg19:
+  base_runtime = 198.00s (12 epochs, 1 GPU, g5.xlarge)
+  setup = 5.78s (model creation + dataloader + warmup)
+  cold_start = 400.52s (on-demand instance startup)
+  total_seconds = 198.00 + 5.78 + 0 + 400.52 = 604.30s
+  total_hours = 604.30 / 3600 = 0.1679h
+  cost_per_trial = 0.1679 * $1.006 = $0.169
+
+### Runtime Base Values (Deadline Calculation)
+The runtime values represent worst-case execution times using the slowest instance
+(g4dn.xlarge, Tesla T4) with the same overhead calculations.
+
+Example calculation for vgg19:
+  base_runtime = 266.02s (12 epochs, 1 GPU, g4dn.xlarge)
+  setup = 5.78s
+  cold_start = 400.52s
+  total = 672.32s per trial
+
+### Constraint Formula
+Budget constraints include parallel trials since cost accumulates across all simultaneous work:
+  budget = cost_per_trial * epochs * iterations * parallel_trials
+
+Deadline constraints exclude parallel trials since they run concurrently, but include a 2x
+scaling factor for resource contention when multiple workflows compete for resources:
+  deadline = runtime_per_trial * epochs * iterations * 2x_contention_factor
+
+This approach ensures conservative bounds that accommodate realistic execution conditions
+while providing optimization opportunities for the moldable scheduling algorithm.
+
+### Speedup Model (Power Law)
+Fitted from 36 profiling runs per instance type (3 models x 3 worker counts x 4 epoch counts):
+  runtime_per_epoch = a * (workers^b) * model_factor + c
+  G4: a=23.039, b=-0.789, c=0.0  (R²=0.983)
+  G5: a=16.445, b=-0.771, c=0.0  (R²=0.988)
+  Model factors: vgg19=1.0, wide_resnet101_2=1.34, convnext_large=1.46
+
+Worker speedup (12 epochs): 2 workers ≈ 1.6-1.8x, 4 workers ≈ 2.9-3.3x
+G5/G4 speed ratio: ~1.3-1.5x (A10G faster than T4)
 """

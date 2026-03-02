@@ -14,20 +14,20 @@ actions:
   yieldToInput: output_config
 api: 4.7.0
 config:
-  mesh: wide_resnet101_2
-  workflowIterations: 5
+  mesh: vgg19
+  workflowIterations: 3
 constraints:
-  budget: 22.34
+  budget: 11.03
   chains: 4
-  deadline: 88051.63
-  tinydaIterations: 9
-id: hpo-5c7581c3
+  deadline: 30890.81
+  tinydaIterations: 4
+id: hpo-23bd6b42
 vars:
 - id: input_config
   value:
-    batch_size: 32
-    epochs: 9
-    learning_rate: 0.0606
-    model: wide_resnet101_2
-    momentum: 0.83
+    batch_size: 64
+    epochs: 4
+    learning_rate: 0.0719
+    model: vgg19
+    momentum: 0.93
     next_trials: 4

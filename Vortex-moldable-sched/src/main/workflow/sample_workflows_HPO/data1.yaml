@@ -14,20 +14,20 @@ actions:
   yieldToInput: output_config
 api: 4.7.0
 config:
-  mesh: convnext_large
-  workflowIterations: 4
+  mesh: vgg19
+  workflowIterations: 5
 constraints:
-  budget: 27.6
-  chains: 3
-  deadline: 114459.47
-  tinydaIterations: 5
-id: hpo-826f9b33
+  budget: 12.64
+  chains: 2
+  deadline: 32343.07
+  tinydaIterations: 8
+id: hpo-aa7ac329
 vars:
 - id: input_config
   value:
     batch_size: 128
-    epochs: 5
-    learning_rate: 0.0588
-    model: convnext_large
-    momentum: 0.97
-    next_trials: 3
+    epochs: 8
+    learning_rate: 0.0743
+    model: vgg19
+    momentum: 0.9
+    next_trials: 2
