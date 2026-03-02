@@ -29,7 +29,7 @@ from resource_manager.instance import CloudOnDemandInstance, Instance, OnPremIns
 import os
 from resource_manager.resource_manager import ResourceManager
 
-_HPO_RESOURCES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
+_HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
 from utils.sim import getTime, getAllElements, peekElement, removeElement
 from utils.resource import getConstraintsFromWorkflow, getEstimate
 from utils.request import ExecutorRequest, sendRequest, getConfig
@@ -43,8 +43,10 @@ class EDF_Optimized_HPO(Scheduler_HPO):
     EDF ordering + moldable resource reallocation + deadline urgency boost.
     """
 
-    def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost_per_trial'):
-        self.resource_manager = ResourceManager(_HPO_RESOURCES)
+    def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost_per_trial',
+                 resource_config=None, file_prefix=None):
+        self.resource_manager = ResourceManager(resource_config or _HPO_RESOURCES_DEFAULT)
+        self.file_prefix = file_prefix or 'EDF_Moldable_HPO_'
         func = lambda x: self.getHPOInstanceCost(x) + (COLD_START_TIME * 0.001 if isinstance(x, CloudOnDemandInstance) else 0)
         self.resource_manager.sortResourcesByFunction(func)
 
@@ -110,7 +112,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 if wf_plan['id'] == 'END':
                     self.popWorkflow(self.workflow_heap)
                     removeElement(wf_mb, self.queue)
-                    self.metrics.computeMetrics(file_prefix='EDF_Moldable_HPO_')
+                    self.metrics.computeMetrics(file_prefix=self.file_prefix)
                     break
 
                 # Moldable scheduling

@@ -24,7 +24,7 @@ import os
 from resource_manager.resource_manager import ResourceManager
 from resource_manager.instance import CloudOnDemandInstance, OnPremInstance
 
-_HPO_RESOURCES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
+_HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
 from utils.sim import getTime, getAllElements, peekElement, removeElement
 from utils.resource import getConstraintsFromWorkflow
 from scheduler.scheduler_HPO import Scheduler_HPO
@@ -38,8 +38,10 @@ class EDF_Scheduler_HPO(Scheduler_HPO):
     Resources allocated once at workflow start, no reallocation.
     """
 
-    def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost'):
-        self.resource_manager = ResourceManager(_HPO_RESOURCES)
+    def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost',
+                 resource_config=None, file_prefix=None):
+        self.resource_manager = ResourceManager(resource_config or _HPO_RESOURCES_DEFAULT)
+        self.file_prefix = file_prefix or 'EDF_Static_HPO_'
         func = lambda x: x.cost if hasattr(x, 'cost') else 0
         self.resource_manager.sortResourcesByFunction(func)
 
@@ -88,7 +90,7 @@ class EDF_Scheduler_HPO(Scheduler_HPO):
                 if wf_plan['id'] == 'END':
                     self.popWorkflow(self.workflow_heap)
                     removeElement(wf_mb, self.queue)
-                    self.metrics.computeMetrics(file_prefix='EDF_Static_HPO_')
+                    self.metrics.computeMetrics(file_prefix=self.file_prefix)
                     break
 
                 # Scheduling
