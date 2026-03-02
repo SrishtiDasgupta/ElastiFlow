@@ -13,23 +13,23 @@ on-prem:
     ip: []
     slots: 0
     cores: 4
-    runtime: 540
+    runtime: 343
     reserved-cost: 0.526
 
 cloud:
   - name: g4dn.xlarge
-    ip: [] # Reserved IPs to be filled at deployment
+    ip: [172.31.0.209, 172.31.9.217] # 2 reserved g4dn.xlarge
     cores: 4
-    runtime: 540
+    runtime: 343 # avg 12-epoch runtime at img64
     reserved-slots: 2
     on-demand-slots: 2
     on-demand-cost: 0.526
     reserved-cost: 0.227
 
   - name: g5.xlarge
-    ip: [] # Reserved IPs to be filled at deployment
+    ip: [172.31.0.120, 172.31.8.91] # 2 reserved g5.xlarge
     cores: 4
-    runtime: 265
+    runtime: 247 # avg 12-epoch runtime at img64
     reserved-slots: 2
     on-demand-slots: 2
     on-demand-cost: 1.006
