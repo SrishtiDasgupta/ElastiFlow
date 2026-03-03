@@ -410,8 +410,8 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
         # Record scale-up metrics
         if alloc_instances:
-            instances_added = sum(count for _, count in alloc_instances)
-            cores_added = sum(count * inst.cores for inst, count in alloc_instances)
+            instances_added = sum(count for _, count, *_ in alloc_instances)
+            cores_added = sum(count * inst.cores for inst, count, *_ in alloc_instances)
             self.metrics.recordScaleUpAttempt(
                 success=True,
                 instances_added=instances_added,
