@@ -5,7 +5,7 @@ import argparse
 import requests
 import numpy as np
 
-from config.constants_HPO import TOTAL_WORKFLOWS as DEFAULT_TOTAL_WORKFLOWS, AVG_INTERARRIVAL_TIME
+from config.constants_HPO import TOTAL_WORKFLOWS as DEFAULT_TOTAL_WORKFLOWS, AVG_INTERARRIVAL_TIME, WORKFLOW_ORDER
 
 
 def generate_poisson_delays(num_workflows, avg_interarrival):
@@ -32,7 +32,8 @@ def fetchWorkflow(i, use_generated=False):
     if i == 'end':
         file_name = os.path.join(base_path, "end.yaml")
     elif use_generated:
-        file_name = os.path.join(base_path, "workflow/sample_workflows_HPO", f"data{i}.yaml")
+        file_idx = WORKFLOW_ORDER[i] if i < len(WORKFLOW_ORDER) else i
+        file_name = os.path.join(base_path, "workflow/sample_workflows_HPO", f"data{file_idx}.yaml")
     else:
         file_name = os.path.join(base_path, "workflow/sample_workflows_HPO", f"sim_wf{i+1}.yaml")
 
@@ -89,7 +90,8 @@ def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=Fals
 
         for i in range(num_workflows):
             sim.sleep(float(delays[i]))
-            print(f'Dispatching workflow {i} (data{i}.yaml) at t={sim.now:.0f}s')
+            file_idx = WORKFLOW_ORDER[i] if i < len(WORKFLOW_ORDER) else i
+            print(f'Dispatching workflow pos={i} (data{file_idx}.yaml) at t={sim.now:.0f}s')
             workflow = fetchWorkflow(i, use_generated=True)
             if workflow is None:
                 print(f'  Failed to load data{i}.yaml, skipping')
@@ -180,7 +182,8 @@ if __name__ == "__main__":
             if workflow:
                 workflow['submit_time'] = time.time()
                 model = workflow.get('config', {}).get('mesh', 'unknown')
-                print(f'Submitting data{i}.yaml (id: {workflow["id"]}, model: {model})')
+                file_idx = WORKFLOW_ORDER[i] if i < len(WORKFLOW_ORDER) else i
+                print(f'Submitting pos={i} data{file_idx}.yaml (id: {workflow["id"]}, model: {model})')
                 send_workflow(workflow, args.host, args.port)
                 workflows_submitted += 1
             else:

@@ -187,8 +187,50 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             print(f"⚠️  Moldable degraded: requested {num_hosts_requested}, got {allocated_hosts}")
 
         if allocated_hosts == 0:
-            print(f"❌ Moldable: Failed to allocate any {optimal_type} hosts")
-            return None, None
+            # Fallback: try alternative instance type (g5 if g4 exhausted, or vice versa)
+            alt_type = 'g5' if optimal_type == 'g4' else 'g4'
+            print(f"Moldable: {optimal_type} exhausted, trying fallback to {alt_type}")
+
+            selected_instances = []
+            remaining = num_hosts_requested
+
+            for instance in instances:
+                if instance.type == 'reserved' and self.getInstanceTypeForHPO(instance.name) == alt_type:
+                    slots_available = min(remaining, instance.getFreeSlots())
+                    if slots_available > 0:
+                        selected_instances.append((instance, slots_available))
+                        remaining -= slots_available
+                        if remaining == 0:
+                            break
+
+            if remaining > 0:
+                runtime_func = getRuntime_g5 if alt_type == 'g5' else getRuntime_g4
+                allocated_so_far = num_hosts_requested - remaining
+                total_hosts = allocated_so_far + remaining
+
+                if total_hosts >= trials:
+                    runtime = runtime_func(total_hosts // trials, model, epochs)
+                else:
+                    runtime = math.ceil(trials / total_hosts) * runtime_func(1, model, epochs)
+
+                for instance in instances:
+                    if instance.type == 'on-demand' and self.getInstanceTypeForHPO(instance.name) == alt_type:
+                        slots_available = min(remaining, instance.getFreeSlots())
+                        if slots_available > 0:
+                            cost = (runtime / 3600) * instance.cost_per_second * slots_available
+                            if cost < budget:
+                                selected_instances.append((instance, slots_available))
+                                remaining -= slots_available
+                                print(f"Moldable fallback: {slots_available} on-demand {alt_type} (${cost:.2f})")
+                                if remaining == 0:
+                                    break
+
+            allocated_hosts = num_hosts_requested - remaining
+            if allocated_hosts > 0:
+                print(f"Moldable fallback: {optimal_type} -> {alt_type}, got {allocated_hosts}/{num_hosts_requested}")
+            else:
+                print(f"Moldable: Failed to allocate any hosts (both {optimal_type} and {alt_type} exhausted)")
+                return None, None
 
         # Allocate and create instances
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)

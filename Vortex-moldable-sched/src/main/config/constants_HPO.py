@@ -38,6 +38,12 @@ TOTAL_RESOURCES = TOTAL_ON_PREMISE + TOTAL_CLOUD_RESERVED + TOTAL_CLOUD_ONDEMAND
 WORKFLOW_CONFIGS = [5, 10, 15, 20]  # Different scales for evaluation
 PRIMARY_WORKFLOWS = 15  # Sweet spot for demonstrating improvements
 
+# Workflow dispatch order: Wide-Short first to saturate g4, triggering g5 fallback
+# Positions 0-4 (5-wf): [8,3] Wide-Short fill on-prem+g4 → [9] g5 fallback → [7,5] fill freed on-prem
+# Positions 5-9 (10-wf): [12] g4 burst → [1,4,10,14] sustained pressure
+# Positions 10-14 (15-wf): [0,6,11,2,13] Narrow-Med tail
+WORKFLOW_ORDER = [8, 3, 9, 7, 5, 12, 1, 4, 10, 14, 0, 6, 11, 2, 13]
+
 # ====================================================================================
 # MEASURED OVERHEADS - From g4.jsonl and g5.jsonl Data
 # ====================================================================================
@@ -87,8 +93,8 @@ G5_RUNTIMES_12EP = {
 # ====================================================================================
 
 INSTANCE_COSTS = {
-    # On-premise (calculated TCO from thesis methodology)
-    'on_premise_g5': 0.90,  # $0.90/hour based on 3-year TCO
+    # On-premise (calculated TCO from thesis methodology — see gpu-cluster-cost.md)
+    'on_premise_g4': 0.84,  # $0.84/hour based on 3-year TCO for 4-node T4 GPU cluster
 
     # Cloud Reserved Instances (xlarge, 1-year no-upfront)
     'cloud_reserved_g4dn': 0.227,  # g4dn.xlarge reserved $/hour
