@@ -19,6 +19,13 @@ ec2 = session.resource('ec2')
 user = 'ubuntu'
 key_file_path = os.path.expanduser('~/.ssh/hpo-exp.pem')
 
+# Subnet fallback order: eu-north-1b (Slurm cluster AZ) → 1c → 1a
+AZ_SUBNETS = [
+    ('eu-north-1b', 'subnet-098f73921fcc5fbe1'),
+    ('eu-north-1c', 'subnet-016c0e4a31d8955d7'),
+    ('eu-north-1a', 'subnet-05ea82169d51876b4'),
+]
+
 def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', sim=None) -> str:
     """
     Create a dedicated executor instance for HPO workflows
@@ -124,66 +131,78 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
     """
     instance_details = []
 
-    try:
-        # Create instances with appropriate tags and 64 GB root volume
-        instances = ec2.create_instances(
-            ImageId='ami-0f7f72d078ea0a900',  # HPO-optimized AMI
-            BlockDeviceMappings=[
-                {
-                    'DeviceName': '/dev/sda1',  # Root device for Ubuntu AMIs
-                    'Ebs': {
-                        'VolumeSize': 64,  # Increase from 40 GB to 64 GB
-                        'VolumeType': 'gp3',  # General Purpose SSD v3 (faster than gp2)
-                        'DeleteOnTermination': True,  # Clean up on instance termination
-                        'Iops': 3000,  # Base IOPS for gp3
-                        'Throughput': 125  # Base throughput in MiB/s for gp3
-                    }
-                }
-            ],
-            TagSpecifications=[
-                {
-                    'ResourceType': 'instance',
-                    'Tags': [
-                        {
-                            'Key': 'Name',
-                            'Value': f'{instanceName}-hpo-{instance_role}'
-                        },
-                        {
-                            'Key': 'Role',
-                            'Value': instance_role
-                        },
-                        {
-                            'Key': 'Project',
-                            'Value': 'Vortex-HPO'
+    # Try each AZ in fallback order until instances launch
+    for az, subnet_id in AZ_SUBNETS:
+        try:
+            print(f"Trying {instanceName} x{count} in {az} ({subnet_id})...")
+            instances = ec2.create_instances(
+                ImageId='ami-0f7f72d078ea0a900',  # HPO-optimized AMI
+                BlockDeviceMappings=[
+                    {
+                        'DeviceName': '/dev/sda1',  # Root device for Ubuntu AMIs
+                        'Ebs': {
+                            'VolumeSize': 64,  # Increase from 40 GB to 64 GB
+                            'VolumeType': 'gp3',  # General Purpose SSD v3 (faster than gp2)
+                            'DeleteOnTermination': True,  # Clean up on instance termination
+                            'Iops': 3000,  # Base IOPS for gp3
+                            'Throughput': 125  # Base throughput in MiB/s for gp3
                         }
-                    ]
+                    }
+                ],
+                TagSpecifications=[
+                    {
+                        'ResourceType': 'instance',
+                        'Tags': [
+                            {
+                                'Key': 'Name',
+                                'Value': f'{instanceName}-hpo-{instance_role}'
+                            },
+                            {
+                                'Key': 'Role',
+                                'Value': instance_role
+                            },
+                            {
+                                'Key': 'Project',
+                                'Value': 'Vortex-HPO'
+                            }
+                        ]
+                    }
+                ],
+                InstanceType=instanceName,
+                MinCount=count,
+                MaxCount=count,
+                KeyName='hpo-exp',
+                SecurityGroupIds=['sg-0d61f6325a433891b'],
+                SubnetId=subnet_id
+            )
+
+            # Wait for all instances in parallel (SSH-wait + setup are independent per instance)
+            with ThreadPoolExecutor(max_workers=len(instances)) as pool:
+                futures = {
+                    pool.submit(_setup_single_instance, inst, instance_role): inst
+                    for inst in instances
                 }
-            ],
-            InstanceType=instanceName,
-            MinCount=count,
-            MaxCount=count,
-            KeyName='hpo-exp',
-            SecurityGroupIds=['sg-0d61f6325a433891b'],
-            SubnetId='subnet-016c0e4a31d8955d7'
-        )
+                for future in as_completed(futures):
+                    ip = future.result()
+                    if ip:
+                        instance_details.append(ip)
 
-        # Wait for all instances in parallel (SSH-wait + setup are independent per instance)
-        with ThreadPoolExecutor(max_workers=len(instances)) as pool:
-            futures = {
-                pool.submit(_setup_single_instance, inst, instance_role): inst
-                for inst in instances
-            }
-            for future in as_completed(futures):
-                ip = future.result()
-                if ip:
-                    instance_details.append(ip)
+            print(f"Created {len(instance_details)} {instance_role} instances in {az}: {instance_details}")
+            return instance_details
 
-        print(f"Created {len(instance_details)} {instance_role} instances: {instance_details}")
-        return instance_details
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'InsufficientInstanceCapacity':
+                print(f"No {instanceName} capacity in {az}, trying next AZ...")
+                continue
+            else:
+                print(f"Error creating instances in {az}: {e}")
+                return []
+        except Exception as e:
+            print(f"Error creating instances in {az}: {e}")
+            return []
 
-    except Exception as e:
-        print(f"Error creating instances: {e}")
-        return []
+    print(f"No {instanceName} capacity in any AZ")
+    return []
 
 def setupInstanceHPO(ssh, instance_ip: str):
     """

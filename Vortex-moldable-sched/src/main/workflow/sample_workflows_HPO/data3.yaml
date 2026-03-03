@@ -19,7 +19,7 @@ config:
 constraints:
   budget: 11.03
   chains: 4
-  deadline: 30890.81
+  deadline: 3089
   tinydaIterations: 4
 id: hpo-23bd6b42
 vars:

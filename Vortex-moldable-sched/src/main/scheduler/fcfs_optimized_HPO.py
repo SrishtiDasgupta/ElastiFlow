@@ -236,6 +236,17 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)
         ips = self.createOnDemandWorkers(ips, sim)
 
+        # Verify we have usable IPs (on-demand creation may have failed)
+        total_ips = sum(
+            len(ip_list)
+            for category in ['on-prem', 'reserved', 'on-demand']
+            for _, (_, ip_list) in ips.get(category, {}).items()
+        )
+        if total_ips == 0:
+            print(f"Moldable: on-demand instance creation failed, returning resources")
+            self.resource_manager.returnResources("_failed_alloc", alloc_resources)
+            return None, None
+
         return ips, alloc_resources
 
     def selectOptimalInstanceType(self, budget, deadline, model, trials, epochs):
