@@ -22,7 +22,7 @@ cloud:
     cores: 4
     runtime: 343 # avg 12-epoch runtime at img64
     reserved-slots: 2
-    on-demand-slots: 2
+    on-demand-slots: 3
     on-demand-cost: 0.526
     reserved-cost: 0.227
 
@@ -31,6 +31,6 @@ cloud:
     cores: 4
     runtime: 247 # avg 12-epoch runtime at img64
     reserved-slots: 2
-    on-demand-slots: 2
+    on-demand-slots: 3
     on-demand-cost: 1.006
     reserved-cost: 0.435
