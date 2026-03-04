@@ -120,23 +120,42 @@ echo "[INFO] Using RAY_ADDRESS=$head_ip:$port"
 cleanup() {{
   echo "[INFO] Cleaning up Ray on all nodes..."
   for node in $nodes; do
-    (srun --overlap -N1 -n1 -w "$node" ray stop || true)
+    (srun --overlap -N1 -n1 -w "$node" bash -c "source ~/rayenv/bin/activate && ray stop" || true)
   done
 }}
 trap cleanup EXIT
 
 # Stop any old Ray (best-effort)
 for node in $nodes; do
-  (srun --overlap -N1 -n1 -w "$node" ray stop || true)
+  (srun --overlap -N1 -n1 -w "$node" bash -c "source ~/rayenv/bin/activate && ray stop" || true)
 done
 
-# Start Ray head (block in background)
-srun --overlap -N1 -n1 -w "$head_node" ray start --head --node-ip-address="$head_ip" --port="$port" --block &
+# Start Ray head (block in background) — explicit venv activation
+srun --overlap -N1 -n1 -w "$head_node" bash -c "source ~/rayenv/bin/activate && ray start --head --node-ip-address=$head_ip --port=$port --block" &
 
-# Start Ray workers (block in background)
+# Wait for Ray head GCS port to be ready (up to 60s)
+echo "[INFO] Waiting for Ray head GCS on $head_ip:$port ..."
+for attempt in $(seq 1 12); do
+  if python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect(('$head_ip',$port)); s.close(); print('READY')" 2>/dev/null | grep -q READY; then
+    echo "[INFO] Ray head GCS ready after $((attempt*5))s"
+    break
+  fi
+  if [ "$attempt" -eq 12 ]; then
+    echo "[ERROR] Ray head GCS not ready after 60s — aborting"
+    exit 1
+  fi
+  echo "[INFO] GCS not ready yet (attempt $attempt/12), waiting 5s..."
+  sleep 5
+done
+
+# Start Ray workers (block in background) — explicit venv activation
 for node in $(echo "$nodes" | tail -n +2); do
-  srun --overlap -N1 -n1 -w "$node" ray start --address="$head_ip:$port" --block &
+  srun --overlap -N1 -n1 -w "$node" bash -c "source ~/rayenv/bin/activate && ray start --address=$head_ip:$port --block" &
 done
+
+# Wait for workers to register
+echo "[INFO] Waiting 15s for Ray workers to join ..."
+sleep 15
 
 # ---- Start HPO job on the Ray Head Node
 echo "[INFO] Running HPO pipeline on head ...."
