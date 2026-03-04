@@ -124,8 +124,8 @@ def _setup_single_instance(instance, instance_role):
         return None
 
 
-VCPU_RETRY_WAIT = 30  # seconds to wait for old instances to finish terminating
-VCPU_MAX_RETRIES = 3  # max retries on VcpuLimitExceeded
+VCPU_RETRY_WAIT = 45  # seconds to wait for old instances to finish terminating
+VCPU_MAX_RETRIES = 4  # max retries on VcpuLimitExceeded
 
 def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
     """
