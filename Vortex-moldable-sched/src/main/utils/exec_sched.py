@@ -353,9 +353,13 @@ def freeResources(to_free_resources, hosts, cur_hosts):
                     )
                     cur_hosts[instance] = list(set(cur_hosts[instance]) - set(ips))
                 case 'on-demand':
-                    # Terminate last n instances
-                    deleteInstanceFromIp(hosts[cluster][instance][1][-n:])
-                    cur_hosts[instance] = list(set(cur_hosts[instance]) - set(hosts[cluster][instance][1][-n:]))
+                    # Terminate last n instances — only remove from tracking after success
+                    ips_to_free = hosts[cluster][instance][1][-n:]
+                    try:
+                        deleteInstanceFromIp(ips_to_free)
+                    except Exception as e:
+                        print(f"[ERROR] Failed to terminate on-demand {ips_to_free}: {e}")
+                    cur_hosts[instance] = list(set(cur_hosts[instance]) - set(ips_to_free))
                     hosts[cluster][instance] = (
                         hosts[cluster][instance][0] - n,
                         hosts[cluster][instance][1][:-n]

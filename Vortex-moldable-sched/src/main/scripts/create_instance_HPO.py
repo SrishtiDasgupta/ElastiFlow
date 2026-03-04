@@ -266,7 +266,7 @@ def deleteInstanceFromIp(instances: List[str]):
     try:
         filters = [
             {'Name': 'private-ip-address', 'Values': instances},
-            {'Name': 'instance-state-name', 'Values': ['running', 'stopping']}
+            {'Name': 'instance-state-name', 'Values': ['pending', 'running', 'stopping']}
         ]
 
         instances_to_terminate = list(ec2.instances.filter(Filters=filters))
