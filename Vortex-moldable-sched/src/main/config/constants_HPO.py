@@ -29,19 +29,20 @@ AVG_PARALLEL_TRIALS = 3  # Matches SeisSol's parallel chain count (was 20, now r
 # ====================================================================================
 
 # Total available resources
-TOTAL_ON_PREMISE = 4  # g5.2xlarge instances
-TOTAL_CLOUD_RESERVED = 4  # 2x g4dn.2xlarge + 2x g5.2xlarge
-TOTAL_CLOUD_ONDEMAND = 4  # 2x g4dn.2xlarge + 2x g5.2xlarge
-TOTAL_RESOURCES = TOTAL_ON_PREMISE + TOTAL_CLOUD_RESERVED + TOTAL_CLOUD_ONDEMAND  # 12
+TOTAL_ON_PREMISE = 4  # 4x g4dn.xlarge (Slurm cluster)
+TOTAL_CLOUD_RESERVED = 4  # 2x g4dn.xlarge + 2x g5.xlarge
+TOTAL_CLOUD_ONDEMAND = 6  # 3x g4dn.xlarge + 3x g5.xlarge
+TOTAL_RESOURCES = TOTAL_ON_PREMISE + TOTAL_CLOUD_RESERVED + TOTAL_CLOUD_ONDEMAND  # 14
 
 # Workflow configurations to test
 WORKFLOW_CONFIGS = [5, 10, 15, 20]  # Different scales for evaluation
 PRIMARY_WORKFLOWS = 15  # Sweet spot for demonstrating improvements
 
-# Workflow dispatch order: Wide-Short first to saturate g4, triggering g5 fallback
-# Positions 0-4 (5-wf): [8,3] Wide-Short fill on-prem+g4 → [9] g5 fallback → [7,5] fill freed on-prem
-# Positions 5-9 (10-wf): [12] g4 burst → [1,4,10,14] sustained pressure
-# Positions 10-14 (15-wf): [0,6,11,2,13] Narrow-Med tail
+# Workflow dispatch order: Wide-Short first to saturate g4, triggering g5 partial-fallback
+# Fallback triggers when g4 can't FULLY satisfy a request (not just when g4 gives 0 hosts)
+# Positions 0-4 (5-wf): [8,3] Wide-Short fill on-prem+g4 → [9] g4 partial→g5 fallback → [7,5] freed on-prem
+# Positions 5-9 (10-wf): [12] g4 burst → [1] g5 OD fallback → [4,10,14] sustained (14/14 peak at t=840)
+# Positions 10-14 (15-wf): [0,6,11,2,13] Narrow-Med tail, moldable scale-up as long workflows finish
 WORKFLOW_ORDER = [8, 3, 9, 7, 5, 12, 1, 4, 10, 14, 0, 6, 11, 2, 13]
 
 # ====================================================================================

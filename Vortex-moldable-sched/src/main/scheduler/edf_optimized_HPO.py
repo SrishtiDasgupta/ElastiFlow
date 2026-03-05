@@ -224,23 +224,26 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                         print(f"EDF Moldable: Partial on-prem {slots_available}/{num_hosts_requested}")
                         break
         else:
-            # CLOUD PATH: reserved then on-demand (skip on-prem entirely)
+            # CLOUD PATH: try optimal_type first, fallback to alt_type if partial
+
+            # --- Attempt 1: optimal_type (e.g. g4) reserved → on-demand ---
+            g4_selected = []
+            g4_remaining = num_hosts_requested
+
             for instance in instances:
                 if instance.type == 'reserved' and \
                    self.getInstanceTypeForHPO(instance.name) == optimal_type:
-                    slots_available = min(remaining, instance.getFreeSlots())
+                    slots_available = min(g4_remaining, instance.getFreeSlots())
                     if slots_available > 0:
-                        selected_instances.append((instance, slots_available))
-                        remaining -= slots_available
-                        if remaining == 0:
+                        g4_selected.append((instance, slots_available))
+                        g4_remaining -= slots_available
+                        if g4_remaining == 0:
                             break
 
-            if remaining > 0:
+            if g4_remaining > 0:
                 runtime_func = getRuntime_g5 if optimal_type == 'g5' else getRuntime_g4
 
-                allocated_so_far = num_hosts_requested - remaining
-                total_hosts = allocated_so_far + remaining
-
+                total_hosts = num_hosts_requested
                 if total_hosts >= trials:
                     workers_per_trial = total_hosts // trials
                     runtime = runtime_func(workers_per_trial, model, epochs)
@@ -251,22 +254,81 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 for instance in instances:
                     if instance.type == 'on-demand' and \
                        self.getInstanceTypeForHPO(instance.name) == optimal_type:
-                        slots_available = min(remaining, instance.getFreeSlots())
+                        slots_available = min(g4_remaining, instance.getFreeSlots())
                         if slots_available > 0:
                             cost = (runtime / 3600) * instance.cost_per_second * slots_available
                             if cost < budget:
-                                selected_instances.append((instance, slots_available))
-                                remaining -= slots_available
+                                g4_selected.append((instance, slots_available))
+                                g4_remaining -= slots_available
                                 print(f"EDF Moldable: {slots_available} on-demand {optimal_type} (${cost:.2f})")
-                                if remaining == 0:
+                                if g4_remaining == 0:
                                     break
 
+            g4_allocated = num_hosts_requested - g4_remaining
+
+            # --- Attempt 2: alt_type — only if optimal couldn't fully satisfy ---
+            if g4_remaining > 0:
+                alt_type = 'g5' if optimal_type == 'g4' else 'g4'
+                g5_selected = []
+                g5_remaining = num_hosts_requested  # try for FULL request
+
+                for instance in instances:
+                    if instance.type == 'reserved' and \
+                       self.getInstanceTypeForHPO(instance.name) == alt_type:
+                        slots_available = min(g5_remaining, instance.getFreeSlots())
+                        if slots_available > 0:
+                            g5_selected.append((instance, slots_available))
+                            g5_remaining -= slots_available
+                            if g5_remaining == 0:
+                                break
+
+                if g5_remaining > 0:
+                    alt_runtime_func = getRuntime_g5 if alt_type == 'g5' else getRuntime_g4
+
+                    total_hosts = num_hosts_requested
+                    if total_hosts >= trials:
+                        workers_per_trial = total_hosts // trials
+                        alt_runtime = alt_runtime_func(workers_per_trial, model, epochs)
+                    else:
+                        batches = math.ceil(trials / total_hosts)
+                        alt_runtime = batches * alt_runtime_func(1, model, epochs)
+
+                    for instance in instances:
+                        if instance.type == 'on-demand' and \
+                           self.getInstanceTypeForHPO(instance.name) == alt_type:
+                            slots_available = min(g5_remaining, instance.getFreeSlots())
+                            if slots_available > 0:
+                                cost = (alt_runtime / 3600) * instance.cost_per_second * slots_available
+                                if cost < budget:
+                                    g5_selected.append((instance, slots_available))
+                                    g5_remaining -= slots_available
+                                    print(f"EDF Moldable: {slots_available} on-demand {alt_type} (${cost:.2f})")
+                                    if g5_remaining == 0:
+                                        break
+
+                g5_allocated = num_hosts_requested - g5_remaining
+
+                # --- Pick winner: whichever type satisfies more hosts ---
+                if g5_allocated > g4_allocated:
+                    selected_instances = g5_selected
+                    remaining = g5_remaining
+                    print(f"EDF Moldable: {optimal_type} partial ({g4_allocated}), using {alt_type} ({g5_allocated}/{num_hosts_requested})")
+                else:
+                    selected_instances = g4_selected
+                    remaining = g4_remaining
+                    if g4_allocated > 0:
+                        print(f"EDF Moldable: {optimal_type} partial ({g4_allocated}/{num_hosts_requested}), {alt_type} no better ({g5_allocated})")
+            else:
+                selected_instances = g4_selected
+                remaining = 0
+
+        # RESILIENT: Proceed with what we got
         allocated_hosts = num_hosts_requested - remaining
         if remaining > 0:
             print(f"EDF Moldable degraded: requested {num_hosts_requested}, got {allocated_hosts}")
 
         if allocated_hosts == 0:
-            print(f"EDF Moldable: Failed to allocate any {optimal_type} hosts")
+            print(f"EDF Moldable: Failed to allocate any hosts (both types exhausted)")
             return None, None
 
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)
