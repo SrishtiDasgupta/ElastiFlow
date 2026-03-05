@@ -25,6 +25,14 @@ export DEBIAN_FRONTEND=noninteractive
 sudo mkdir -p /etc/needrestart/conf.d/
 echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
 
+# Wait for unattended-upgrades / dpkg lock to release before any apt calls
+echo "Waiting for dpkg lock..."
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "  dpkg lock held by unattended-upgrades, waiting 5s..."
+    sleep 5
+done
+echo "dpkg lock free"
+
 # --- Mount FSx Lustre ---
 if mountpoint -q /fsx; then
     echo "FSx already mounted"

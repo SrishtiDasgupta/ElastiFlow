@@ -12,6 +12,14 @@ echo "Starting HPO Worker setup on ${WORKER_IP}..."
 sudo mkdir -p /etc/needrestart/conf.d/
 echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
 
+# Wait for unattended-upgrades / dpkg lock to release before any apt calls
+echo "Waiting for dpkg lock..."
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "  dpkg lock held by unattended-upgrades, waiting 5s..."
+    sleep 5
+done
+echo "dpkg lock free"
+
 # Setup FSx Lustre client
 wget -O - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
 
@@ -108,18 +116,36 @@ print('CIFAR-10 dataset downloaded successfully')
 fi
 
 echo "Verifying Redis is accepting connections..."
+REDIS_OK=false
 for attempt in $(seq 1 10); do
     if redis-cli ping 2>/dev/null | grep -q PONG; then
         echo "Redis ready (attempt $attempt)"
+        REDIS_OK=true
         break
     fi
     if [ "$attempt" -eq 10 ]; then
         echo "ERROR: Redis not responding after 10 attempts, trying manual start..."
         sudo redis-server --daemonize yes >> ~/setup.out 2>&1
         sleep 2
+        if redis-cli ping 2>/dev/null | grep -q PONG; then
+            echo "Redis ready after manual start"
+            REDIS_OK=true
+        fi
     fi
     sleep 2
 done
+
+if [ "$REDIS_OK" = false ]; then
+    echo "FATAL: Redis is not running — reinstalling..."
+    sudo apt-get install -y redis-server >> ~/setup.out 2>&1
+    sudo systemctl start redis-server >> ~/setup.out 2>&1
+    sleep 3
+    if redis-cli ping 2>/dev/null | grep -q PONG; then
+        echo "Redis recovered after reinstall"
+    else
+        echo "FATAL: Redis still not running, executor will fail"
+    fi
+fi
 
 echo "Starting HPO Executor on ${WORKER_IP}..."
 

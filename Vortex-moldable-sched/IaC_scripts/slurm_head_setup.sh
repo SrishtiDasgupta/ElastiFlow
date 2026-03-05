@@ -15,6 +15,14 @@ export DEBIAN_FRONTEND=noninteractive
 mkdir -p /etc/needrestart/conf.d/
 echo "\$nrconf{restart} = 'a';" | tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
 
+# Wait for unattended-upgrades / dpkg lock to release before any apt calls
+echo "Waiting for dpkg lock..."
+while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "  dpkg lock held by unattended-upgrades, waiting 5s..."
+    sleep 5
+done
+echo "dpkg lock free"
+
 # --- Verify FSx is mounted (ParallelCluster should have done this) ---
 if ! mountpoint -q /fsx; then
     echo "ERROR: /fsx is not mounted. ParallelCluster should mount this."
