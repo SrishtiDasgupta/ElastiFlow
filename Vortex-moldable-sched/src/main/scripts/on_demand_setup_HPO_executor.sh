@@ -4,6 +4,8 @@
 
 EXECUTOR_IP=$1
 
+set -e  # Exit immediately on any command failure
+
 export DEBIAN_FRONTEND=noninteractive
 
 echo "Starting HPO Executor setup on ${EXECUTOR_IP}..."
@@ -32,6 +34,12 @@ sudo mkdir -p /fsx
 # Mount FSx file system
 sudo mount -t lustre -o relatime,flock fs-04a4223998940b3ef.fsx.eu-north-1.amazonaws.com@tcp:/5ynhnbev /fsx
 
+# Verify FSx mount succeeded
+if ! mountpoint -q /fsx; then
+    echo "FATAL: FSx mount failed"
+    exit 1
+fi
+
 # Install AWS CLI if not present
 if ! command -v aws &> /dev/null; then
     cp /fsx/install_aws.sh ~
@@ -55,12 +63,24 @@ cd ~
 # Copy Vortex codebase
 sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
 
+# Verify codebase exists
+if [ ! -f ~/Vortex-moldable-sched/src/main/executor_HPO.py ]; then
+    echo "FATAL: Vortex codebase copy failed"
+    exit 1
+fi
+
 cd Vortex-moldable-sched/src/main
 
 # Install and start Redis server (required for executor queue)
 echo "Installing Redis server..."
 sudo apt-get update >> ~/setup.out 2>&1
 sudo apt-get install -y redis-server >> ~/setup.out 2>&1
+
+# Verify Redis is actually installed
+if ! command -v redis-server &>/dev/null; then
+    echo "FATAL: redis-server not installed"
+    exit 1
+fi
 
 # Start Redis service (try both possible service names)
 echo "Starting Redis server..."
@@ -136,8 +156,14 @@ nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
 
 echo "HPO Executor started successfully"
 
-# Create marker file to indicate setup completion
-echo "HPO_EXECUTOR_READY:$(date)" > ~/hpo_executor_ready.marker
+# Only write marker if executor process is running
+sleep 2
+if pgrep -f "executor_HPO.py" > /dev/null; then
+    echo "HPO_EXECUTOR_READY:$(date)" > ~/hpo_executor_ready.marker
+else
+    echo "FATAL: executor_HPO.py process not running"
+    exit 1
+fi
 
 sleep 5
 

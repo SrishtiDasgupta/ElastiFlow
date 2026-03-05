@@ -22,11 +22,17 @@ def sendRequest(ip: str, port, data):
     "http": None,
     "https": None
     }
-    response = requests.post(url, json=data, proxies=proxies, timeout=15)
-    if response.status_code == 200:
-        print("Data sent successfully!")
-    else:
-        print(f"Error sending data: {response.status_code} - {response.text}")
+    try:
+        response = requests.post(url, json=data, proxies=proxies, timeout=15)
+        if response.status_code == 200:
+            print("Data sent successfully!")
+            return True
+        else:
+            print(f"Error sending data: {response.status_code} - {response.text}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed to {url}: {e}")
+        return False
 
 # NOTE: Right now, return a random executor node for simulation
 # script to create one executor instance and retrieve its ip. Creation of other instances must be offlloaded to the executor

@@ -115,6 +115,7 @@ def _setup_single_instance(instance, instance_role):
         if ok:
             # Verify executor is listening on port 8089 before returning
             print(f"Verifying executor on {private_ip}:8089 ...")
+            executor_verified = False
             for attempt in range(6):
                 _, stdout_chk, _ = ssh.exec_command(
                     f"ss -tlnp | grep 8089 || echo NOT_READY"
@@ -122,20 +123,25 @@ def _setup_single_instance(instance, instance_role):
                 chk = stdout_chk.read().decode().strip()
                 if 'NOT_READY' not in chk:
                     print(f"Executor verified on {private_ip}:8089")
+                    executor_verified = True
                     break
                 if attempt == 5:
                     # Dump executor log for diagnostics
                     _, log_out, _ = ssh.exec_command("tail -30 ~/executor.out 2>/dev/null")
-                    print(f"[WARN] Executor not listening on {private_ip}:8089 after 30s")
+                    print(f"FATAL: Executor never started on {private_ip}:8089 after 30s")
                     print(f"  executor.out: {log_out.read().decode()}")
                 print(f"  Waiting for executor... (attempt {attempt+1}/6)")
                 time.sleep(5)
 
-        else:
-            print(f"Warning: Setup may have failed for {instance_role} instance: {private_ip}")
+            ssh.close()
+            if not executor_verified:
+                return None
+            return private_ip
 
-        ssh.close()
-        return private_ip  # Return IP even if setup had warnings — non-fatal
+        else:
+            print(f"Setup FAILED for {instance_role} instance: {private_ip}")
+            ssh.close()
+            return None
 
     except Exception as e:
         print(f"Error setting up instance {private_ip}: {e}")
@@ -255,15 +261,20 @@ def setupInstanceHPO(ssh, instance_ip: str):
         command = f'bash {remote_script} {instance_ip}'
         stdin, stdout, stderr = ssh.exec_command(command)
 
-        # Get output
+        # Get output and check exit code
         stdout_output = stdout.read().decode()
         stderr_output = stderr.read().decode()
+        exit_status = stdout.channel.recv_exit_status()
 
         print(f"Setup output for {instance_ip}:")
         if stdout_output:
             print(f"STDOUT: {stdout_output}")
         if stderr_output:
             print(f"STDERR: {stderr_output}")
+
+        if exit_status != 0:
+            print(f"SETUP FAILED for {instance_ip} (exit code {exit_status})")
+            return False
 
         return True
 
