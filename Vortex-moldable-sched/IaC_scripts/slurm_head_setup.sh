@@ -56,6 +56,21 @@ else
     redis-server --daemonize yes
 fi
 
+# Verify Redis is actually accepting connections
+echo "Verifying Redis is accepting connections..."
+for attempt in $(seq 1 10); do
+    if redis-cli ping 2>/dev/null | grep -q PONG; then
+        echo "Redis ready (attempt $attempt)"
+        break
+    fi
+    if [ "$attempt" -eq 10 ]; then
+        echo "ERROR: Redis not responding after 10 attempts, trying manual start..."
+        redis-server --daemonize yes
+        sleep 2
+    fi
+    sleep 2
+done
+
 # --- Copy Vortex codebase from FSx ---
 sudo -u ubuntu bash <<'USEREOF'
 set -ex
