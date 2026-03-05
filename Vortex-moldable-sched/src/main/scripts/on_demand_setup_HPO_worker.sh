@@ -107,6 +107,20 @@ print('CIFAR-10 dataset downloaded successfully')
 "
 fi
 
+echo "Verifying Redis is accepting connections..."
+for attempt in $(seq 1 10); do
+    if redis-cli ping 2>/dev/null | grep -q PONG; then
+        echo "Redis ready (attempt $attempt)"
+        break
+    fi
+    if [ "$attempt" -eq 10 ]; then
+        echo "ERROR: Redis not responding after 10 attempts, trying manual start..."
+        sudo redis-server --daemonize yes >> ~/setup.out 2>&1
+        sleep 2
+    fi
+    sleep 2
+done
+
 echo "Starting HPO Executor on ${WORKER_IP}..."
 
 # Start the HPO-specific executor (use rayenv python)
