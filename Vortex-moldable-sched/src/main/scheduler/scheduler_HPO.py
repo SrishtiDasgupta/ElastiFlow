@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 import time
 from typing import List
 
-from config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT
+from config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT, SIMULATE
 from executor_HPO import executeWorkflowHPO, processNewResourcesHPO
+from scripts.create_instance_HPO import deleteInstanceFromIp
 from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 from utils.metrics_HPO import MetricsHPO as Metrics
 from utils.resource import getEstimate
@@ -64,13 +65,54 @@ class Scheduler_HPO(ABC):
             data = peekElement(mb, self.finish_queue)
             if data:
                 data = eval(data)
-                self.resource_manager.returnResources(data.get('wf-id'))
-                self.metrics.updateDataframe(data.get('wf-id'), {'exec_start_time': data.get('start-time'), 'finish_time': data.get('finish-time'), 'complete': data.get('complete')})
-                print(f'{data.get("wf-id")} workflow freed at {getTime(sim)}')
+                wf_id = data.get('wf-id')
+
+                # Safety-net: terminate on-demand instances from scheduler side.
+                # The executor's finally block should have done this already,
+                # but if the executor crashed or never reached cleanup, this
+                # ensures on-demand instances don't run forever.
+                self._terminate_ondemand_instances(wf_id, data.get('hosts'), sim)
+
+                self.resource_manager.returnResources(wf_id)
+                self.metrics.updateDataframe(wf_id, {'exec_start_time': data.get('start-time'), 'finish_time': data.get('finish-time'), 'complete': data.get('complete')})
+                print(f'{wf_id} workflow freed at {getTime(sim)}')
                 with open('workflow_status.log', 'a') as f:
-                    f.write(f'{data.get("wf-id")} COMPLETED at {getTime(sim)}\n')
+                    f.write(f'{wf_id} COMPLETED at {getTime(sim)}\n')
                 removeElement(mb, self.finish_queue)
             (sim or time).sleep(60) # NOTE: polling interval
+
+    def _terminate_ondemand_instances(self, wf_id, hosts, sim):
+        """
+        Safety-net termination of on-demand instances.
+        Called from processJobCompletion before returnResources pops the workflow.
+        Uses hosts dict from the completion message; falls back to stored workflow data.
+        Idempotent: if executor already terminated them, deleteInstanceFromIp finds nothing.
+        """
+        if sim or SIMULATE:
+            return
+
+        # Collect on-demand IPs from completion message hosts
+        ondemand_ips = []
+        if hosts:
+            for name, val in hosts.get('on-demand', {}).items():
+                if isinstance(val, (tuple, list)) and len(val) >= 2:
+                    ondemand_ips.extend(val[1])
+
+        # Fallback: extract from stored workflow data (before returnResources pops it)
+        if not ondemand_ips:
+            wf_data = self.resource_manager.getWorkflow(wf_id)
+            if wf_data:
+                instances = wf_data[0]  # [(instance_obj, count, [ips])]
+                for instance, count, ips in instances:
+                    if instance.type == 'on-demand' and ips:
+                        ondemand_ips.extend(ips)
+
+        if ondemand_ips:
+            print(f"[SAFETY-NET] Terminating on-demand instances for {wf_id}: {ondemand_ips}")
+            try:
+                deleteInstanceFromIp(ondemand_ips)
+            except Exception as e:
+                print(f"[ERROR] Safety-net termination failed for {wf_id}: {e}")
 
     # request = {"wf-id", "count", "iteration": ind, "tinyda-iterations", "client-ip", "request-time"}
     def allocateNewResources(self, request, sim):
@@ -127,6 +169,17 @@ class Scheduler_HPO(ABC):
                 if freed_count == request['count']:
                     break
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
+
+            # Terminate freed on-demand EC2 instances immediately (don't wait for workflow end)
+            if not sim and not SIMULATE:
+                for instance, count, ips in to_free_instances:
+                    if instance.type == 'on-demand' and ips:
+                        print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
+                        try:
+                            deleteInstanceFromIp(ips)
+                        except Exception as e:
+                            print(f"[ERROR] Scale-down termination failed: {e}")
+
         # Free resources
         self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
 

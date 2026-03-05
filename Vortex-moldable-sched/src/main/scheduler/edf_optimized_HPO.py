@@ -24,7 +24,7 @@ from config.constants_HPO import (COLD_START_TIME, WORKFLOW_POLLING, SIMULATE, M
                                   DEADLINE_BUFFER, MIN_INSTANCE_COST, SPEEDUP_THRESHOLD,
                                   OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR)
 from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
-from scripts.create_instance_HPO import createWorkerInstances
+from scripts.create_instance_HPO import createWorkerInstances, deleteInstanceFromIp
 from resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 import os
 from resource_manager.resource_manager import ResourceManager
@@ -654,6 +654,16 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 if freed_count == request['count']:
                     break
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
+
+            # Terminate freed on-demand EC2 instances immediately (don't wait for workflow end)
+            if not sim and not SIMULATE:
+                for instance, count, ips in to_free_instances:
+                    if instance.type == 'on-demand' and ips:
+                        print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
+                        try:
+                            deleteInstanceFromIp(ips)
+                        except Exception as e:
+                            print(f"[ERROR] Scale-down termination failed: {e}")
 
             # Record scale-down metrics
             cores_freed = sum(inst.cores * count for inst, count, _ in to_free_instances)
