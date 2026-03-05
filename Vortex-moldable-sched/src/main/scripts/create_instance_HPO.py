@@ -111,12 +111,30 @@ def _setup_single_instance(instance, instance_role):
         ssh.connect(private_dns, username=user, key_filename=key_file_path)
 
         ok = setupInstanceHPO(ssh, private_ip)
-        ssh.close()
 
         if ok:
-            print(f"Successfully set up {instance_role} instance: {private_ip}")
+            # Verify executor is listening on port 8089 before returning
+            print(f"Verifying executor on {private_ip}:8089 ...")
+            for attempt in range(6):
+                _, stdout_chk, _ = ssh.exec_command(
+                    f"ss -tlnp | grep 8089 || echo NOT_READY"
+                )
+                chk = stdout_chk.read().decode().strip()
+                if 'NOT_READY' not in chk:
+                    print(f"Executor verified on {private_ip}:8089")
+                    break
+                if attempt == 5:
+                    # Dump executor log for diagnostics
+                    _, log_out, _ = ssh.exec_command("tail -30 ~/executor.out 2>/dev/null")
+                    print(f"[WARN] Executor not listening on {private_ip}:8089 after 30s")
+                    print(f"  executor.out: {log_out.read().decode()}")
+                print(f"  Waiting for executor... (attempt {attempt+1}/6)")
+                time.sleep(5)
+
         else:
             print(f"Warning: Setup may have failed for {instance_role} instance: {private_ip}")
+
+        ssh.close()
         return private_ip  # Return IP even if setup had warnings — non-fatal
 
     except Exception as e:
