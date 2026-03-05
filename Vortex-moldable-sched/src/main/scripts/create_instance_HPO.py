@@ -143,7 +143,7 @@ def _setup_single_instance(instance, instance_role):
 
 
 VCPU_RETRY_WAIT = 45  # seconds to wait for old instances to finish terminating
-VCPU_MAX_RETRIES = 4  # max retries on VcpuLimitExceeded
+VCPU_MAX_RETRIES = 8  # max retries on VcpuLimitExceeded (8x45s=360s covers ~6min shutdown)
 
 def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
     """
@@ -296,7 +296,20 @@ def deleteInstanceFromIp(instances: List[str]):
             for instance in instances_to_terminate:
                 instance.terminate()
 
-            print(f"Terminated {len(instance_ids)} instances")
+            # Wait for instances to reach 'terminated' state so AWS releases vCPUs.
+            # Without this, new launches hit VcpuLimitExceeded during the ~6min
+            # shutting-down window.
+            print(f"Waiting for {len(instance_ids)} instances to reach terminated state...")
+            for instance in instances_to_terminate:
+                try:
+                    instance.wait_until_terminated(
+                        WaiterConfig={'Delay': 15, 'MaxAttempts': 30}  # up to 7.5 min
+                    )
+                    print(f"  {instance.id} terminated")
+                except Exception as e:
+                    print(f"  [WARN] Timeout waiting for {instance.id} to terminate: {e}")
+
+            print(f"Terminated {len(instance_ids)} instances (vCPUs released)")
         else:
             print(f"No running instances found for IPs: {instances}")
 
