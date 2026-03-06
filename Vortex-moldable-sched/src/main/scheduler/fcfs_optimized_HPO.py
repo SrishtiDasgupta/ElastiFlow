@@ -311,7 +311,10 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             cost_per_hour = cost_per_second * 3600
 
             # Try different num_hosts for this instance type
-            for num_hosts in range(1, trials + 1):
+            # Cap initial allocation to leave headroom for moldable scale-up
+            from config.constants_HPO import MOLDABLE_INITIAL_CAP
+            max_initial = max(1, math.ceil(trials * MOLDABLE_INITIAL_CAP))
+            for num_hosts in range(1, max_initial + 1):
                 # Calculate actual runtime based on execution pattern
                 if num_hosts >= trials:
                     # Parallel execution: each trial gets (num_hosts // trials) workers

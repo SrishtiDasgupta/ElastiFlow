@@ -369,7 +369,10 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             runtime_func = info['runtime_func']
             cost_per_second = info['cost_per_second']
 
-            for num_hosts in range(1, trials + 1):
+            # Cap initial allocation to leave headroom for moldable scale-up
+            from config.constants_HPO import MOLDABLE_INITIAL_CAP
+            max_initial = max(1, math.ceil(trials * MOLDABLE_INITIAL_CAP))
+            for num_hosts in range(1, max_initial + 1):
                 if num_hosts >= trials:
                     workers_per_trial = num_hosts // trials
                     runtime = runtime_func(workers_per_trial, model, epochs)

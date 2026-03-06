@@ -182,6 +182,7 @@ OPTIM_FCFS_BFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}  # Budget 
 OPTIM_FCFS_DFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}  # Deadline pressure factors
 SPEEDUP_THRESHOLD = 1.4  # Minimum speedup for instance type switching
 DEADLINE_BUFFER = 180  # Safety buffer for deadline calculations (3 minutes)
+MOLDABLE_INITIAL_CAP = 0.5  # Start at half max parallelism; moldable scale-up fills the rest
 
 # ====================================================================================
 # SIMULATION PARAMETERS
