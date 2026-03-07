@@ -563,6 +563,17 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                 acquired_count += to_be_used
                 budget -= to_be_used * cost_per_instance
 
+        if not acquired_instances:
+            wf_id = request.get('wf-id', '?')
+            if not available_instances:
+                print(f"Moldable: Cloud workflow {wf_id} cannot scale (no free {instance_type_filter} slots)")
+            elif budget < MIN_INSTANCE_COST:
+                print(f"Moldable: Cloud workflow {wf_id} cannot scale (budget exhausted, ${budget:.4f} remaining)")
+            elif available_runtime <= 0:
+                print(f"Moldable: Cloud workflow {wf_id} cannot scale (deadline exhausted)")
+            else:
+                print(f"Moldable: Cloud workflow {wf_id} cannot scale (speedup not justified, budget=${budget:.4f}, time={available_runtime:.0f}s)")
+
         return acquired_instances
 
     def freeResources(self, instances, request, sim):
