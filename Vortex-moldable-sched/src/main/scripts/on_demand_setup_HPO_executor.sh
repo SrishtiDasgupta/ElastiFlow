@@ -22,6 +22,9 @@ while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
 done
 echo "dpkg lock free"
 
+# Fix corrupted /etc/apt/sources.list if present (AMI has bad 'ty' entry on line 51)
+sudo sed -i '/^ty /d' /etc/apt/sources.list 2>/dev/null || true
+
 # Setup FSx Lustre client
 wget -o - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
 
