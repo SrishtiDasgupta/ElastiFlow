@@ -73,13 +73,18 @@ def createInstance(name: str, count: int = 1, sim=None) -> List[str]:
     return createWorkerInstances(name, count, sim)
 
 def _terminate_failed_instance(instance, private_ip, reason):
-    """Terminate an EC2 instance that failed setup to prevent leaking."""
+    """Terminate an EC2 instance that failed setup to prevent leaking.
+    Retries once after 5s if the first attempt fails."""
     print(f"[CLEANUP] Terminating failed instance {instance.id} ({private_ip}): {reason}")
-    try:
-        instance.terminate()
-        print(f"[CLEANUP] Instance {instance.id} terminated")
-    except Exception as e:
-        print(f"[CLEANUP] Failed to terminate {instance.id}: {e}")
+    for attempt in range(2):
+        try:
+            instance.terminate()
+            print(f"[CLEANUP] Instance {instance.id} terminated")
+            return
+        except Exception as e:
+            print(f"[CLEANUP] Failed to terminate {instance.id} (attempt {attempt+1}/2): {e}")
+            if attempt == 0:
+                time.sleep(5)
 
 def _setup_single_instance(instance, instance_role):
     """Wait for one instance to be running, SSH-ready, and set up. Returns IP or None."""

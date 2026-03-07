@@ -334,6 +334,17 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)
         ips = self.createOnDemandWorkers(ips, sim)
 
+        # Verify we have usable IPs (on-demand creation may have failed)
+        total_ips = sum(
+            len(ip_list)
+            for category in ['on-prem', 'reserved', 'on-demand']
+            for _, (_, ip_list) in ips.get(category, {}).items()
+        )
+        if total_ips == 0:
+            print(f"EDF Moldable: on-demand instance creation failed, returning resources")
+            self.resource_manager.returnResources("_failed_alloc", alloc_resources)
+            return None, None
+
         return ips, alloc_resources
 
     def selectOptimalInstanceType(self, budget, deadline, model, trials, epochs):
@@ -544,6 +555,14 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         if ips:
             ips = self.createOnDemandWorkers(ips, sim)
+            # If all on-demand creation failed, return the slots
+            total_ips = sum(len(ip_list) for _, (_, ip_list) in ips.get('on-demand', {}).items())
+            on_demand_requested = sum(count for _, (count, _) in ips.get('on-demand', {}).items())
+            if on_demand_requested > 0 and total_ips == 0:
+                print(f"[SCALE-UP] On-demand creation failed, returning reserved slots")
+                self.resource_manager.returnResources("_failed_scaleup", alloc_resources)
+                alloc_instances = []
+                ips = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
 
         # Record scale-up metrics
         if alloc_instances:
@@ -656,9 +675,9 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 freed_count += to_free
                 if freed_count == request['count']:
                     break
-            self.resource_manager.returnResources(request['wf-id'], to_free_instances)
 
-            # Terminate freed on-demand EC2 instances immediately (don't wait for workflow end)
+            # Terminate freed on-demand EC2 instances BEFORE releasing slots
+            # (if termination fails, slots stay reserved so we don't lose track)
             if not sim and not SIMULATE:
                 for instance, count, ips in to_free_instances:
                     if instance.type == 'on-demand' and ips:
@@ -667,6 +686,8 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                             deleteInstanceFromIp(ips)
                         except Exception as e:
                             print(f"[ERROR] Scale-down termination failed: {e}")
+
+            self.resource_manager.returnResources(request['wf-id'], to_free_instances)
 
             # Record scale-down metrics
             cores_freed = sum(inst.cores * count for inst, count, _ in to_free_instances)
@@ -717,6 +738,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
     def createOnDemandWorkers(self, ips, sim):
         """Create actual on-demand worker instances for allocated virtual slots.
         Multiple instance types are created in parallel.
+        Terminates any successfully created instances if other threads fail.
         """
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -732,11 +754,26 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
             return instance_type, count, worker_ips
 
-        with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
-            futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
-            for future in as_completed(futures):
-                instance_type, count, worker_ips = future.result()
-                ips['on-demand'][instance_type] = (count, worker_ips)
+        created_ips = []  # Track all created IPs for rollback on failure
+        try:
+            with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
+                futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
+                for future in as_completed(futures):
+                    instance_type, count, worker_ips = future.result()
+                    created_ips.extend(worker_ips)
+                    ips['on-demand'][instance_type] = (count, worker_ips)
+        except Exception as e:
+            print(f"[ERROR] On-demand instance creation failed: {e}")
+            # Terminate any instances that were successfully created
+            if created_ips and not sim and not SIMULATE:
+                print(f"[CLEANUP] Rolling back {len(created_ips)} successfully created instances: {created_ips}")
+                try:
+                    deleteInstanceFromIp(created_ips)
+                except Exception as cleanup_err:
+                    print(f"[CLEANUP] Rollback termination failed: {cleanup_err}")
+            # Zero out all on-demand IPs so caller sees creation failed
+            for itype in to_create:
+                ips['on-demand'][itype] = (ips['on-demand'][itype][0], [])
 
         return ips
 
