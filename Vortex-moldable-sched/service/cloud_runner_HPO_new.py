@@ -525,15 +525,9 @@ class CloudRunnerHPO:
     # Utility methods
 
     def get_private_dns(self, ip_address: str) -> str:
-        """Get private DNS name for an IP address.
-        Derives it directly from the IP using AWS naming convention
-        (ip-X-X-X-X.region.compute.internal) to avoid needing EC2 API credentials."""
-        try:
-            ip_dashed = ip_address.replace('.', '-')
-            return f"ip-{ip_dashed}.{self.region}.compute.internal"
-        except Exception as e:
-            self.logger.error(f"Error getting private DNS for {ip_address}: {e}")
-            return None
+        """Return the private IP directly — SSH (paramiko) works with IPs,
+        no DNS derivation or EC2 API call needed."""
+        return ip_address
 
     def create_ssh_connection(self, private_dns: str):
         """Create SSH connection to an instance"""
