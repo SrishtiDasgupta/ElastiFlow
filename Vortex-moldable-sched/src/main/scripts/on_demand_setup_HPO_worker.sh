@@ -75,7 +75,7 @@ source ~/rayenv/bin/activate
 pip install --upgrade pip >> ~/setup.out 2>&1
 pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu128 >> ~/setup.out 2>&1
 pip install "ray[default]" "ray[tune]" >> ~/setup.out 2>&1
-pip install numpy pandas filelock boto3 paramiko pyyaml redis scikit-learn >> ~/setup.out 2>&1
+pip install numpy pandas filelock boto3 paramiko pyyaml redis scikit-learn requests >> ~/setup.out 2>&1
 
 echo "PyTorch + Ray venv created at ~/rayenv"
 
