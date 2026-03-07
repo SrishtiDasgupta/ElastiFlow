@@ -1,5 +1,4 @@
 import os
-import boto3
 import paramiko
 import subprocess
 import re
@@ -36,7 +35,6 @@ class CloudRunnerHPO:
         self.key_file_path = os.path.expanduser('~/.ssh/hpo-exp.pem')
         self.user = 'ubuntu'
         self.region = 'eu-north-1'
-        self.ec2 = boto3.client('ec2', region_name=self.region)
 
         # Setup logging
         logging.basicConfig(level=logging.INFO)
@@ -527,21 +525,12 @@ class CloudRunnerHPO:
     # Utility methods
 
     def get_private_dns(self, ip_address: str) -> str:
-        """Get private DNS name for an IP address"""
+        """Get private DNS name for an IP address.
+        Derives it directly from the IP using AWS naming convention
+        (ip-X-X-X-X.region.compute.internal) to avoid needing EC2 API credentials."""
         try:
-            response = self.ec2.describe_instances(
-                Filters=[
-                    {'Name': 'private-ip-address', 'Values': [ip_address]},
-                    {'Name': 'instance-state-name', 'Values': ['running']}
-                ]
-            )
-
-            for reservation in response['Reservations']:
-                for instance in reservation['Instances']:
-                    return instance['PrivateDnsName']
-
-            return None
-
+            ip_dashed = ip_address.replace('.', '-')
+            return f"ip-{ip_dashed}.{self.region}.compute.internal"
         except Exception as e:
             self.logger.error(f"Error getting private DNS for {ip_address}: {e}")
             return None
