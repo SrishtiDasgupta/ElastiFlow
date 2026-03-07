@@ -333,6 +333,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)
         ips = self.createOnDemandWorkers(ips, sim)
+        self._syncOnDemandIPs(ips, alloc_resources)
 
         # Verify we have usable IPs (on-demand creation may have failed)
         total_ips = sum(
@@ -409,6 +410,17 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         print(f"EDF Moldable selected: {best_num_hosts} x {best_instance_type} for {trials} trials (cost: ${best_cost:.2f}, runtime: {best_runtime:.0f}s)")
         return (best_instance_type, best_num_hosts)
+
+    def _syncOnDemandIPs(self, ips, alloc_resources):
+        """Sync actual on-demand IPs from ips dict back into alloc_resources list.
+        After createOnDemandWorkers(), ips has real EC2 IPs but alloc_resources
+        still has empty lists. This prevents phantom slots in the resource manager."""
+        for i, (instance, count, ip_list) in enumerate(alloc_resources):
+            if instance.type == 'on-demand' and len(ip_list) == 0:
+                actual_ips = ips.get('on-demand', {}).get(instance.name, (0, []))[1]
+                if actual_ips:
+                    alloc_resources[i] = (instance, count, list(actual_ips))
+        return alloc_resources
 
     def getInstanceTypeForHPO(self, instance_name):
         """Map instance names to HPO instance types"""
@@ -555,6 +567,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         if ips:
             ips = self.createOnDemandWorkers(ips, sim)
+            self._syncOnDemandIPs(ips, alloc_resources)
             # If all on-demand creation failed, return the slots
             total_ips = sum(len(ip_list) for _, (_, ip_list) in ips.get('on-demand', {}).items())
             on_demand_requested = sum(count for _, (count, _) in ips.get('on-demand', {}).items())
