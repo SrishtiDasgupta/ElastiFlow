@@ -414,12 +414,18 @@ class EDF_Optimized_HPO(Scheduler_HPO):
     def _syncOnDemandIPs(self, ips, alloc_resources):
         """Sync actual on-demand IPs from ips dict back into alloc_resources list.
         After createOnDemandWorkers(), ips has real EC2 IPs but alloc_resources
-        still has empty lists. This prevents phantom slots in the resource manager."""
+        still has empty lists. Syncs BOTH count and IPs to match actual creation
+        (partial creation may return fewer instances than requested)."""
         for i, (instance, count, ip_list) in enumerate(alloc_resources):
             if instance.type == 'on-demand' and len(ip_list) == 0:
                 actual_ips = ips.get('on-demand', {}).get(instance.name, (0, []))[1]
-                if actual_ips:
-                    alloc_resources[i] = (instance, count, list(actual_ips))
+                actual_count = len(actual_ips)
+                # Release over-reserved slots if partial creation
+                if actual_count < count:
+                    over_reserved = count - actual_count
+                    instance.freeResources(over_reserved, [])
+                    print(f"[SYNC] Released {over_reserved} phantom on-demand slots for {instance.name}")
+                alloc_resources[i] = (instance, actual_count, list(actual_ips))
         return alloc_resources
 
     def getInstanceTypeForHPO(self, instance_name):
