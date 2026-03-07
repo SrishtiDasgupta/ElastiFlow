@@ -152,6 +152,18 @@ class ExecuteAction(Action):
                 print(f"[ERROR] STDOUT:\n{e.stdout}")
                 print(f"[ERROR] STDERR:\n{e.stderr}")
                 last_error = f"Subprocess exit code {e.returncode}"
+                # Write error output to persistent log (instance may be terminated soon)
+                try:
+                    log_dir = "/fsx/hpo_logs"
+                    os.makedirs(log_dir, exist_ok=True)
+                    log_path = os.path.join(log_dir, f"{self.wf_id}_iter{self.workflow_iterator}_attempt{attempt}_FAILED.log")
+                    with open(log_path, 'w') as f:
+                        f.write(f"=== COMMAND ===\n{' '.join(command)}\n\n")
+                        f.write(f"=== RETURN CODE ===\n{e.returncode}\n\n")
+                        f.write(f"=== STDOUT ===\n{e.stdout}\n\n")
+                        f.write(f"=== STDERR ===\n{e.stderr}\n")
+                except Exception:
+                    pass
 
             # Retry after delay (cloud instances may need time to become SSH-ready)
             if attempt < MAX_RETRIES:
@@ -232,7 +244,17 @@ class ExecuteAction(Action):
             print(f"[ERROR] ============================================")
             print(f"[ERROR] Workflow {self.wf_id} iteration {self.workflow_iterator} FAILED: {e}")
             import traceback
-            traceback.print_exc()
+            tb = traceback.format_exc()
+            print(tb)
             print(f"[ERROR] ============================================")
+            # Write error to persistent log (instance may be terminated soon)
+            try:
+                log_dir = "/fsx/hpo_logs"
+                os.makedirs(log_dir, exist_ok=True)
+                log_path = os.path.join(log_dir, f"{self.wf_id}_iter{self.workflow_iterator}_ERROR.log")
+                with open(log_path, 'w') as f:
+                    f.write(f"=== WORKFLOW ERROR ===\n{e}\n\n=== TRACEBACK ===\n{tb}\n")
+            except Exception:
+                pass
             setWorkflowComplete(self.wf_id, True)  # Mark complete to prevent executor hanging
         
