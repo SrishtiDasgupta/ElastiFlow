@@ -72,6 +72,15 @@ def createInstance(name: str, count: int = 1, sim=None) -> List[str]:
     """
     return createWorkerInstances(name, count, sim)
 
+def _terminate_failed_instance(instance, private_ip, reason):
+    """Terminate an EC2 instance that failed setup to prevent leaking."""
+    print(f"[CLEANUP] Terminating failed instance {instance.id} ({private_ip}): {reason}")
+    try:
+        instance.terminate()
+        print(f"[CLEANUP] Instance {instance.id} terminated")
+    except Exception as e:
+        print(f"[CLEANUP] Failed to terminate {instance.id}: {e}")
+
 def _setup_single_instance(instance, instance_role):
     """Wait for one instance to be running, SSH-ready, and set up. Returns IP or None."""
     instance.wait_until_running()
@@ -102,6 +111,7 @@ def _setup_single_instance(instance, instance_role):
         time.sleep(10)
     else:
         print(f"Warning: SSH not ready after 20 attempts for {private_ip}")
+        _terminate_failed_instance(instance, private_ip, "SSH timeout")
         return None
 
     # Setup
@@ -135,16 +145,19 @@ def _setup_single_instance(instance, instance_role):
 
             ssh.close()
             if not executor_verified:
+                _terminate_failed_instance(instance, private_ip, "executor not started")
                 return None
             return private_ip
 
         else:
             print(f"Setup FAILED for {instance_role} instance: {private_ip}")
             ssh.close()
+            _terminate_failed_instance(instance, private_ip, "setup failed")
             return None
 
     except Exception as e:
         print(f"Error setting up instance {private_ip}: {e}")
+        _terminate_failed_instance(instance, private_ip, str(e))
         return None
 
 
