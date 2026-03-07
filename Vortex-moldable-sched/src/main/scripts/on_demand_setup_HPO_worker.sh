@@ -53,7 +53,7 @@ fi
 
 # Copy SSH key (needed for cloud_runner to SSH between worker instances)
 mkdir -p ~/.ssh
-cp /fsx/.ssh/hpo-exp.pem ~/.ssh/hpo-exp.pem
+cp /fsx/hpo-exp.pem ~/.ssh/hpo-exp.pem
 chmod 600 ~/.ssh/hpo-exp.pem
 
 # Copy AWS credentials (skip if not present — IAM role provides credentials)
