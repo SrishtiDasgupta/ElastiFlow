@@ -620,7 +620,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             cost_per_instance = (runtime / 3600) * inst.cost_per_second
 
             if inst.type == 'on-demand':
-                cost_per_instance += COLD_START_TIME * inst.cost_per_second
+                cost_per_instance += (COLD_START_TIME / 3600) * inst.cost_per_second
 
             current_trials = request['chains'] - request['count'] + acquired_count
             new_trials = current_trials + 1

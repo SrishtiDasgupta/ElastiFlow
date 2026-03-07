@@ -516,7 +516,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
             # Add cold start for on-demand
             if inst.type == 'on-demand':
-                cost_per_instance += COLD_START_TIME * inst.cost_per_second
+                cost_per_instance += (COLD_START_TIME / 3600) * inst.cost_per_second
 
             # Check speedup justification
             current_trials = request['chains'] - request['count'] + acquired_count
