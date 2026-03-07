@@ -19,6 +19,8 @@ _PORTS_YAML = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_
 from .steep_variables import Variable
 
 MAX_ITERATIONS = 0
+MAX_RETRIES = 2          # Retry failed iterations (e.g. cloud SSH timeout)
+RETRY_DELAY_SECS = 60   # Wait before retry (let cloud instances finish booting)
 
 class ActionType(Enum):
     ForEach = auto()
@@ -90,6 +92,74 @@ class ExecuteAction(Action):
         if ready:
             self.execute()
     
+    def _run_subprocess(self, args, command, env):
+        """Run the HPO subprocess with retry logic for transient cloud failures.
+        Returns (parsed_result, sim_flag) on success, raises on permanent failure."""
+        sim = args.get('_sim_ref')  # stored by caller
+        last_error = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                print(f"{self.wf_id} iteration {self.workflow_iterator} attempt {attempt}/{MAX_RETRIES} started at {time.time()}")
+                result = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
+
+                print(f"[DEBUG] Subprocess completed successfully")
+                print(f"[DEBUG] STDOUT (first 500 chars): {result.stdout[:500]}")
+
+                # Write full subprocess output to persistent log
+                try:
+                    log_dir = "/fsx/hpo_logs"
+                    os.makedirs(log_dir, exist_ok=True)
+                    log_path = os.path.join(log_dir, f"{self.wf_id}_iter{self.workflow_iterator}_attempt{attempt}.log")
+                    with open(log_path, 'w') as f:
+                        f.write(f"=== COMMAND ===\n{' '.join(command)}\n\n")
+                        f.write(f"=== STDOUT ===\n{result.stdout}\n\n")
+                        f.write(f"=== STDERR ===\n{result.stderr}\n")
+                    print(f"[DEBUG] Full output written to {log_path}")
+                except Exception as log_err:
+                    print(f"[WARN] Could not write log file: {log_err}")
+
+                if sim or SIMULATE:
+                    return result, True  # caller handles sim path
+
+                # Parse output for config
+                output_lines = result.stdout.splitlines()
+                parsed_result = None
+                for line in output_lines:
+                    line = line.strip()
+                    if line.startswith('{'):
+                        try:
+                            parsed_result = json.loads(line)
+                            if 'config' in parsed_result:
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+                if parsed_result is not None and 'config' in parsed_result:
+                    return parsed_result, False  # success
+
+                # No config — log and retry
+                print(f"[ERROR] No valid config in run_hpo.py output (attempt {attempt}/{MAX_RETRIES}):")
+                for line in output_lines:
+                    print(f"  | {line}")
+                if parsed_result and 'error' in parsed_result:
+                    print(f"[ERROR] Runner error: {parsed_result['error']}")
+                last_error = f"No valid config in output"
+
+            except subprocess.CalledProcessError as e:
+                print(f"[ERROR] Service script failed (attempt {attempt}/{MAX_RETRIES})!")
+                print(f"[ERROR] Return code: {e.returncode}")
+                print(f"[ERROR] STDOUT:\n{e.stdout}")
+                print(f"[ERROR] STDERR:\n{e.stderr}")
+                last_error = f"Subprocess exit code {e.returncode}"
+
+            # Retry after delay (cloud instances may need time to become SSH-ready)
+            if attempt < MAX_RETRIES:
+                print(f"[RETRY] Waiting {RETRY_DELAY_SECS}s before retry {attempt+1}/{MAX_RETRIES}...")
+                time.sleep(RETRY_DELAY_SECS)
+
+        raise RuntimeError(f"{self.wf_id} iteration {self.workflow_iterator} failed after {MAX_RETRIES} attempts: {last_error}")
+
     def execute(self):
         # We assume there is only 1 input in the list - (cohesion, hosts) for next wf iteration
         next_trials=0
@@ -104,9 +174,6 @@ class ExecuteAction(Action):
             print(f"[DEBUG] Client inputs: {args}")
             print(f"[DEBUG] Service script: {self.service}")
 
-            start = time.time()
-            print(f"{self.wf_id} Workflow iteration {self.workflow_iterator} started at {start}")
-
             # Build command with JSON-formatted args (required by run_hpo.py)
             args_json = json.dumps(args)
             command = [sys.executable, self.service, args_json]
@@ -114,25 +181,15 @@ class ExecuteAction(Action):
 
             # Explicitly pass environment to subprocess (required for boto3 to find AWS credentials)
             env = os.environ.copy()
-            result = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
 
-            print(f"[DEBUG] Subprocess completed successfully")
-            print(f"[DEBUG] STDOUT (first 500 chars): {result.stdout[:500]}")
+            # Store sim ref for _run_subprocess
+            args['_sim_ref'] = sim
 
-            # Write full subprocess output to persistent log for diagnostics
-            try:
-                log_dir = "/fsx/hpo_logs"
-                os.makedirs(log_dir, exist_ok=True)
-                log_path = os.path.join(log_dir, f"{self.wf_id}_iter{self.workflow_iterator}.log")
-                with open(log_path, 'w') as f:
-                    f.write(f"=== COMMAND ===\n{' '.join(command)}\n\n")
-                    f.write(f"=== STDOUT ===\n{result.stdout}\n\n")
-                    f.write(f"=== STDERR ===\n{result.stderr}\n")
-                print(f"[DEBUG] Full output written to {log_path}")
-            except Exception as log_err:
-                print(f"[WARN] Could not write log file: {log_err}")
+            # Run with retry logic
+            result, is_sim = self._run_subprocess(args, command, env)
 
-            if sim or SIMULATE:
+            if is_sim:
+                # Simulation path
                 result = eval(result.stdout)
                 runtime = float(result['runtime'])
                 deadline = getWorkflowConfig(self.wf_id)['deadline']
@@ -143,28 +200,6 @@ class ExecuteAction(Action):
                     return
             else:
                 print(f"{self.wf_id} Workflow iteration {self.workflow_iterator} finished at {time.time()}")
-                output_lines = result.stdout.splitlines()  # Split the output into lines
-                # Line 0 is the wf_id printed by run_hpo.py; result dict starts at line 1
-                parsed_result = None
-                for line in output_lines:
-                    line = line.strip()
-                    if line.startswith('{'):
-                        try:
-                            parsed_result = json.loads(line)
-                            if 'config' in parsed_result:
-                                break
-                        except json.JSONDecodeError:
-                            continue
-                if parsed_result is None or 'config' not in parsed_result:
-                    # Log the raw output for debugging
-                    print(f"[ERROR] No valid config in run_hpo.py output:")
-                    for line in output_lines:
-                        print(f"  | {line}")
-                    if parsed_result and 'error' in parsed_result:
-                        print(f"[ERROR] Runner error: {parsed_result['error']}")
-                    setWorkflowComplete(self.wf_id, True)
-                    return
-                result = parsed_result
                 next_trials = result['config']['next_trials']
                 print(result)
 
@@ -178,7 +213,7 @@ class ExecuteAction(Action):
                     print(f"[WARN] Could not write results JSONL: {log_err}")
 
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
-            if not SIMULATE and len(args['hosts'].get('on-prem', [])) != 0:       
+            if not SIMULATE and len(args['hosts'].get('on-prem', [])) != 0:
                 port = args['port']
                 with open(_PORTS_YAML, "r") as f:
                     data = yaml.safe_load(f)
@@ -186,25 +221,18 @@ class ExecuteAction(Action):
                 ports.append(port)
                 data["onprem_ports"] = ports
                 with open(_PORTS_YAML, "w") as f:
-                    yaml.safe_dump(data, f) 
+                    yaml.safe_dump(data, f)
             self.workflow_iterator += 1 # increment the iterator for the workflow
             if next_trials>0 and self.workflow_iterator<self.workflow_iterations:
                 self.output_parameters[0].append((result['config'],  hosts))
             else:
                 # Else condition terminates the execution since a new input value is not appended
                 setWorkflowComplete(self.wf_id, True)
-        except subprocess.CalledProcessError as e:
-            print(f"[ERROR] ============================================")
-            print(f"[ERROR] Service script failed!")
-            print(f"[ERROR] Command: {e.cmd}")
-            print(f"[ERROR] Return code: {e.returncode}")
-            print(f"[ERROR] STDOUT:\n{e.stdout}")
-            print(f"[ERROR] STDERR:\n{e.stderr}")
-            print(f"[ERROR] ============================================")
-            setWorkflowComplete(self.wf_id, True)  # Mark as complete to prevent hanging
         except Exception as e:
-            print(f"[ERROR] Unexpected error in workflow iteration: {e}")
+            print(f"[ERROR] ============================================")
+            print(f"[ERROR] Workflow {self.wf_id} iteration {self.workflow_iterator} FAILED: {e}")
             import traceback
             traceback.print_exc()
-            setWorkflowComplete(self.wf_id, True)
+            print(f"[ERROR] ============================================")
+            setWorkflowComplete(self.wf_id, True)  # Mark complete to prevent executor hanging
         

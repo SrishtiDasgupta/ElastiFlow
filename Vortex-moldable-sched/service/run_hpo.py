@@ -76,6 +76,14 @@ if __name__ == "__main__":
         print(json.dumps(err), flush=True)
         sys.exit(1)
 
+    # Check if runner returned an error (e.g. Ray cluster setup failed)
+    if isinstance(result, dict) and 'error' in result:
+        result.setdefault("status", "error")
+        result.setdefault("wf_id", wf_id)
+        result.setdefault("mode", mode)
+        print(json.dumps(result), flush=True)
+        sys.exit(1)
+
     # Success path
     if not isinstance(result, dict):
         result = {"status": "ok", "wf_id": wf_id, "mode": mode, "result": str(result)}

@@ -612,7 +612,9 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
 
     def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip):
-        """Send new resources to executor"""
+        """Send new resources to executor.
+        If send fails (executor dead/unreachable), terminate any on-demand instances
+        that were just created to prevent leaks."""
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -620,11 +622,30 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             "hosts": ips,
         }
         print(f"{wf_id} allocated additional resources: ", ips)
+        send_ok = True
         if sim:
             from executor_HPO import processNewResourcesHPO
             sim.process(processNewResourcesHPO, new_req)
         else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+            send_ok = sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+
+        if not send_ok and not sim and not SIMULATE:
+            # Executor is dead — terminate any on-demand instances we just created
+            leaked_ips = []
+            for name, val in ips.get('on-demand', {}).items():
+                if isinstance(val, (tuple, list)) and len(val) >= 2:
+                    leaked_ips.extend(val[1])
+            if leaked_ips:
+                print(f"[CLEANUP] Send to executor failed for {wf_id}, terminating on-demand scale-up instances: {leaked_ips}")
+                try:
+                    deleteInstanceFromIp(leaked_ips)
+                except Exception as e:
+                    print(f"[CLEANUP] Failed to terminate leaked scale-up instances: {e}")
+            # Return allocated slots to resource manager
+            if alloc_resources:
+                self.resource_manager.returnResources(wf_id + "_send_failed", alloc_resources)
+            return
+
         if alloc_resources:
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
             self.metrics.updateResources(wf_id, alloc_resources, getTime(sim))
