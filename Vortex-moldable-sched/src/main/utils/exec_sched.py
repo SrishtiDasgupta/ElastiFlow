@@ -317,6 +317,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
             break
         if getTime(sim) - start_time > timeout:
             print(f'Timeout reached for {wf_id}. Continuing with available resources')
+            setNewResources(wf_id, None)  # Clear to prevent stale pickup by next iteration
             break
     if req_type == ExecutorRequest.FREE_RESOURCE.value:
         return freeResources(resources, hosts, cur_hosts)
@@ -353,12 +354,10 @@ def freeResources(to_free_resources, hosts, cur_hosts):
                     )
                     cur_hosts[instance] = list(set(cur_hosts[instance]) - set(ips))
                 case 'on-demand':
-                    # Terminate last n instances — only remove from tracking after success
+                    # Remove from tracking only — scheduler handles instance termination
+                    # (termination moved to scheduler's freeResources to avoid double-terminate
+                    # and ~5 min executor blocking)
                     ips_to_free = hosts[cluster][instance][1][-n:]
-                    try:
-                        deleteInstanceFromIp(ips_to_free)
-                    except Exception as e:
-                        print(f"[ERROR] Failed to terminate on-demand {ips_to_free}: {e}")
                     cur_hosts[instance] = list(set(cur_hosts[instance]) - set(ips_to_free))
                     hosts[cluster][instance] = (
                         hosts[cluster][instance][0] - n,
