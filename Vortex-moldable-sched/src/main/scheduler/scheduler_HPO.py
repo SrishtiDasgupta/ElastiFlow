@@ -62,23 +62,42 @@ class Scheduler_HPO(ABC):
     def processJobCompletion(self, sim=None, mb=None):
         print('HPO Scheduler started listening to completed jobs...')
         while True:
-            data = peekElement(mb, self.finish_queue)
-            if data:
-                data = eval(data)
-                wf_id = data.get('wf-id')
+            try:
+                data = peekElement(mb, self.finish_queue)
+                if data:
+                    data = eval(data)
+                    wf_id = data.get('wf-id')
 
-                # Safety-net: terminate on-demand instances from scheduler side.
-                # The executor's finally block should have done this already,
-                # but if the executor crashed or never reached cleanup, this
-                # ensures on-demand instances don't run forever.
-                self._terminate_ondemand_instances(wf_id, data.get('hosts'), sim)
+                    # Guard against duplicate completion messages (e.g., TCP retry).
+                    # Without this, returnResources().pop() on an already-completed
+                    # workflow would KeyError and crash this thread permanently.
+                    if not self.resource_manager.getWorkflow(wf_id):
+                        print(f'[WARN] Duplicate completion for {wf_id}, ignoring')
+                        removeElement(mb, self.finish_queue)
+                        (sim or time).sleep(1)
+                        continue
 
-                self.resource_manager.returnResources(wf_id)
-                self.metrics.updateDataframe(wf_id, {'exec_start_time': data.get('start-time'), 'finish_time': data.get('finish-time'), 'complete': data.get('complete')})
-                print(f'{wf_id} workflow freed at {getTime(sim)}')
-                with open('workflow_status.log', 'a') as f:
-                    f.write(f'{wf_id} COMPLETED at {getTime(sim)}\n')
-                removeElement(mb, self.finish_queue)
+                    # Safety-net: terminate on-demand instances from scheduler side.
+                    # The executor's finally block should have done this already,
+                    # but if the executor crashed or never reached cleanup, this
+                    # ensures on-demand instances don't run forever.
+                    self._terminate_ondemand_instances(wf_id, data.get('hosts'), sim)
+
+                    self.resource_manager.returnResources(wf_id)
+                    self.metrics.updateDataframe(wf_id, {'exec_start_time': data.get('start-time'), 'finish_time': data.get('finish-time'), 'complete': data.get('complete')})
+                    print(f'{wf_id} workflow freed at {getTime(sim)}')
+                    with open('workflow_status.log', 'a') as f:
+                        f.write(f'{wf_id} COMPLETED at {getTime(sim)}\n')
+                    removeElement(mb, self.finish_queue)
+            except Exception as e:
+                print(f'[ERROR] processJobCompletion exception: {e}')
+                import traceback
+                traceback.print_exc()
+                # Don't crash the thread — skip this message and continue
+                try:
+                    removeElement(mb, self.finish_queue)
+                except Exception:
+                    pass
             (sim or time).sleep(60) # NOTE: polling interval
 
     def _terminate_ondemand_instances(self, wf_id, hosts, sim):

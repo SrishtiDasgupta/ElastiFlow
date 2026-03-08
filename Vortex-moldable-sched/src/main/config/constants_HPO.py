@@ -13,11 +13,11 @@ MIN_WORKFLOW_ITERATIONS = 3  # Minimum for convergence detection
 MAX_WORKFLOW_ITERATIONS = 5  # Multiple reallocation opportunities
 AVG_WORKFLOW_ITERATIONS = 4  # Matches SeisSol's average iteration count
 
-# Epochs (sequential training per trial)
-MIN_EPOCHS = 3   # Fast exploratory trials
-MAX_EPOCHS = 9   # High-quality convergence trials (removed expensive 12-epoch config)
-AVG_TINYDA_ITERATIONS = 6  # Named for compatibility with existing codebase (was AVG_EPOCHS)
-# Distribution: 3 epochs for early exploration, 6 for balanced, 9 for final convergence
+# Epochs (sequential training per trial — analogous to TinyDA iterations in SeisSol)
+MIN_EPOCHS = 3    # Fast exploratory trials
+MAX_EPOCHS = 36   # High-quality convergence trials (increased for meaningful training time)
+AVG_TINYDA_ITERATIONS = 20  # Named for compatibility with existing codebase (was AVG_EPOCHS)
+# Distribution: 3-12 epochs for exploration, 12-24 for balanced, 24-36 for final convergence
 
 # Parallel Trials (per iteration)
 MIN_TRIALS = 2   # Minimum for Bayesian optimization
@@ -107,60 +107,52 @@ INSTANCE_COSTS = {
 }
 
 # ====================================================================================
-# CONSTRAINT CALCULATION - Using SeisSol Methodology
+# CONSTRAINT CALCULATION - Using SeisSol Methodology (Consistent with Plain)
+# ====================================================================================
+#
+# Plain SeisSol formula:
+#   deadline = single_run_time × tinyda_iterations × workflow_iterations × 2
+#   budget   = single_run_cost × chains × tinyda_iterations × workflow_iterations
+#
+# HPO mapping (epoch ↔ TinyDA iteration, trial ↔ chain):
+#   1 epoch  = atomic sequential unit (like 1 SeisSol simulation run)
+#   epochs   = sequential count per trial (like tinyda_iterations)
+#   trials   = parallel count per iteration (like chains)
+#
+# Base unit is pure compute time per epoch — no cold start (same as Plain's 253s).
+# The 2x contention factor covers cold start, queuing delays, etc.
 # ====================================================================================
 
-def calculate_trial_cost(model, instance='cloud_ondemand_g5', epochs=12):
-    """Calculate worst-case cost for a single trial"""
-    base_runtime = G5_RUNTIMES_12EP[model] * (epochs / 12)
-    setup = SETUP_OVERHEAD[model]
-    ddp = DDP_OVERHEAD_PER_GPU[1]  # Single GPU assumption
-    cold_start = COLD_START_TIME if 'ondemand' in instance else 0
-    
-    total_seconds = base_runtime + setup + ddp + cold_start
-    total_hours = total_seconds / 3600
-    
-    return total_hours * INSTANCE_COSTS[instance]
-
-def calculate_trial_runtime(model, instance='cloud_ondemand_g4dn', epochs=12):
-    """Calculate worst-case runtime for a single trial"""
-    base_runtime = G4DN_RUNTIMES_12EP[model] * (epochs / 12)
-    setup = SETUP_OVERHEAD[model]
-    ddp = DDP_OVERHEAD_PER_GPU[1]
-    cold_start = COLD_START_TIME if 'ondemand' in instance else 0
-    
-    return base_runtime + setup + ddp + cold_start
-
-# Pre-calculated base values for standard 12-epoch trials
-COST_PER_TRIAL = {
-    'vgg19': calculate_trial_cost('vgg19'),           # ~$0.305
-    'wide_resnet101_2': calculate_trial_cost('wide_resnet101_2'),  # ~$0.385
-    'convnext_large': calculate_trial_cost('convnext_large')       # ~$0.475
+# Per-epoch runtime on slowest instance (g4dn, 1 worker) — pure compute, no cold start
+# Derived from profiling: G4DN_RUNTIMES_12EP / 12
+EPOCH_RUNTIME = {
+    'vgg19': G4DN_RUNTIMES_12EP['vgg19'] / 12,                        # 22.17 s/epoch
+    'wide_resnet101_2': G4DN_RUNTIMES_12EP['wide_resnet101_2'] / 12,   # 29.66 s/epoch
+    'convnext_large': G4DN_RUNTIMES_12EP['convnext_large'] / 12        # 34.03 s/epoch
 }
 
-RUNTIME_PER_TRIAL = {
-    'vgg19': calculate_trial_runtime('vgg19'),           # ~1391s
-    'wide_resnet101_2': calculate_trial_runtime('wide_resnet101_2'),  # ~1675s
-    'convnext_large': calculate_trial_runtime('convnext_large')       # ~2488s
+# Per-epoch cost on most expensive instance (g5 on-demand) — pure compute, no cold start
+EPOCH_COST = {
+    model: (G5_RUNTIMES_12EP[model] / 12) / 3600 * INSTANCE_COSTS['cloud_ondemand_g5']
+    for model in G5_RUNTIMES_12EP
 }
 
 # ====================================================================================
-# FINAL CONSTRAINT VALUES - OPTIMIZED PARAMETERS
+# FINAL CONSTRAINT VALUES
 # ====================================================================================
 
-# Budget constraints (includes parallel trials since cost accumulates)
-AVG_BUDGET = {
-    'vgg19': COST_PER_TRIAL['vgg19'] * (AVG_TINYDA_ITERATIONS/12*12) * AVG_WORKFLOW_ITERATIONS * AVG_PARALLEL_TRIALS,
-    'wide_resnet101_2': COST_PER_TRIAL['wide_resnet101_2'] * (AVG_TINYDA_ITERATIONS/12*12) * AVG_WORKFLOW_ITERATIONS * AVG_PARALLEL_TRIALS,
-    'convnext_large': COST_PER_TRIAL['convnext_large'] * (AVG_TINYDA_ITERATIONS/12*12) * AVG_WORKFLOW_ITERATIONS * AVG_PARALLEL_TRIALS
-}
-
-# Deadline constraints (excludes parallel trials since they run concurrently)
-# Includes 2x scaling factor for resource contention
+# Deadline: epoch_time × avg_epochs × workflow_iterations × 2x_contention
+# (Same structure as Plain: run_time × tinyda_iters × wf_iters × 2)
 AVG_DEADLINE = {
-    'vgg19': RUNTIME_PER_TRIAL['vgg19'] * (AVG_TINYDA_ITERATIONS/12*12) * AVG_WORKFLOW_ITERATIONS * 2,
-    'wide_resnet101_2': RUNTIME_PER_TRIAL['wide_resnet101_2'] * (AVG_TINYDA_ITERATIONS/12*12) * AVG_WORKFLOW_ITERATIONS * 2,
-    'convnext_large': RUNTIME_PER_TRIAL['convnext_large'] * (AVG_TINYDA_ITERATIONS/12*12) * AVG_WORKFLOW_ITERATIONS * 2
+    model: EPOCH_RUNTIME[model] * AVG_TINYDA_ITERATIONS * AVG_WORKFLOW_ITERATIONS * 2
+    for model in EPOCH_RUNTIME
+}
+
+# Budget: epoch_cost × trials × avg_epochs × workflow_iterations
+# (Same structure as Plain: run_cost × chains × tinyda_iters × wf_iters)
+AVG_BUDGET = {
+    model: EPOCH_COST[model] * AVG_PARALLEL_TRIALS * AVG_TINYDA_ITERATIONS * AVG_WORKFLOW_ITERATIONS
+    for model in EPOCH_COST
 }
 
 # ====================================================================================
@@ -199,22 +191,23 @@ TOTAL_WORKFLOWS = PRIMARY_WORKFLOWS  # Default to 10 workflows
 AVG_INTERARRIVAL_TIME = 720  # seconds between HPO workflow submissions
 
 # ====================================================================================
-# EXPECTED IMPROVEMENTS WITH OPTIMIZED PARAMETERS
+# EXPECTED CONSTRAINT VALUES (with avg 20 epochs, 4 iterations, 3 trials)
 # ====================================================================================
 """
-With image_size=64 profiling (3-5 iterations, 3-9 epochs, 2-4 trials):
+Constraint formula consistent with Plain SeisSol (epoch ↔ TinyDA iteration):
 
-Budget per workflow (average, using g5 on-demand worst case + cold start):
-- VGG19: ~$12.16
-- Wide_ResNet: ~$13.55
-- ConvNeXt: ~$13.86
+Deadline per workflow (epoch_time × 20 × 4 × 2):
+- VGG19:       22.17 × 20 × 4 × 2 = 3,547s (59 min)
+- Wide_ResNet:  29.66 × 20 × 4 × 2 = 4,746s (79 min)
+- ConvNeXt:    34.03 × 20 × 4 × 2 = 5,445s (91 min)
 
-Deadline per workflow (average, using g4dn worst case + cold start + 2x contention):
-- VGG19: ~9.0 hours
-- Wide_ResNet: ~10.2 hours
-- ConvNeXt: ~11.0 hours
+Budget per workflow (epoch_cost × 3 × 20 × 4):
+- VGG19:       ~$1.10
+- Wide_ResNet:  ~$1.49
+- ConvNeXt:    ~$1.54
 
 Profiling data sources: HPO/g4_img64.jsonl, HPO/g5_img64.jsonl (36 entries each)
+Runtime scales linearly with epochs (verified: CV < 5% across 3/6/9/12 epoch runs)
 """
 
 # Print summary when module is imported
@@ -237,46 +230,28 @@ if __name__ == "__main__":
     print("=" * 60)
 
 """
-## HPO Constraint Base Values Explanation
+## HPO Constraint Methodology — Consistent with Plain SeisSol
 
-The HPO constraint calculations use empirically-derived base values representing worst-case
-scenarios for cost and runtime per complete trial. All values measured at IMAGE_SIZE=64,
-batch_size=64, single GPU per trial (profiling data: HPO/g4_img64.jsonl, HPO/g5_img64.jsonl).
+### Mapping between Plain SeisSol and HPO
+  Plain: 1 SeisSol simulation run (253s)  ↔  HPO: 1 training epoch (22s)
+  Plain: TinyDA iterations (7 sequential) ↔  HPO: epochs per trial (20 avg sequential)
+  Plain: chains (4 parallel)              ↔  HPO: trials (3 parallel)
+  Plain: workflow iterations (4)          ↔  HPO: workflow iterations (4)
 
-### Cost Base Values (Budget Calculation)
-The cost values are calculated using the most expensive instance configuration
-(g5.xlarge on-demand at $1.006/hour) running a single GPU for 12 epochs, with added overheads
-for cold start time (400.52 seconds for on-demand instances) and setup overhead per model.
-Ray coordination overhead is negligible (~0.000003% measured, effectively 0%).
+### Constraint Formula (identical structure to Plain)
+  deadline = epoch_runtime × avg_epochs × workflow_iterations × 2x_contention
+  budget   = epoch_cost   × trials     × avg_epochs          × workflow_iterations
 
-Example calculation for vgg19:
-  base_runtime = 198.00s (12 epochs, 1 GPU, g5.xlarge)
-  setup = 5.78s (model creation + dataloader + warmup)
-  cold_start = 400.52s (on-demand instance startup)
-  total_seconds = 198.00 + 5.78 + 0 + 400.52 = 604.30s
-  total_hours = 604.30 / 3600 = 0.1679h
-  cost_per_trial = 0.1679 * $1.006 = $0.169
+Base unit is pure compute per epoch on worst-case instance — NO cold start baked in.
+Cold start and queuing delays are covered by the 2x contention factor (same as Plain).
 
-### Runtime Base Values (Deadline Calculation)
-The runtime values represent worst-case execution times using the slowest instance
-(g4dn.xlarge, Tesla T4) with the same overhead calculations.
+### Example: vgg19 deadline
+  epoch_runtime = 266.02s / 12 = 22.17 s/epoch (g4dn, 1 GPU, pure compute)
+  deadline = 22.17 × 20 × 4 × 2 = 3,547s (59 min)
 
-Example calculation for vgg19:
-  base_runtime = 266.02s (12 epochs, 1 GPU, g4dn.xlarge)
-  setup = 5.78s
-  cold_start = 400.52s
-  total = 672.32s per trial
-
-### Constraint Formula
-Budget constraints include parallel trials since cost accumulates across all simultaneous work:
-  budget = cost_per_trial * epochs * iterations * parallel_trials
-
-Deadline constraints exclude parallel trials since they run concurrently, but include a 2x
-scaling factor for resource contention when multiple workflows compete for resources:
-  deadline = runtime_per_trial * epochs * iterations * 2x_contention_factor
-
-This approach ensures conservative bounds that accommodate realistic execution conditions
-while providing optimization opportunities for the moldable scheduling algorithm.
+### Example: vgg19 budget
+  epoch_cost = (198.00 / 12) / 3600 × $1.006 = $0.00461/epoch (g5 on-demand)
+  budget = 0.00461 × 3 × 20 × 4 = $1.11
 
 ### Speedup Model (Power Law)
 Fitted from 36 profiling runs per instance type (3 models x 3 worker counts x 4 epoch counts):
@@ -285,6 +260,5 @@ Fitted from 36 profiling runs per instance type (3 models x 3 worker counts x 4 
   G5: a=16.445, b=-0.771, c=0.0  (R²=0.988)
   Model factors: vgg19=1.0, wide_resnet101_2=1.34, convnext_large=1.46
 
-Worker speedup (12 epochs): 2 workers ≈ 1.6-1.8x, 4 workers ≈ 2.9-3.3x
-G5/G4 speed ratio: ~1.3-1.5x (A10G faster than T4)
+Runtime scales linearly with epochs (verified: CV < 5% across 3/6/9/12 epoch profiling runs).
 """

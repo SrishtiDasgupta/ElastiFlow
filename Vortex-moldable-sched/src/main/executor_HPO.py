@@ -104,7 +104,18 @@ def executeWorkflowHPO(data, sim=None):
         if sim:
             sim.sync().send(sim, 'completed_jobs_mb', str(request))
         else:
-            sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
+            # Retry completion notification up to 3 times.
+            # A lost notification means the scheduler never frees this
+            # workflow's resources, hanging the entire experiment.
+            for attempt in range(3):
+                success = sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
+                if success:
+                    break
+                print(f"[RETRY] Completion notification for {workflow.id} failed (attempt {attempt+1}/3)")
+                import time as _time
+                _time.sleep(5)
+            else:
+                print(f"[ERROR] All 3 completion notification attempts failed for {workflow.id}")
     except Exception as e:
         print(f"[ERROR] Failed to notify scheduler: {e}")
     finally:
