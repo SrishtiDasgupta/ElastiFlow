@@ -203,9 +203,12 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
         chains = input[0].get('next_trials', 0)
         tinyda_iterations = input[0].get('epoch', input[0].get('epochs', 1))
 
-    # HPO uses its own MOLDABLE flag from constants_HPO (not the shared constants.py)
+    # HPO uses its own constants from constants_HPO (not the shared constants.py)
     from config.constants_HPO import MOLDABLE as HPO_MOLDABLE, SIMULATE as HPO_SIMULATE
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, HPO_MOLDABLE, chains)
+    from config.constants_HPO import FREE_RESOURCES as HPO_FREE_RESOURCES
+    from config.constants_HPO import RESOURCE_REQUEST_TIMEOUT as HPO_TIMEOUT
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, HPO_MOLDABLE, chains,
+                                               HPO_FREE_RESOURCES, HPO_TIMEOUT)
 
     if not HPO_SIMULATE and len(hosts.get('on-prem', [])) != 0:
         port = getWorkflowOnpremPort()
@@ -248,7 +251,13 @@ def getClientInputs(wf_id, input: Tuple, ind):
 
 # hosts = {'on-prem': {}, 'reserved': {name: (n, [ips])}, 'on-demand': {}}
 # cur_hosts = {name: [ips]}
-def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0):
+def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0,
+                         free_resources=None, request_timeout=None):
+    if free_resources is None:
+        free_resources = FREE_RESOURCES
+    if request_timeout is None:
+        request_timeout = RESOURCE_REQUEST_TIMEOUT
+
     count = 0
     cur_hosts = {}
     for cluster in ['on-prem', 'reserved', 'on-demand']:
@@ -272,16 +281,18 @@ def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0):
         if count < chains:
             n = chains - count if chains - count < 4 else 3
             print(f'New resource request: {wf_id} requesting {n} resources for iteration {ind+1}')
-            return sendAndFetchResponse(wf_id, ExecutorRequest.REQUEST_RESOURCE.value, hosts, ind, cur_hosts, n, chains)
+            return sendAndFetchResponse(wf_id, ExecutorRequest.REQUEST_RESOURCE.value, hosts, ind, cur_hosts, n, chains, request_timeout)
         # Free resources
-        elif FREE_RESOURCES and count > chains:
+        elif free_resources and count > chains:
             n = count - chains
             print(f'Free resource request: {wf_id} requesting to free {n} resources for iteration {ind+1}')
-            return sendAndFetchResponse(wf_id, ExecutorRequest.FREE_RESOURCE.value, hosts, ind, cur_hosts, n, chains)
+            return sendAndFetchResponse(wf_id, ExecutorRequest.FREE_RESOURCE.value, hosts, ind, cur_hosts, n, chains, request_timeout)
 
     return cur_hosts, hosts
 
-def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
+def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, request_timeout=None):
+    if request_timeout is None:
+        request_timeout = RESOURCE_REQUEST_TIMEOUT
 
     config = getWorkflowConfig(wf_id)
 
@@ -320,7 +331,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
     # Wait for response until timeout
     resources = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
     req_type = ExecutorRequest.FREE_RESOURCE.value # Only because less computation than merge
-    start_time, timeout = getTime(sim), 30 + RESOURCE_REQUEST_TIMEOUT # 30 sec network latency
+    start_time, timeout = getTime(sim), 30 + request_timeout # 30 sec network latency
     while True:
         (sim or time).sleep(5)
         if getWorkflowConfig(wf_id).get('new_resources', None):

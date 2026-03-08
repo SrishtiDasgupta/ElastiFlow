@@ -173,7 +173,7 @@ MIN_ITERATION_RUNTIME = MIN_RUNTIME * MIN_EPOCHS  # Minimum iteration runtime
 MIN_INSTANCE_COST = min(INSTANCE_COSTS.values()) * (MIN_RUNTIME / 3600)  # Minimum cost threshold
 
 # Request and polling parameters
-RESOURCE_REQUEST_TIMEOUT = 3 * 60  # 3 minutes timeout for resource requests
+RESOURCE_REQUEST_TIMEOUT = 8 * 60  # 8 minutes — must exceed COLD_START_TIME (400s) + setup (~120s)
 WORKFLOW_POLLING = 30  # Polling interval in seconds for new workflow requests
 RESOURCE_UTILIZATION_POLLING = 20 * 60  # 20 minutes for resource utilization metrics
 
