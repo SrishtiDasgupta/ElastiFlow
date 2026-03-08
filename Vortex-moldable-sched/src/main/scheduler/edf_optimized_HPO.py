@@ -740,17 +740,6 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 if freed_count == request['count']:
                     break
 
-            # Terminate freed on-demand EC2 instances BEFORE releasing slots
-            # (if termination fails, slots stay reserved so we don't lose track)
-            if not sim and not SIMULATE:
-                for instance, count, ips in to_free_instances:
-                    if instance.type == 'on-demand' and ips:
-                        print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
-                        try:
-                            deleteInstanceFromIp(ips)
-                        except Exception as e:
-                            print(f"[ERROR] Scale-down termination failed: {e}")
-
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
 
             # Record scale-down metrics
@@ -761,7 +750,20 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 cores_removed=cores_freed
             )
 
+        # Notify executor FIRST so it stops using freed IPs immediately.
+        # Instance termination happens AFTER to avoid blocking the response
+        # (termination can take 5+ minutes, exceeding executor's 210s timeout).
         self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
+
+        # Terminate freed on-demand EC2 instances AFTER notifying executor
+        if request['count'] > 0 and not sim and not SIMULATE:
+            for instance, count, ips in to_free_instances:
+                if instance.type == 'on-demand' and ips:
+                    print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
+                    try:
+                        deleteInstanceFromIp(ips)
+                    except Exception as e:
+                        print(f"[ERROR] Scale-down termination failed: {e}")
 
     def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip):
         """Send new resources to executor.
