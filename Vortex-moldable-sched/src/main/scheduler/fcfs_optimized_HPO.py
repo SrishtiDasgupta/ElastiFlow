@@ -118,20 +118,19 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         selected_instances = []
         remaining = num_hosts_requested
 
-        # Check if on-prem can satisfy (any free slots of the right type)
+        # Check if on-prem can satisfy (always prefer on-prem over cloud)
+        # On-prem is checked regardless of optimal_type since it's local infrastructure
         on_prem_available = False
         for instance in instances:
-            if isinstance(instance, OnPremInstance) and \
-               self.getInstanceTypeForHPO(instance.name) == optimal_type:
-                if instance.getFreeSlots() > 0:
-                    on_prem_available = True
-                    break
+            if isinstance(instance, OnPremInstance) and instance.getFreeSlots() > 0:
+                on_prem_available = True
+                break
 
         if on_prem_available:
             # ON-PREM PATH: only allocate on-prem (skip cloud entirely)
+            # On-prem is always g4-type hardware, used regardless of optimizer's cloud choice
             for instance in instances:
-                if isinstance(instance, OnPremInstance) and \
-                   self.getInstanceTypeForHPO(instance.name) == optimal_type:
+                if isinstance(instance, OnPremInstance):
                     slots_available = instance.getFreeSlots()
                     if slots_available >= remaining:
                         selected_instances = [(instance, remaining)]
@@ -274,30 +273,33 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         Select optimal instance type AND number of hosts (moldable version)
         Returns: (instance_type, num_hosts)
 
-        Considers ALL available instance types (on-prem, g4, g5) with actual costs
-        Explores different host counts to find best cost/performance tradeoff
-        No instance type switching - stays within one type for entire workflow
+        Availability-aware: uses ACTUAL cost based on which slots are free.
+        If reserved g4 is taken, g4 cost = on-demand price ($0.526/hr).
+        If reserved g5 is free, g5 cost = reserved price ($0.435/hr).
+        This ensures paid-for reserved capacity is used before on-demand.
         """
         instances = self.resource_manager.getResources()
 
-        # Build list of unique instance types to evaluate
-        instance_types = {}
+        # Build availability info per instance type (cloud only):
+        # On-prem is excluded here — allocateResourcesMoldableHPO handles on-prem-first
+        # logic separately. Including on-prem's TCO cost ($0.84) would make the optimizer
+        # pick cloud g5 ($0.435 reserved) over on-prem, which is wrong.
+        type_slots = {}  # {type: [(cost_per_hour, free_slots), ...]}
+        type_runtime = {}  # {type: runtime_func}
         for instance in instances:
+            if isinstance(instance, OnPremInstance):
+                continue  # Skip on-prem; handled by allocation logic
             inst_type = self.getInstanceTypeForHPO(instance.name)
-            if inst_type not in instance_types:
-                # Store cheapest cost for this type (prioritize reserved/on-prem over on-demand)
-                cost = instance.cost_per_second
-                runtime_func = getRuntime_g5 if inst_type == 'g5' else getRuntime_g4
-                instance_types[inst_type] = {
-                    'cost_per_second': cost,
-                    'runtime_func': runtime_func,
-                    'name': instance.name
-                }
-            else:
-                # Update if we found a cheaper instance of same type
-                if instance.cost_per_second < instance_types[inst_type]['cost_per_second']:
-                    instance_types[inst_type]['cost_per_second'] = instance.cost_per_second
-                    instance_types[inst_type]['name'] = instance.name
+            if inst_type not in type_slots:
+                type_slots[inst_type] = []
+                type_runtime[inst_type] = getRuntime_g5 if inst_type == 'g5' else getRuntime_g4
+            free = instance.getFreeSlots()
+            if free > 0:
+                type_slots[inst_type].append((instance.cost_per_second, free))
+
+        # Sort each type's slots by cost (cheapest first: on-prem/reserved before on-demand)
+        for inst_type in type_slots:
+            type_slots[inst_type].sort(key=lambda x: x[0])
 
         best_instance_type = None
         best_num_hosts = 1
@@ -305,33 +307,38 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         best_cost = 0
         best_runtime = 0
 
-        # Evaluate each instance type
-        for inst_type, info in instance_types.items():
-            runtime_func = info['runtime_func']
-            cost_per_second = info['cost_per_second']
-            cost_per_hour = cost_per_second * 3600
+        from config.constants_HPO import MOLDABLE_INITIAL_CAP
+        max_initial = max(1, math.ceil(trials * MOLDABLE_INITIAL_CAP))
 
-            # Try different num_hosts for this instance type
-            # Cap initial allocation to leave headroom for moldable scale-up
-            from config.constants_HPO import MOLDABLE_INITIAL_CAP
-            max_initial = max(1, math.ceil(trials * MOLDABLE_INITIAL_CAP))
-            for num_hosts in range(1, max_initial + 1):
-                # Calculate actual runtime based on execution pattern
+        # Evaluate each instance type
+        for inst_type, slots in type_slots.items():
+            runtime_func = type_runtime[inst_type]
+            total_free = sum(free for _, free in slots)
+
+            # Only try up to available free slots (can't allocate more than exists)
+            for num_hosts in range(1, min(max_initial, total_free) + 1):
+                # Calculate runtime
                 if num_hosts >= trials:
-                    # Parallel execution: each trial gets (num_hosts // trials) workers
                     workers_per_trial = num_hosts // trials
                     runtime = runtime_func(workers_per_trial, model, epochs)
                 else:
-                    # Sequential batches: some trials must wait
                     batches = math.ceil(trials / num_hosts)
                     runtime = batches * runtime_func(1, model, epochs)
 
-                # Calculate cost for this configuration (cost_per_second is actually $/hour)
-                cost = (runtime / 3600) * cost_per_second * num_hosts
+                # Calculate ACTUAL cost: assign to cheapest free slots first
+                hosts_remaining = num_hosts
+                cost_rate = 0  # total $/hour across all assigned instances
+                for slot_cost, slot_free in slots:
+                    use = min(hosts_remaining, slot_free)
+                    cost_rate += use * slot_cost  # cost_per_second is $/hour
+                    hosts_remaining -= use
+                    if hosts_remaining == 0:
+                        break
+
+                cost = (runtime / 3600) * cost_rate
 
                 # Check if meets constraints
                 if runtime <= deadline and cost <= budget:
-                    # Score: minimize cost with slight preference for faster completion
                     score = cost + (runtime / deadline) * 0.1
                     if score < best_score:
                         best_score = score
@@ -342,9 +349,14 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
         if best_instance_type is None:
             # No solution found within constraints - return cheapest option
-            cheapest_type = min(instance_types.items(), key=lambda x: x[1]['cost_per_second'])[0]
-            print(f"⚠️  No configuration meets constraints, defaulting to cheapest: 1 × {cheapest_type}")
-            return cheapest_type, 1
+            # Fall back to any type that has free slots
+            for inst_type, slots in type_slots.items():
+                if sum(free for _, free in slots) > 0:
+                    print(f"⚠️  No configuration meets constraints, defaulting to: 1 × {inst_type}")
+                    return inst_type, 1
+            # Absolute fallback
+            print(f"⚠️  No free slots available, defaulting to g4")
+            return 'g4', 1
 
         print(f"Moldable selected: {best_num_hosts} × {best_instance_type} for {trials} trials (cost: ${best_cost:.2f}, runtime: {best_runtime:.0f}s)")
         return (best_instance_type, best_num_hosts)
