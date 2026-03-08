@@ -17,17 +17,17 @@ config:
   mesh: vgg19
   workflowIterations: 3
 constraints:
-  budget: 11.03
+  budget: 1.09
   chains: 4
-  deadline: 3089
-  tinydaIterations: 4
-id: hpo-23bd6b42
+  deadline: 3463.89
+  tinydaIterations: 15
+id: hpo-a87b8123
 vars:
 - id: input_config
   value:
-    batch_size: 64
-    epochs: 4
-    learning_rate: 0.0719
+    batch_size: 32
+    epochs: 15
+    learning_rate: 0.0595
     model: vgg19
-    momentum: 0.93
+    momentum: 0.81
     next_trials: 4

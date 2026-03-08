@@ -2,7 +2,7 @@
 # =============================================================================
 # Slurm Compute Node Setup (ParallelCluster OnNodeConfigured)
 # Role: GPU worker — runs Ray, trains models
-# ParallelCluster provides: FSx mount at /fsx, AWS CLI, Slurm
+# ParallelCluster provides: EFS mount at /fsx, AWS CLI, Slurm
 # AMI provides: CUDA drivers, NVIDIA runtime
 # =============================================================================
 set -ex
@@ -16,12 +16,12 @@ export DEBIAN_FRONTEND=noninteractive
 mkdir -p /etc/needrestart/conf.d/
 echo "\$nrconf{restart} = 'a';" | tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
 
-# --- Verify FSx is mounted (ParallelCluster should have done this) ---
+# --- Verify EFS is mounted (ParallelCluster should have done this) ---
 if ! mountpoint -q /fsx; then
     echo "ERROR: /fsx is not mounted. ParallelCluster should mount this."
     exit 1
 fi
-echo "FSx verified at /fsx"
+echo "EFS verified at /fsx"
 
 # --- Verify GPU is available ---
 if command -v nvidia-smi &> /dev/null; then

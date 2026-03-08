@@ -17,17 +17,17 @@ config:
   mesh: convnext_large
   workflowIterations: 5
 constraints:
-  budget: 15.43
-  chains: 2
-  deadline: 3805
-  tinydaIterations: 8
-id: hpo-a82342ac
+  budget: 1.77
+  chains: 3
+  deadline: 5648.81
+  tinydaIterations: 20
+id: hpo-b03a4442
 vars:
 - id: input_config
   value:
-    batch_size: 64
-    epochs: 8
-    learning_rate: 0.0079
+    batch_size: 32
+    epochs: 20
+    learning_rate: 0.0223
     model: convnext_large
-    momentum: 0.93
-    next_trials: 2
+    momentum: 0.95
+    next_trials: 3

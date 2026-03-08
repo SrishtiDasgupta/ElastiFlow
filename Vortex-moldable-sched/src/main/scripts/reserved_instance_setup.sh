@@ -7,13 +7,12 @@
 # Every reserved instance is executor-capable (Redis + executor process).
 # For standalone EC2 instances (not ParallelCluster).
 # Must be run manually via SSH after instance is running.
-# Handles FSx mount, PyTorch, Ray, CIFAR-10, Vortex codebase, Redis, executor.
+# Handles EFS mount, PyTorch, Ray, CIFAR-10, Vortex codebase, Redis, executor.
 # =============================================================================
 set -ex
 
 # --- CONFIGURE THESE ---
-FSX_DNS="fs-04a4223998940b3ef.fsx.eu-north-1.amazonaws.com"
-FSX_MOUNT_NAME="5ynhnbev"
+EFS_DNS="fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com"
 # ------------------------
 
 exec > >(tee ~/hpo-reserved-setup.log) 2>&1
@@ -33,26 +32,21 @@ while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
 done
 echo "dpkg lock free"
 
-# --- Mount FSx Lustre ---
+# --- Mount EFS ---
 if mountpoint -q /fsx; then
-    echo "FSx already mounted"
+    echo "EFS already mounted at /fsx"
 else
-    # Install Lustre client
-    wget -O - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc \
-        | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/fsx-ubuntu-public-key.gpg] https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu jammy main" \
-        | sudo tee /etc/apt/sources.list.d/fsxlustreclientrepo.list
     sudo apt-get update -y
-    sudo apt-get install -y lustre-client-modules-$(uname -r)
+    sudo apt-get install -y nfs-common
 
     sudo mkdir -p /fsx
-    sudo mount -t lustre -o noatime,flock ${FSX_DNS}@tcp:/${FSX_MOUNT_NAME} /fsx
+    sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576 ${EFS_DNS}:/ /fsx
 
     # Persist across reboots
-    echo "${FSX_DNS}@tcp:/${FSX_MOUNT_NAME} /fsx lustre defaults,noatime,flock,_netdev 0 0" \
+    echo "${EFS_DNS}:/ /fsx nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,_netdev 0 0" \
         | sudo tee -a /etc/fstab
 
-    echo "FSx mounted at /fsx"
+    echo "EFS mounted at /fsx"
 fi
 
 # --- Verify GPU ---
@@ -170,6 +164,6 @@ echo "Summary:"
 echo "  Venv:     ~/rayenv"
 echo "  Vortex:   ~/Vortex-moldable-sched"
 echo "  CIFAR-10: ~/cifar10"
-echo "  FSx:      /fsx"
+echo "  EFS:      /fsx"
 echo "  Executor: running (log: ~/executor.out)"
 echo "  Redis:    running on default port"

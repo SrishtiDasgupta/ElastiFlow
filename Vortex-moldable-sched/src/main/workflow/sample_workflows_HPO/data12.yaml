@@ -15,19 +15,19 @@ actions:
 api: 4.7.0
 config:
   mesh: vgg19
-  workflowIterations: 5
+  workflowIterations: 4
 constraints:
-  budget: 11.96
+  budget: 1.28
   chains: 4
-  deadline: 3189
-  tinydaIterations: 3
-id: hpo-76abe507
+  deadline: 3819.14
+  tinydaIterations: 15
+id: hpo-ccb43739
 vars:
 - id: input_config
   value:
-    batch_size: 128
-    epochs: 3
-    learning_rate: 0.0613
+    batch_size: 64
+    epochs: 15
+    learning_rate: 0.0465
     model: vgg19
-    momentum: 0.83
+    momentum: 0.82
     next_trials: 4

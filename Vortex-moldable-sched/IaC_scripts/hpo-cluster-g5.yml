@@ -44,7 +44,7 @@ Scheduling:
 
 SharedStorage:
   - MountDir: /fsx
-    Name: fsx-hpo
-    StorageType: FsxLustre
-    FsxLustreSettings:
-      FileSystemId: fs-04a4223998940b3ef
+    Name: efs-hpo
+    StorageType: Efs
+    EfsSettings:
+      FileSystemId: fs-0c7ed8d283368b734

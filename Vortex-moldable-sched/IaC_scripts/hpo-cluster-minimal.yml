@@ -19,8 +19,8 @@ Scheduling:
       CapacityType: ONDEMAND
       ComputeResources:
         - Name: g4dn-nodes
-          InstanceType: g5.xlarge
-          MinCount: 0
+          InstanceType: g4dn.xlarge
+          MinCount: 4
           MaxCount: 4
       Networking:
         SubnetIds:
@@ -30,7 +30,7 @@ Scheduling:
 
 SharedStorage:
   - MountDir: /fsx
-    Name: fsx-hpo
-    StorageType: FsxLustre
-    FsxLustreSettings:
-      FileSystemId: fs-04a4223998940b3ef
+    Name: efs-hpo
+    StorageType: Efs
+    EfsSettings:
+      FileSystemId: fs-0c7ed8d283368b734

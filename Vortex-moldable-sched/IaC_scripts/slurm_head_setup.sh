@@ -2,7 +2,7 @@
 # =============================================================================
 # Slurm Head Node Setup (ParallelCluster OnNodeConfigured)
 # Role: Executor — orchestrates HPO workflows, does NOT train
-# ParallelCluster provides: FSx mount at /fsx, AWS CLI, Slurm
+# ParallelCluster provides: EFS mount at /fsx, AWS CLI, Slurm
 # =============================================================================
 set -ex
 
@@ -23,12 +23,12 @@ while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
 done
 echo "dpkg lock free"
 
-# --- Verify FSx is mounted (ParallelCluster should have done this) ---
+# --- Verify EFS is mounted (ParallelCluster should have done this) ---
 if ! mountpoint -q /fsx; then
     echo "ERROR: /fsx is not mounted. ParallelCluster should mount this."
     exit 1
 fi
-echo "FSx verified at /fsx"
+echo "EFS verified at /fsx"
 
 # --- Python venv (control-plane only, no PyTorch/Ray) ---
 apt-get update -y

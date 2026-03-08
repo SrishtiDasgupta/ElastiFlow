@@ -25,21 +25,18 @@ echo "dpkg lock free"
 # Fix corrupted /etc/apt/sources.list if present (AMI has bad 'ty' entry on line 51)
 sudo sed -i '/^ty /d' /etc/apt/sources.list 2>/dev/null || true
 
-# Setup FSx Lustre client
-wget -o - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
-
-yes | sudo bash -c 'echo "deb [signed-by=/usr/share/keyrings/fsx-ubuntu-public-key.gpg] https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu jammy main" > /etc/apt/sources.list.d/fsxlustreclientrepo.list && yes | apt-get update >> ~/setup.out'
-
-yes | sudo apt install -y lustre-client-modules-$(uname -r) >> ~/setup.out
+# Mount EFS (replaces FSx Lustre — no Lustre client needed)
+sudo apt-get update -y >> ~/setup.out 2>&1
+sudo apt-get install -y nfs-common >> ~/setup.out 2>&1
 
 sudo mkdir -p /fsx
 
-# Mount FSx file system
-sudo mount -t lustre -o relatime,flock fs-04a4223998940b3ef.fsx.eu-north-1.amazonaws.com@tcp:/5ynhnbev /fsx
+sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576 \
+    fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx
 
-# Verify FSx mount succeeded
+# Verify EFS mount succeeded
 if ! mountpoint -q /fsx; then
-    echo "FATAL: FSx mount failed"
+    echo "FATAL: EFS mount failed"
     exit 1
 fi
 

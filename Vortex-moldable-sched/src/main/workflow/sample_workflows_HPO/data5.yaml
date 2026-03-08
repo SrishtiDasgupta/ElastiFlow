@@ -17,17 +17,17 @@ config:
   mesh: wide_resnet101_2
   workflowIterations: 5
 constraints:
-  budget: 12.51
+  budget: 1.43
   chains: 3
-  deadline: 3617
-  tinydaIterations: 5
-id: hpo-e10d65ba
+  deadline: 4859.88
+  tinydaIterations: 18
+id: hpo-df19b440
 vars:
 - id: input_config
   value:
-    batch_size: 64
-    epochs: 5
-    learning_rate: 0.0285
+    batch_size: 128
+    epochs: 18
+    learning_rate: 0.0566
     model: wide_resnet101_2
-    momentum: 0.84
+    momentum: 0.94
     next_trials: 3

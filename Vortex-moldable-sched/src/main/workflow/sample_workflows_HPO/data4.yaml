@@ -15,19 +15,19 @@ actions:
 api: 4.7.0
 config:
   mesh: convnext_large
-  workflowIterations: 3
+  workflowIterations: 4
 constraints:
-  budget: 15.41
+  budget: 1.4
   chains: 3
-  deadline: 4168
-  tinydaIterations: 7
-id: hpo-92c161bd
+  deadline: 5504.66
+  tinydaIterations: 15
+id: hpo-ff42ba35
 vars:
 - id: input_config
   value:
     batch_size: 32
-    epochs: 7
-    learning_rate: 0.0285
+    epochs: 15
+    learning_rate: 0.0226
     model: convnext_large
-    momentum: 0.97
+    momentum: 0.9
     next_trials: 3

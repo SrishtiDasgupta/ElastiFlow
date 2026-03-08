@@ -35,14 +35,31 @@ TOTAL_CLOUD_ONDEMAND = 6  # 3x g4dn.xlarge + 3x g5.xlarge
 TOTAL_RESOURCES = TOTAL_ON_PREMISE + TOTAL_CLOUD_RESERVED + TOTAL_CLOUD_ONDEMAND  # 14
 
 # Workflow configurations to test
-WORKFLOW_CONFIGS = [5, 10, 15, 20]  # Different scales for evaluation
-PRIMARY_WORKFLOWS = 15  # Sweet spot for demonstrating improvements
+WORKFLOW_CONFIGS = [5, 10, 15]  # Different batch sizes for evaluation
+PRIMARY_WORKFLOWS = 15  # Full batch for comprehensive evaluation
 
-# Workflow dispatch order: Wide-Short first to saturate g4, triggering g5 partial-fallback
-# Fallback triggers when g4 can't FULLY satisfy a request (not just when g4 gives 0 hosts)
-# Positions 0-4 (5-wf): [8,3] Wide-Short fill on-prem+g4 → [9] g4 partial→g5 fallback → [7,5] freed on-prem
-# Positions 5-9 (10-wf): [12] g4 burst → [1] g5 OD fallback → [4,10,14] sustained (14/14 peak at t=840)
-# Positions 10-14 (15-wf): [0,6,11,2,13] Narrow-Med tail, moldable scale-up as long workflows finish
+# ====================================================================================
+# WORKFLOW DISPATCH ORDER — Optimized for Moldable vs Static Comparison
+# ====================================================================================
+# Maps dispatch position → data file index. Position 0 dispatched first, etc.
+# For 5-wf batch: positions 0-4. For 10-wf: positions 0-9. For 15-wf: all 15.
+#
+# Strategy: Wide-Short workflows first (chains=4, low epochs) create resource contention.
+# Static allocates 4 instances each → pool saturated → later workflows queue.
+# Moldable allocates 2 each (cap=0.5) → pool has headroom → all workflows start → scale up later.
+#
+# Positions 0-4 (5-wf): [8,3] Wide-Short vgg19 fill on-prem+g4 → [9] g4 partial→g5 fallback → [7,5] freed on-prem
+#   Static demand:   4+4+3+2+3 = 16 (>14 → queuing)
+#   Moldable demand: 2+2+2+1+2 = 9  (all fit → 5 free for scale-up)
+#
+# Positions 5-9 (10-wf): [12] g4 burst → [1] g5 OD fallback → [4,10,14] sustained
+#   Cumulative static: 32 (2.3x oversubscribed)
+#   Cumulative moldable: 18 (1.3x — much less queuing)
+#
+# Positions 10-14 (15-wf): [0,6,11,2,13] Narrow-Long convnext tail
+#   All chains=2, high epochs (18-28). Moldable starts with 1 instance each,
+#   scales up as earlier Wide-Short workflows complete and free resources.
+#   Cumulative static: 42 (3x). Moldable: 23 (1.6x).
 WORKFLOW_ORDER = [8, 3, 9, 7, 5, 12, 1, 4, 10, 14, 0, 6, 11, 2, 13]
 
 # ====================================================================================
