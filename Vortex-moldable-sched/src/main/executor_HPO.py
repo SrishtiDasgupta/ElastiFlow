@@ -2,7 +2,7 @@ import threading
 import sys
 import argparse
 from utils.sim import getTime
-from utils.exec_sched import setNewResources
+from utils.exec_sched import setNewResources, isResourceRequestPending
 from scripts.create_instance_HPO import deleteInstanceFromIp
 from utils.request import getConfig, sendRequest
 from workflow.steep_workflow_HPO import Steep_Workflow_HPO
@@ -129,9 +129,15 @@ def processNewResourcesHPO(data):
     Process new resource allocations for moldable HPO workflows
     Updates workflow config with new worker instances
     """
-    # Update workflow config with new resources
-    setNewResources(data['wf-id'], (data.get('request'), data.get('hosts')))
-    print(f"Updated resources for HPO workflow {data['wf-id']}")
+    wf_id = data['wf-id']
+    # Only accept if executor is still waiting for this response.
+    # Late responses (after executor timeout) are discarded to prevent
+    # stale resources being picked up by the next iteration.
+    if not isResourceRequestPending(wf_id):
+        print(f"[DISCARD] Late resource response for {wf_id} (executor already timed out)")
+        return
+    setNewResources(wf_id, (data.get('request'), data.get('hosts')))
+    print(f"Updated resources for HPO workflow {wf_id}")
 
 
 if __name__ == "__main__":

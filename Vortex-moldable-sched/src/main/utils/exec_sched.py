@@ -90,6 +90,12 @@ def removeWorkflowConfig(id):
 def setNewResources(id, data: Tuple):
     workflow_config[id]['new_resources'] = data
 
+def setResourceRequestPending(id, pending: bool):
+    workflow_config[id]['resource_request_pending'] = pending
+
+def isResourceRequestPending(id):
+    return workflow_config.get(id, {}).get('resource_request_pending', False)
+
 def setWorkflowComplete(id, isComplete: bool):
     workflow_config[id]['complete'] = isComplete
 
@@ -299,6 +305,12 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
     }
 
     sim = getWorkflowConfig(wf_id)['sim']
+
+    # Mark request as pending so processNewResourcesHPO knows we're waiting.
+    # Late responses (arriving after timeout) are discarded when pending=False.
+    setNewResources(wf_id, None)  # Clear any stale data from previous iterations
+    setResourceRequestPending(wf_id, True)
+
     if sim:
         request['request-time'] = sim.now
         sim.sync().send(sim, 'resource_request_mb', str(request))
@@ -314,10 +326,12 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
         if getWorkflowConfig(wf_id).get('new_resources', None):
             req_type, resources = getWorkflowConfig(wf_id).get('new_resources')
             setNewResources(wf_id, None)
+            setResourceRequestPending(wf_id, False)
             break
         if getTime(sim) - start_time > timeout:
             print(f'Timeout reached for {wf_id}. Continuing with available resources')
-            setNewResources(wf_id, None)  # Clear to prevent stale pickup by next iteration
+            setNewResources(wf_id, None)
+            setResourceRequestPending(wf_id, False)  # Reject late responses
             break
     if req_type == ExecutorRequest.FREE_RESOURCE.value:
         return freeResources(resources, hosts, cur_hosts)
