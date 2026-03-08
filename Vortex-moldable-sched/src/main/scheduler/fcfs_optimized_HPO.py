@@ -430,6 +430,19 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         if request['count'] is None:
             request['count'] = min_needed_instances - current_trials
 
+        # Moldable opportunity: even if we CAN finish with current instances,
+        # try to scale up to max parallelism (1 instance per trial) if budget allows.
+        # This is the core moldable benefit: start lean, scale up for speedup.
+        if request['count'] <= 0 and current_trials < request['chains']:
+            potential_extra = request['chains'] - current_trials
+            # Calculate speedup from going parallel
+            seq_runtime = runtime_per_trial * math.ceil(request['chains'] / max(current_trials, 1))
+            par_runtime = runtime_per_trial * math.ceil(request['chains'] / (current_trials + potential_extra))
+            if seq_runtime > 0 and par_runtime < seq_runtime:
+                print(f"Moldable opportunity: {wf_id} can scale {current_trials}→{current_trials + potential_extra} "
+                      f"(speedup {seq_runtime/par_runtime:.1f}x, {seq_runtime:.0f}s→{par_runtime:.0f}s)")
+                request['count'] = potential_extra
+
         # Allocate new resources (same instance type only, homogeneous)
         alloc_instances = self.checkNewResourcesHPO(
             free_resources,
