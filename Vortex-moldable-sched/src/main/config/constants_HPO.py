@@ -178,8 +178,8 @@ WORKFLOW_POLLING = 30  # Polling interval in seconds for new workflow requests
 RESOURCE_UTILIZATION_POLLING = 20 * 60  # 20 minutes for resource utilization metrics
 
 # Moldable scheduler optimization factors (from SeisSol approach)
-OPTIM_FCFS_BFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}  # Budget pressure factors
-OPTIM_FCFS_DFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}  # Deadline pressure factors
+OPTIM_FCFS_BFACTOR = {0: 0.3, 1: 0.5, 2: 0.6, 3: 0.7, 4: 0.8, 5: 0.9}  # Budget pressure factors
+OPTIM_FCFS_DFACTOR = {0: 0.3, 1: 0.5, 2: 0.6, 3: 0.7, 4: 0.8, 5: 0.9}  # Deadline pressure factors
 SPEEDUP_THRESHOLD = 1.4  # Minimum speedup for instance type switching
 DEADLINE_BUFFER = 180  # Safety buffer for deadline calculations (3 minutes)
 MOLDABLE_INITIAL_CAP = 0.5  # Start at half max parallelism; moldable scale-up fills the rest
