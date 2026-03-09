@@ -30,7 +30,7 @@ Scheduling:
 
 SharedStorage:
   - MountDir: /fsx
-    Name: efs-hpo
+    Name: vortex-hpo-shared
     StorageType: Efs
     EfsSettings:
       FileSystemId: fs-0c7ed8d283368b734

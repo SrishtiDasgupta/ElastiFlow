@@ -1,0 +1,478 @@
+================================================================================
+ HPO ParallelCluster — Build & Setup Guide
+ Config: hpo-cluster-minimal.yml (4x g4dn.xlarge + EFS)
+================================================================================
+
+PREREQUISITES
+─────────────
+- AWS ParallelCluster CLI installed (pcluster)
+- SSH key: hpo-exp.pem
+- EFS filesystem: fs-0c7ed8d283368b734 (eu-north-1)
+- EFS has: /Vortex-mid/Vortex-moldable-sched (git repo, hpo branch)
+           /.aws (credentials)
+           /hyperparameter_test (HPO scripts, if applicable)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 1: DELETE OLD CLUSTER (skip if no existing cluster)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Delete:
+   pcluster delete-cluster --cluster-name hpo-cluster --region eu-north-1
+
+2. Wait for deletion (~5-10 min):
+   pcluster describe-cluster --cluster-name hpo-cluster --region eu-north-1 --query 'clusterStatus'
+
+   Keep checking until you get "cluster does not exist" error.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 2: CREATE CLUSTER
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Create:
+   pcluster create-cluster --cluster-name hpo-cluster --region eu-north-1 \
+     --cluster-configuration IaC_scripts/hpo-cluster-minimal.yml
+
+2. Wait for creation (~10-15 min):
+   pcluster describe-cluster --cluster-name hpo-cluster --region eu-north-1 \
+     --query '{status: clusterStatus, fleet: computeFleetStatus}'
+
+   Wait until status = CREATE_COMPLETE.
+
+3. Get head node IP:
+   pcluster describe-cluster --cluster-name hpo-cluster --region eu-north-1 \
+     --query 'headNode.publicIpAddress' --output text
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 3: SET UP HEAD NODE (executor role)
+═══════════════════════════════════════════════════════════════════════════════
+
+SSH into the head node:
+   ssh -i hpo-exp.pem ubuntu@<HEAD_NODE_IP>
+
+Then run these steps:
+
+3a. Verify EFS mount
+────────────────────
+   df -h /fsx
+   ls /fsx/Vortex-mid/Vortex-moldable-sched
+
+3b. Install Python venv + control-plane packages
+─────────────────────────────────────────────────
+   sudo apt-get update -y
+   sudo apt-get install -y python3.10-venv
+
+   python3 -m venv ~/rayenv
+   source ~/rayenv/bin/activate
+   pip install --upgrade pip
+   pip install boto3 paramiko redis PyYAML pandas scikit-learn requests
+
+3c. Copy Vortex codebase from EFS
+──────────────────────────────────
+   cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+
+3d. Copy AWS credentials
+─────────────────────────
+   [ -d /fsx/.aws ] && cp -r /fsx/.aws ~/
+
+3e. Copy SSH key (needed to SSH into on-demand instances)
+─────────────────────────────────────────────────────────
+   [ -f /fsx/hpo-exp.pem ] && cp /fsx/hpo-exp.pem ~/
+
+3f. Install + start Redis
+─────────────────────────
+   sudo apt-get install -y lsb-release curl gpg
+   curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor --yes -o /usr/share/keyrings/redis-archive-keyring.gpg
+   sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
+   echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -sc) main" \
+     | sudo tee /etc/apt/sources.list.d/redis.list
+   sudo apt-get update -y
+   sudo apt-get install -y redis-server
+   sudo systemctl enable redis-server
+   sudo systemctl start redis-server
+
+   # Verify:
+   redis-cli ping
+   # Should return: PONG
+
+3g. Start executor
+──────────────────
+   source ~/rayenv/bin/activate
+   cd ~/Vortex-moldable-sched/src/main
+   EXECUTOR_IP=$(hostname -I | awk '{print $1}')
+   nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
+   echo "Executor started on ${EXECUTOR_IP}"
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 4: SET UP COMPUTE NODES (GPU workers)
+═══════════════════════════════════════════════════════════════════════════════
+
+From the head node, check which compute nodes are up:
+   sinfo -N -l
+
+Compute nodes are named like: gpu-compute-dy-g4dn-nodes-1, ...-2, ...-3, ...-4
+
+OPTION A: Run setup on all 4 nodes in parallel from head node
+─────────────────────────────────────────────────────────────
+   for node in gpu-compute-dy-g4dn-nodes-{1..4}; do
+     ssh $node 'bash -s' <<'SETUP' &
+   set -ex
+   # Verify EFS + GPU
+   ls /fsx/Vortex-mid/Vortex-moldable-sched
+   nvidia-smi
+
+   # Python venv
+   sudo apt-get update -y
+   sudo apt-get install -y python3.10-venv
+   python3 -m venv ~/rayenv
+   source ~/rayenv/bin/activate
+   pip install --upgrade pip
+   pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu128
+   pip install "ray[default]" "ray[tune]"
+   pip install numpy pandas filelock boto3 paramiko pyyaml scikit-learn
+
+   # Copy codebase + credentials
+   cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+   [ -d /fsx/hyperparameter_test ] && cp -r /fsx/hyperparameter_test ~/hyperparameter_test
+   [ -d /fsx/.aws ] && cp -r /fsx/.aws ~/
+
+   # Download CIFAR-10
+   source ~/rayenv/bin/activate
+   if [ ! -d ~/cifar10 ]; then
+     python3 -c "
+   import torchvision, torchvision.transforms as T, os
+   torchvision.datasets.CIFAR10(root=os.path.expanduser('~/cifar10'), train=True, download=True, transform=T.ToTensor())
+   print('CIFAR-10 downloaded')
+   "
+   fi
+
+   echo "SETUP COMPLETE on $(hostname)"
+   SETUP
+   done
+   wait
+   echo "=== All compute nodes set up ==="
+
+OPTION B: SSH to each node individually and run the same commands
+────────────────────────────────────────────────────────────────
+   ssh gpu-compute-dy-g4dn-nodes-1
+   # ... run the commands from Option A's SETUP block ...
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 5: VERIFY EVERYTHING
+═══════════════════════════════════════════════════════════════════════════════
+
+From the head node:
+
+5a. Check Slurm sees all nodes:
+   sinfo -N -l
+   # All 4 nodes should be in "idle" state
+
+5b. Check Redis:
+   redis-cli ping
+   # PONG
+
+5c. Check executor is running:
+   ps aux | grep executor_HPO
+   tail ~/executor.out
+
+5d. Test a Slurm job reaches a compute node:
+   srun --partition=gpu-compute -N1 hostname
+
+5e. Check GPU on a compute node:
+   srun --partition=gpu-compute -N1 nvidia-smi
+
+5f. Check Python on a compute node:
+   srun --partition=gpu-compute -N1 bash -c 'source ~/rayenv/bin/activate && python3 -c "import torch; print(torch.cuda.is_available())"'
+   # Should print: True
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 6: SCHEDULER / DISPATCHER NODE (standalone EC2, not part of cluster)
+═══════════════════════════════════════════════════════════════════════════════
+
+This is the standalone EC2 instance that runs the Vortex scheduler and
+dispatcher. It is NOT recreated — it persists across cluster rebuilds.
+It needs: EFS mount, Redis, Python venv, Vortex codebase.
+
+6a. Mount EFS (if not already mounted)
+───────────────────────────────────────
+   # Check if already mounted
+   mountpoint -q /fsx && echo "Already mounted" || echo "Not mounted"
+
+   # If not mounted:
+   sudo apt-get update -y && sudo apt-get install -y nfs-common
+   sudo mkdir -p /fsx
+   sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576 \
+       fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx
+
+   # Persist across reboots (run once):
+   echo "fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,_netdev 0 0" \
+       | sudo tee -a /etc/fstab
+
+   # Verify:
+   ls /fsx/Vortex-mid/Vortex-moldable-sched
+
+6b. Symlink Vortex codebase (one-time)
+───────────────────────────────────────
+   The codebase lives on EFS so all nodes share the same code.
+   Create a symlink in ~ for convenience:
+
+   ln -sfn /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+
+   This means ~/Vortex-moldable-sched always points to the EFS copy.
+   Any `git pull` on EFS is immediately visible.
+
+6c. Pull latest code
+────────────────────
+   cd /fsx/Vortex-mid && git pull origin hpo
+
+6d. Ensure Redis is running
+───────────────────────────
+   redis-cli ping
+   # If not PONG:
+   sudo systemctl start redis-server
+   # Or if Redis was never installed, see Phase 3f for full install steps.
+
+6e. Activate Python venv
+────────────────────────
+   source ~/rayenv/bin/activate
+   # If venv doesn't exist, create it:
+   # python3 -m venv ~/rayenv && source ~/rayenv/bin/activate
+   # pip install --upgrade pip
+   # pip install boto3 paramiko redis PyYAML pandas scikit-learn requests
+
+6f. Start the SCHEDULER
+───────────────────────
+   cd ~/Vortex-moldable-sched/src/main
+   source ~/rayenv/bin/activate
+
+   # Moldable FCFS, 5 workflows:
+   PYTHONPATH=. python3 main_HPO.py --mode moldable --algo fcfs --count 5
+
+   # Static FCFS, 5 workflows:
+   PYTHONPATH=. python3 main_HPO.py --mode static --algo fcfs --count 5
+
+   # Moldable EDF, 10 workflows:
+   PYTHONPATH=. python3 main_HPO.py --mode moldable --algo edf --count 10
+
+   # Static EDF, 15 workflows:
+   PYTHONPATH=. python3 main_HPO.py --mode static --algo edf --count 15
+
+   CLI flags:
+     --mode     static | moldable     (default: moldable)
+     --algo     fcfs | edf            (default: fcfs)
+     --count    N                     (workflow count, used in output filenames)
+     --infra    hybrid | cloud | slurm (default: hybrid)
+
+   The scheduler starts 5 threads:
+     - Job Listener         (port 8080)
+     - Scheduler engine
+     - Completion Listener  (port 8082)
+     - Completion Processor
+     - Resource Listener    (port 8084)
+
+   It blocks until all workflows complete and END signal is received.
+
+6g. Start the DISPATCHER (in a separate terminal / tmux pane)
+─────────────────────────────────────────────────────────────
+   The dispatcher submits workflow YAMLs to the scheduler over HTTP.
+   Run AFTER the scheduler is already listening.
+
+   cd ~/Vortex-moldable-sched/src/main
+   source ~/rayenv/bin/activate
+   SCHEDULER_IP=$(hostname -I | awk '{print $1}')
+
+   # Submit 5 generated workflows with Poisson inter-arrival times:
+   PYTHONPATH=. python3 scripts/dispatcher_HPO.py \
+       --count 5 --poisson --avg-delay 120 --host ${SCHEDULER_IP}
+
+   # Submit 10 generated workflows:
+   PYTHONPATH=. python3 scripts/dispatcher_HPO.py \
+       --count 10 --poisson --avg-delay 120 --host ${SCHEDULER_IP}
+
+   # Submit 15 generated workflows:
+   PYTHONPATH=. python3 scripts/dispatcher_HPO.py \
+       --count 15 --poisson --avg-delay 120 --host ${SCHEDULER_IP}
+
+   # Send END signal (tells scheduler to compute final metrics and exit):
+   PYTHONPATH=. python3 scripts/dispatcher_HPO.py --end --host ${SCHEDULER_IP}
+
+   CLI flags:
+     --count      N           Number of generated workflows to submit
+     --poisson                Use Poisson-distributed inter-arrival times
+     --avg-delay  SECONDS     Average delay between submissions (default: 120)
+     --host       IP          Scheduler IP (default: 0.0.0.0)
+     --port       PORT        Scheduler port (default: 8080)
+     --seed       N           Random seed for reproducible delays
+     --end                    Only send END signal (no workflows)
+
+   Workflow dispatch order is controlled by WORKFLOW_ORDER in
+   config/constants_HPO.py — the dispatcher reads data{WORKFLOW_ORDER[i]}.yaml
+   for position i.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 7: RESERVED INSTANCES (standalone EC2 with GPU, not part of cluster)
+═══════════════════════════════════════════════════════════════════════════════
+
+Reserved instances are persistent GPU EC2 instances (e.g., g4dn.xlarge,
+g5.xlarge). They are NOT recreated — they persist across cluster rebuilds.
+Each one runs Redis + an executor process.
+
+OPTION A: Full setup from scratch (new/reformatted instance)
+────────────────────────────────────────────────────────────
+   SSH into the reserved instance:
+   ssh -i hpo-exp.pem ubuntu@<RESERVED_IP>
+
+   Run the setup script (handles everything: EFS mount, venv, Redis, executor):
+   bash /path/to/reserved_instance_setup.sh
+
+   Or copy from EFS:
+   # First mount EFS manually, then run the script from EFS:
+   sudo apt-get update -y && sudo apt-get install -y nfs-common
+   sudo mkdir -p /fsx
+   sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576 \
+       fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx
+   bash /fsx/Vortex-mid/Vortex-moldable-sched/src/main/scripts/reserved_instance_setup.sh
+
+   The script does all of the below steps automatically.
+
+OPTION B: Restart services on an already-set-up instance (e.g., after reboot)
+─────────────────────────────────────────────────────────────────────────────
+
+7a. Verify EFS is mounted
+─────────────────────────
+   mountpoint -q /fsx && echo "Mounted" || echo "Not mounted"
+
+   # If not mounted (e.g., after reboot without fstab entry):
+   sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576 \
+       fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx
+
+7b. Symlink Vortex codebase (one-time, if not already done)
+───────────────────────────────────────────────────────────
+   If you used reserved_instance_setup.sh, the codebase was copied (not symlinked).
+   To use symlink instead (always up-to-date with EFS):
+   rm -rf ~/Vortex-moldable-sched
+   ln -sfn /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+
+   Or to keep the copy approach, re-copy after code updates:
+   cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+
+7c. Ensure Redis is running
+───────────────────────────
+   redis-cli ping
+   # If not PONG:
+   sudo systemctl start redis-server
+   # Verify:
+   redis-cli ping
+
+7d. Start the EXECUTOR
+──────────────────────
+   source ~/rayenv/bin/activate
+   cd ~/Vortex-moldable-sched/src/main
+
+   # Check if executor is already running:
+   ps aux | grep executor_HPO | grep -v grep
+
+   # If not running, start it:
+   EXECUTOR_IP=$(hostname -I | awk '{print $1}')
+   nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
+   echo "Executor started on ${EXECUTOR_IP}"
+
+   # Monitor executor:
+   tail -f ~/executor.out
+
+7e. Verify executor is accepting connections
+────────────────────────────────────────────
+   # From the scheduler node, check if executor responds:
+   curl -s http://<RESERVED_IP>:8089/status || echo "Not reachable"
+
+   # Executor listens on port 8089 by default.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ PHASE 8: UPDATE CODE (when pulling new changes)
+═══════════════════════════════════════════════════════════════════════════════
+
+On the scheduler/dispatcher node:
+   cd /fsx/Vortex-mid && git pull origin hpo
+   # If using symlink, ~/Vortex-moldable-sched is already updated.
+   # If using copy:
+   cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+
+On the cluster head node:
+   cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+
+On cluster compute nodes (from head node):
+   for node in gpu-compute-dy-g4dn-nodes-{1..4}; do
+     ssh $node 'cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched' &
+   done
+   wait
+
+On reserved instances:
+   # If using symlink: nothing to do (EFS is shared).
+   # If using copy:
+   ssh -i hpo-exp.pem ubuntu@<RESERVED_IP> \
+     'cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched'
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ RUNNING AN EXPERIMENT (end-to-end checklist)
+═══════════════════════════════════════════════════════════════════════════════
+
+Before running, ensure all services are up:
+
+   [ ] EFS mounted on: scheduler node, cluster head, all compute nodes, all reserved instances
+   [ ] Redis running on: scheduler node, cluster head, all reserved instances
+   [ ] Executor running on: cluster head, all reserved instances
+   [ ] Latest code pulled to EFS: cd /fsx/Vortex-mid && git pull origin hpo
+   [ ] Code copied/symlinked to all nodes
+
+Then:
+
+   1. Terminal 1 (scheduler node): Start scheduler
+      cd ~/Vortex-moldable-sched/src/main && source ~/rayenv/bin/activate
+      PYTHONPATH=. python3 main_HPO.py --mode moldable --algo fcfs --count 5
+
+   2. Terminal 2 (scheduler node): Start dispatcher
+      cd ~/Vortex-moldable-sched/src/main && source ~/rayenv/bin/activate
+      SCHEDULER_IP=$(hostname -I | awk '{print $1}')
+      PYTHONPATH=. python3 scripts/dispatcher_HPO.py --count 5 --poisson --host ${SCHEDULER_IP}
+
+   3. Wait for all workflows to complete (monitor scheduler output)
+
+   4. Terminal 2: Send END signal
+      PYTHONPATH=. python3 scripts/dispatcher_HPO.py --end --host ${SCHEDULER_IP}
+
+   5. Scheduler computes metrics and exits. Results saved with prefix like:
+      FCFS_Moldable_HPO_5wf_hybrid_
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════════
+
+- Compute nodes not appearing in sinfo:
+    Check: pcluster describe-cluster --cluster-name hpo-cluster --region eu-north-1
+    MinCount=4 means all 4 should launch automatically.
+
+- EFS not mounted on compute node:
+    ParallelCluster should auto-mount. If not:
+    sudo mount -t nfs4 -o nfsvers=4.1 fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx
+
+- nvidia-smi not found on compute node:
+    g4dn instances with ubuntu2204 AMI should have NVIDIA drivers.
+    If missing: sudo apt-get install -y nvidia-driver-535
+
+- pip install torch hangs or OOMs:
+    g4dn.xlarge has 16GB RAM. Should be fine, but if issues:
+    pip install --no-cache-dir torch==2.7.1 ...
+
+- Executor won't start (Redis not ready):
+    sudo systemctl restart redis-server
+    sleep 2 && redis-cli ping
+    Then restart executor.
