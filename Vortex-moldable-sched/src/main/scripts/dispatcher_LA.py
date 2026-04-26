@@ -24,6 +24,7 @@ from config.constants_LA import (
     TEMPORAL_COMPRESSION_FACTOR,
     SUBMISSION_JITTER_MINUTES
 )
+from utils.validate_workflow import validate_workflow
 
 
 def plotSubmitTimes(submitTimes):
@@ -144,23 +145,19 @@ def fetchWorkflow(i, path=None):
     with open(file_name, 'r') as stream:
         try:
             workflow = yaml.safe_load(stream)
-
-            # Validation: Ensure all workflows have licenses (except END)
-            if workflow.get('id') != 'END':
-                if not workflow.get('constraints', {}).get('license_pool'):
-                    raise ValueError(f"Workflow {i} missing license_pool in constraints!")
-                if not workflow.get('config', {}).get('software_id'):
-                    raise ValueError(f"Workflow {i} missing software_id in config!")
-
-                print(f"  [✓] Loaded {workflow['id']} (license: {workflow['constraints']['license_pool']})")
-
-            return workflow
         except yaml.YAMLError as exc:
             print(f"  [✗] YAML error loading workflow {i}: {exc}")
             return None
-        except ValueError as exc:
-            print(f"  [✗] Validation error: {exc}")
-            return None
+
+    if workflow is not None and workflow.get('id') != 'END':
+        violations = validate_workflow(workflow, 'LA')
+        if violations:
+            msg = (f"Workflow {workflow.get('id', '<no id>')} ({file_name}) "
+                   f"failed LA schema validation:\n  - " + "\n  - ".join(violations))
+            raise ValueError(msg)
+        print(f"  [✓] Loaded {workflow['id']} (license: {workflow['constraints']['license_pool']})")
+
+    return workflow
 
 
 def send_workflow(workflow):

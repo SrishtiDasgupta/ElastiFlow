@@ -8,6 +8,7 @@ import requests
 import yaml
 
 from config.constants import TOTAL_WORKFLOWS
+from utils.validate_workflow import validate_workflow
 
 # DEPRECATED
 def delay_generation(workflows):
@@ -91,11 +92,16 @@ def fetchWorkflow(i, path = "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-
     with open(file_name, 'r') as stream:
         try:
             workflow = yaml.safe_load(stream)
-            # print(f" why {workflow}")
         except yaml.YAMLError as exc:
-            workflow = None
             print(f" error: {exc}")
-        return workflow
+            return None
+    if workflow is not None and workflow.get('id') != 'END':
+        violations = validate_workflow(workflow, 'PLAIN')
+        if violations:
+            msg = (f"Workflow {workflow.get('id', '<no id>')} ({file_name}) "
+                   f"failed PLAIN schema validation:\n  - " + "\n  - ".join(violations))
+            raise ValueError(msg)
+    return workflow
 
 def send_workflow(workflow):
     proxies = {

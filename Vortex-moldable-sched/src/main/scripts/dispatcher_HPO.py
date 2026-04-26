@@ -6,6 +6,7 @@ import requests
 import numpy as np
 
 from config.constants_HPO import TOTAL_WORKFLOWS as DEFAULT_TOTAL_WORKFLOWS, AVG_INTERARRIVAL_TIME, WORKFLOW_ORDER
+from utils.validate_workflow import validate_workflow
 
 
 def generate_poisson_delays(num_workflows, avg_interarrival):
@@ -41,8 +42,14 @@ def fetchWorkflow(i, use_generated=False):
         try:
             workflow = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
-            workflow = None
             print(f"Error loading workflow: {exc}")
+            return None
+    if workflow is not None and workflow.get('id') != 'END':
+        violations = validate_workflow(workflow, 'HPO')
+        if violations:
+            msg = (f"Workflow {workflow.get('id', '<no id>')} ({file_name}) "
+                   f"failed HPO schema validation:\n  - " + "\n  - ".join(violations))
+            raise ValueError(msg)
     return workflow
 
 
