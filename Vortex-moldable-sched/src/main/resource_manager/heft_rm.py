@@ -25,8 +25,8 @@ class HEFTResourceManager(ResourceManager):
             else:
                 # NOTE: We do not multiply per second cost since it will cancel out
                 runtime = getRuntime(1, wf_plan['config']['mesh'], 'on-prem')
-                exec_cost = getEstimate(runtime, 1 + wf_plan['constraints']['tinydaIterations'], 1, chains = wf_plan['constraints']['chains']) 
-                + getEstimate(runtime, AVG_TINYDA_ITERATIONS, AVG_WORKFLOW_ITERATIONS-1, 4) # Avg configs
+                exec_cost = (getEstimate(runtime, 1 + wf_plan['constraints']['tinydaIterations'], 1, chains = wf_plan['constraints']['chains'])
+                + getEstimate(runtime, AVG_TINYDA_ITERATIONS, AVG_WORKFLOW_ITERATIONS-1, 4)) # Avg configs
                 # In case of a tie, workflows are picked randomly, here with wf_id
                 heapq.heappush(self.workflow_heap, (-exec_cost, wf_plan['id'], wf_plan))  
 
@@ -38,8 +38,8 @@ class HEFTResourceManager(ResourceManager):
                 # We need maxheap, but python gives minheap by default, so multiply -1
                 wf = self.getWorkflow(req['wf-id']) # (instances, budget, deadline, start_time, mesh)
                 runtime = getRuntime(1, wf[4], wf[0][0][0].name) # instances = [(instance, alloc_n, ip_list)]
-                exec_cost = getEstimate(runtime, req['tinyda-iterations'], 1, chains = req['count'])
-                + getEstimate(runtime, AVG_TINYDA_ITERATIONS, workflow_iterations = max(AVG_WORKFLOW_ITERATIONS - req['iteration'], 1))
+                exec_cost = (getEstimate(runtime, req['tinyda-iterations'], 1, chains = req['count'])
+                + getEstimate(runtime, AVG_TINYDA_ITERATIONS, workflow_iterations = max(AVG_WORKFLOW_ITERATIONS - req['iteration'], 1)))
             else:
                 exec_cost = 100000 # Free requests are always on top
             # In case of a tie, workflows are picked randomly, here with wf_id
