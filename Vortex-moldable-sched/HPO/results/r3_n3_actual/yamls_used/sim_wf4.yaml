@@ -1,0 +1,39 @@
+api: 4.7.0
+id: hpo-sim-wf4-vgg19-large-budget
+
+constraints:
+  budget: 80.00                 # Large budget
+  deadline: 7200                # Comfortable deadline
+  chains: 8                     # Many parallel trials
+  tinydaIterations: 10          # Many epochs
+
+config:
+  mesh: vgg19
+  workflowIterations: 5         # Many rounds
+
+vars:
+  - id: input_config
+    value: {
+      "learning_rate": 0.01,
+      "momentum": 0.9,
+      "batch_size": 128,
+      "epochs": 10,
+      "next_trials": 8,
+      "model": "vgg19",
+      "image_size": 64
+    }
+
+actions:
+  - type: for
+    input: input_config
+    enumerator: i
+    yieldToInput: output_config
+    actions:
+      - type: execute
+        service: /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py
+        inputs:
+          - id: config
+            var: i
+        outputs:
+          - id: config_out
+            var: output_config

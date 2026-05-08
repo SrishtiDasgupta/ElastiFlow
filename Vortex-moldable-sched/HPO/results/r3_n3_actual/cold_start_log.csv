@@ -1,0 +1,2 @@
+instance_id,instance_type,role,az,t_request,t_running,t_ssh,t_setup_done,t_executor_listening,outcome
+i-03932f84a2299bae6,g4dn.xlarge,worker,eu-north-1b,1778250712.387143,1778250727.7641695,1778250763.635558,1778251071.4787474,1778251071.6361651,ok

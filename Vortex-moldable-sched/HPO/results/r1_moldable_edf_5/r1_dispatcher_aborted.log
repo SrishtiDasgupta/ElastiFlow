@@ -1,0 +1,17 @@
+Submitting 5 generated HPO workflows with Poisson delays (avg=90s)
+Submitting pos=0 data9.yaml (id: hpo-b03a4442, model: convnext_large)
+  Success: hpo-b03a4442
+  Waiting 271s before next submission...
+Submitting pos=1 data7.yaml (id: hpo-73120874, model: wide_resnet101_2)
+  Success: hpo-73120874
+  Waiting 119s before next submission...
+Submitting pos=2 data5.yaml (id: hpo-df19b440, model: wide_resnet101_2)
+  Success: hpo-df19b440
+  Waiting 82s before next submission...
+Traceback (most recent call last):
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/scripts/dispatcher_HPO.py", line 188, in <module>
+    workflow = fetchWorkflow(i, use_generated=True)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/scripts/dispatcher_HPO.py", line 52, in fetchWorkflow
+    raise ValueError(msg)
+ValueError: Workflow hpo-a87b8123 (/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_HPO/data3.yaml) failed HPO schema validation:
+  - vars[0].value.next_trials (3) != constraints.chains (4)

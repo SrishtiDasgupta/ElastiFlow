@@ -1,0 +1,33 @@
+actions:
+- actions:
+  - inputs:
+    - id: config
+      var: i
+    outputs:
+    - id: config_out
+      var: output_config
+    service: /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py
+    type: execute
+  enumerator: i
+  input: input_config
+  type: for
+  yieldToInput: output_config
+api: 4.7.0
+config:
+  mesh: convnext_large
+  workflowIterations: 4
+constraints:
+  budget: 2.07
+  chains: 2
+  deadline: 7002.9
+  tinydaIterations: 20
+id: hpo-0a5998a0
+vars:
+- id: input_config
+  value:
+    batch_size: 64
+    epochs: 20
+    learning_rate: 0.0643
+    model: convnext_large
+    momentum: 0.8
+    next_trials: 2

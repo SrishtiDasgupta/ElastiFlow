@@ -1,0 +1,39 @@
+api: 4.7.0
+id: hpo-sim-wf5-convnext-constrained
+
+constraints:
+  budget: 20.00                 # Low budget
+  deadline: 4800
+  chains: 3
+  tinydaIterations: 5
+
+config:
+  mesh: convnext_large
+  workflowIterations: 3
+
+vars:
+  - id: input_config
+    value: {
+      "learning_rate": 0.002,
+      "momentum": 0.9,
+      "batch_size": 64,
+      "epochs": 5,
+      "next_trials": 3,
+      "model": "convnext_large",
+      "image_size": 64
+    }
+
+actions:
+  - type: for
+    input: input_config
+    enumerator: i
+    yieldToInput: output_config
+    actions:
+      - type: execute
+        service: /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py
+        inputs:
+          - id: config
+            var: i
+        outputs:
+          - id: config_out
+            var: output_config

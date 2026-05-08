@@ -1,0 +1,19 @@
+Submitting 5 generated HPO workflows with Poisson delays (avg=90s)
+Submitting pos=0 data9.yaml (id: hpo-b03a4442, model: convnext_large)
+  Success: hpo-b03a4442
+  Waiting 271s before next submission...
+Submitting pos=1 data7.yaml (id: hpo-73120874, model: wide_resnet101_2)
+  Success: hpo-73120874
+  Waiting 119s before next submission...
+Submitting pos=2 data5.yaml (id: hpo-df19b440, model: wide_resnet101_2)
+  Success: hpo-df19b440
+  Waiting 82s before next submission...
+Submitting pos=3 data3.yaml (id: hpo-a87b8123, model: vgg19)
+  Success: hpo-a87b8123
+  Waiting 15s before next submission...
+Submitting pos=4 data8.yaml (id: hpo-60bf3eb4, model: vgg19)
+  Success: hpo-60bf3eb4
+
+All 5 workflow(s) submitted.
+Check progress:  cat workflow_status.log
+Send END when done:  PYTHONPATH=. python3 scripts/dispatcher_HPO.py --end --host 172.31.9.121

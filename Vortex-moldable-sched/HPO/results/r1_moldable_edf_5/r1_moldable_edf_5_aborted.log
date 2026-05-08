@@ -1,0 +1,94 @@
+Starting HPO Scheduling System
+Algorithm: EDF, Mode: MOLDABLE
+Expected workflows: 5
+Infrastructure: hybrid
+==================================================
+Resource config: resources_HPO.yaml
+Output prefix: EDF_Moldable_HPO_5wf_hybrid_
+Using Moldable HPO EDF Scheduler
+Scheduler initialized: EDF_Optimized_HPO
+
+Starting scheduler threads:
+  1. Job Listener (port 8080)
+  2. HPO Scheduler
+  3. Completion Listener (port 8082)
+  4. Completion Processor
+  5. Resource Request Listener (port 8084)
+  ✅ Job Listener started
+Starting HPO Moldable EDF scheduler...
+  - EDF ordering: Workflows prioritized by earliest deadline
+  - Moldable: Dynamic resource reallocation between iterations
+  - Deadline urgency boost: CRITICAL 2.0x, WARNING 1.5x, Regular 1.2x
+  ✅ HPO Scheduler started
+  ✅ Completion Listener started
+HPO Scheduler started listening to completed jobs...
+  ✅ Completion Processor started
+  ✅ Resource Request Listener started
+
+==================================================
+HPO Scheduling System Ready!
+Algorithm: EDF, Mode: MOLDABLE
+Waiting for HPO workflows...
+==================================================
+
+📌 Moldable Features Enabled:
+  • Dynamic instance type switching
+  • Elastic resource scaling
+  • Cross-type optimization (g4dn ↔ g5)
+  • Automatic executor creation per workflow
+
+⚠️  Important: Cloud executors will be created automatically
+No manual executor start needed on reserved instances!
+
+Press Ctrl+C to stop the scheduler
+Starting server on port 8084...Starting server on port 8082...
+
+Starting server on port 8080...
+Workflow received at 1778096417.6653886
+172.31.9.121 - - [06/May/2026 19:40:17] "POST / HTTP/1.1" 200 -
+EDF Moldable selected: 1 x g4 for 3 trials (cost: $0.13, runtime: 2018s)
+EDF Moldable: Allocated 1 on-prem on-prem
+hpo-b03a4442 EDF moldable allocation (deadline=1778102066.5s):  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-b03a4442: Using on-prem executor at 172.31.10.173
+  Workers: {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+172.31.10.173 - - [06/May/2026 19:40:30] "POST / HTTP/1.1" 200 -
+EDF Moldable: Scaling on-prem workflow, adding 1 on-prem instances
+hpo-b03a4442 EDF allocated additional resources:  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.04435992240905762
+Workflow received at 1778096688.6983502
+172.31.9.121 - - [06/May/2026 19:44:48] "POST / HTTP/1.1" 200 -
+EDF Moldable selected: 1 x g4 for 2 trials (cost: $0.08, runtime: 1235s)
+EDF Moldable: Allocated 1 on-prem on-prem
+hpo-73120874 EDF moldable allocation (deadline=1778100525.9s):  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-73120874: Using on-prem executor at 172.31.10.173
+  Workers: {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+172.31.10.173 - - [06/May/2026 19:45:00] "POST / HTTP/1.1" 200 -
+EDF Moldable: Scaling on-prem workflow, adding 1 on-prem instances
+hpo-73120874 EDF allocated additional resources:  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.00911402702331543
+Workflow received at 1778096807.307575
+172.31.9.121 - - [06/May/2026 19:46:47] "POST / HTTP/1.1" 200 -
+EDF Moldable selected: 1 x g4 for 3 trials (cost: $0.11, runtime: 1667s)
+hpo-df19b440 EDF moldable allocation (deadline=1778101667.2s):  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.35.38'])}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-df19b440: Using cloud executor at 172.31.35.38
+  Workers: {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.35.38'])}, 'on-demand': {}}
+Data sent successfully!
+172.31.35.38 - - [06/May/2026 19:47:00] "POST / HTTP/1.1" 200 -
+hpo-df19b440 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.39.103'])}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.015206336975097656
+172.31.10.173 - - [06/May/2026 19:50:02] "POST / HTTP/1.1" 200 -
+EDF Moldable opportunity: hpo-b03a4442 can scale 2→4 (speedup 2.0x, 1346s→673s)
+EDF Moldable: On-prem workflow cannot scale (no free slots or budget)
+hpo-b03a4442 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.011118173599243164
+172.31.10.173 - - [06/May/2026 19:51:31] "POST / HTTP/1.1" 200 -
+EDF Moldable: On-prem workflow cannot scale (no free slots or budget)
+hpo-73120874 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.011265993118286133
