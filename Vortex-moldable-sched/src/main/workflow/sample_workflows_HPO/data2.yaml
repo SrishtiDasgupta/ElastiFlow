@@ -17,9 +17,9 @@ config:
   mesh: convnext_large
   workflowIterations: 5
 constraints:
-  budget: 1.59
+  budget: 2.39
   chains: 2
-  deadline: 5147.89
+  deadline: 7721.84
   tinydaIterations: 24
 id: hpo-5e16eb0a
 vars:

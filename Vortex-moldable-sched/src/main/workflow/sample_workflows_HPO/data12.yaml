@@ -17,9 +17,9 @@ config:
   mesh: vgg19
   workflowIterations: 4
 constraints:
-  budget: 1.28
+  budget: 1.92
   chains: 4
-  deadline: 3819.14
+  deadline: 5728.71
   tinydaIterations: 15
 id: hpo-ccb43739
 vars:

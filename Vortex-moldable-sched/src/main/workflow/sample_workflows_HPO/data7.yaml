@@ -17,9 +17,9 @@ config:
   mesh: wide_resnet101_2
   workflowIterations: 4
 constraints:
-  budget: 1.58
+  budget: 2.37
   chains: 2
-  deadline: 3837.2
+  deadline: 5755.8
   tinydaIterations: 20
 id: hpo-73120874
 vars:
