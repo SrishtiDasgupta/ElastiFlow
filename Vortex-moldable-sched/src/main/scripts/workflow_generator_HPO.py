@@ -41,10 +41,13 @@ from config.constants_HPO import (
 #   2. Medium (chains=3) workflows → sustained load
 #   3. Narrow-Long (chains=2, high epochs) workflows last → benefit most from moldable scale-up
 #
-# With MOLDABLE_INITIAL_CAP=0.5:
-#   chains=4 → initial=2 (static=4)  → 2x resource savings
-#   chains=3 → initial=2 (static=3)  → 1.5x resource savings
-#   chains=2 → initial=1 (static=2)  → 2x resource savings
+# With MOLDABLE_INITIAL_CAP=1.0 (revised 2026-05-08 after R1 analysis):
+#   Initial allocation = chains₀ (== static at iter 0). Moldable wins by tracking
+#   chain GROWTH across iterations (chains₀ → next_trials → ... up to ~3× chains₀
+#   over 4-5 iters). Static is locked at chains₀; its longest iterations run at
+#   the worst allocation. Moldable claims freed always-on lanes when shorter
+#   siblings finish, scaling up to chains_k.
+#   See HPO/results/r1_moldable_edf_5/R1_R2_FINALIZED.md for the empirical analysis.
 #
 # Model distribution: convnext=7 (47%), wide_resnet=4 (27%), vgg19=4 (27%)
 # ====================================================================================

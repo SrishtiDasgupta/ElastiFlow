@@ -60,14 +60,19 @@ PRIMARY_WORKFLOWS = 15  # Full batch for comprehensive evaluation
 #   All chains=2, high epochs (18-28). Moldable starts with 1 instance each,
 #   scales up as earlier Wide-Short workflows complete and free resources.
 #   Cumulative static: 42 (3x). Moldable: 23 (1.6x).
-WORKFLOW_ORDER = [8, 3, 9, 7, 5, 12, 1, 4, 10, 14, 0, 6, 11, 2, 13]
+WORKFLOW_ORDER = [8, 9, 5, 7, 3, 12, 1, 4, 10, 14, 0, 6, 11, 2, 13]  # N=3 dispatch (R3, revised 2026-05-08): data8 (chains₀=4) fills slurm cleanly; data9 (chains₀=3, 5 iters convnext) takes cloud-g4 fully; data5 (chains₀=3, 5 iters wide_resnet) lands on cloud-g4 PARTIAL (only 1 OD-g4 free) and runs at lanes=1 until data9 finishes, then moldable scales 1→4 for last 2 iters. Dispatch ordering chosen so the trapped wf is the one with most iters remaining at scale-up time, maximizing moldable benefit. See HPO/results/r3_n3_projected/.
 
 # ====================================================================================
 # MEASURED OVERHEADS - From g4.jsonl and g5.jsonl Data
 # ====================================================================================
 
-# Cold start time for on-demand instances (from thesis Section 5.3)
-COLD_START_TIME = 400.52  # seconds
+# Cold start time for on-demand instances.
+# Original thesis Section 5.3 measurement was 400.52s (boot + setup, no GPU drivers).
+# After the 2026-05 NVIDIA driver install + reboot was added to on_demand_setup_HPO_worker.sh,
+# real cold start is ~530s: 400 (boot+base setup) + ~90 (nvidia-driver-535-server install)
+# + ~40 (reboot back to ready). Using 530s prevents under-estimating runtime/cost and avoids
+# RESOURCE_REQUEST_TIMEOUT firing before the worker is actually up.
+COLD_START_TIME = 530.0  # seconds
 
 # Setup overheads per model (from g4_img64.jsonl instrumentation data)
 SETUP_OVERHEAD = {
@@ -120,7 +125,24 @@ INSTANCE_COSTS = {
 
     # Cloud On-Demand Instances (xlarge)
     'cloud_ondemand_g4dn': 0.526,  # g4dn.xlarge on-demand $/hour
-    'cloud_ondemand_g5': 1.006     # g5.xlarge on-demand $/hour (most expensive for budget)
+    'cloud_ondemand_g5': 1.006,    # g5.xlarge on-demand $/hour (most expensive for budget)
+
+    # ----------------------------------------------------------------------
+    # Per-(family, size) entries — additive, unreferenced by current code.
+    # The deployed inventory (single size per family) does not exercise
+    # these; they exist so a future inventory widening can drop in extra
+    # sizes without further config edits. See POLICY_B_TODO.md.
+    # AWS list prices, eu-north-1.
+    # ----------------------------------------------------------------------
+    'cloud_reserved_g4dn.xlarge':  0.227,
+    'cloud_reserved_g4dn.2xlarge': 0.325,
+    'cloud_reserved_g5.xlarge':    0.435,
+    'cloud_reserved_g5.2xlarge':   0.522,
+
+    'cloud_ondemand_g4dn.xlarge':  0.526,
+    'cloud_ondemand_g4dn.2xlarge': 0.752,
+    'cloud_ondemand_g5.xlarge':    1.006,
+    'cloud_ondemand_g5.2xlarge':   1.212,
 }
 
 # ====================================================================================
@@ -128,7 +150,7 @@ INSTANCE_COSTS = {
 # ====================================================================================
 #
 # Plain SeisSol formula:
-#   deadline = single_run_time × tinyda_iterations × workflow_iterations × 2
+#   deadline = single_run_time × tinyda_iterations × workflow_iterations × 3
 #   budget   = single_run_cost × chains × tinyda_iterations × workflow_iterations
 #
 # HPO mapping (epoch ↔ TinyDA iteration, trial ↔ chain):
@@ -137,7 +159,11 @@ INSTANCE_COSTS = {
 #   trials   = parallel count per iteration (like chains)
 #
 # Base unit is pure compute time per epoch — no cold start (same as Plain's 253s).
-# The 2x contention factor covers cold start, queuing delays, etc.
+# The 3x contention factor covers cold start (measured ~330s), queuing delays,
+# and moldable lane-allocation races. Empirically tuned from R1 (2026-05-06):
+# ×2 was too tight (3/5 wfs missed by <55s — near-binary on resource luck);
+# ×3 isolates the genuine race-loss case (1/5 missed at 1.29×). See
+# HPO/results/r1_moldable_edf_5/R1_FINALIZED.md.
 # ====================================================================================
 
 # Per-epoch runtime on slowest instance (g4dn, 1 worker) — pure compute, no cold start
@@ -158,10 +184,10 @@ EPOCH_COST = {
 # FINAL CONSTRAINT VALUES
 # ====================================================================================
 
-# Deadline: epoch_time × avg_epochs × workflow_iterations × 2x_contention
-# (Same structure as Plain: run_time × tinyda_iters × wf_iters × 2)
+# Deadline: epoch_time × avg_epochs × workflow_iterations × 3x_contention
+# (Same structure as Plain: run_time × tinyda_iters × wf_iters × 3)
 AVG_DEADLINE = {
-    model: EPOCH_RUNTIME[model] * AVG_TINYDA_ITERATIONS * AVG_WORKFLOW_ITERATIONS * 2
+    model: EPOCH_RUNTIME[model] * AVG_TINYDA_ITERATIONS * AVG_WORKFLOW_ITERATIONS * 3
     for model in EPOCH_RUNTIME
 }
 
@@ -182,16 +208,18 @@ MIN_ITERATION_RUNTIME = MIN_RUNTIME * MIN_EPOCHS  # Minimum iteration runtime
 MIN_INSTANCE_COST = min(INSTANCE_COSTS.values()) * (MIN_RUNTIME / 3600)  # Minimum cost threshold
 
 # Request and polling parameters
-RESOURCE_REQUEST_TIMEOUT = 8 * 60  # 8 minutes — must exceed COLD_START_TIME (400s) + setup (~120s)
+RESOURCE_REQUEST_TIMEOUT = 12 * 60  # 12 minutes — must exceed COLD_START_TIME (530s) + safety margin.
+# Executor-side wait is 30 + RESOURCE_REQUEST_TIMEOUT (exec_sched.py:389) = 750s, giving 220s
+# headroom over 530s cold start so the executor doesn't time out before the scheduler returns IPs.
 WORKFLOW_POLLING = 30  # Polling interval in seconds for new workflow requests
 RESOURCE_UTILIZATION_POLLING = 20 * 60  # 20 minutes for resource utilization metrics
 
 # Moldable scheduler optimization factors (from SeisSol approach)
-OPTIM_FCFS_BFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}  # Budget pressure factors
-OPTIM_FCFS_DFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}  # Deadline pressure factors
+OPTIM_FCFS_BFACTOR = {0: 0.5, 1: 0.7, 2: 0.85, 3: 1.0, 4: 1.0, 5: 1.0}  # Budget pacing factor: fraction of remaining budget usable for current iter's scale-up. HPO chain-growth is back-loaded (chains₀ → 3× chains₀ over 4-5 iters) so late iters NEED most of the budget. Original {0.1, 0.3, 0.4, 0.6, 0.7, 0.8} pacing (Plain SeisSol heritage) was too conservative for HPO and denied data5's late-iter scale-up in the modeled R3. See HPO/results/r1_moldable_edf_5/R1_R2_FINALIZED.md cross-effect analysis.
+OPTIM_FCFS_DFACTOR = {0: 0.1, 1: 0.3, 2: 0.4, 3: 0.6, 4: 0.7, 5: 0.8}  # Deadline pacing factor (kept conservative; ×3 contention already gives moldable plenty of time headroom)
 SPEEDUP_THRESHOLD = 1.4  # Minimum speedup for instance type switching
 DEADLINE_BUFFER = 180  # Safety buffer for deadline calculations (3 minutes)
-MOLDABLE_INITIAL_CAP = 0.5  # Start at half max parallelism; moldable scale-up fills the rest
+MOLDABLE_INITIAL_CAP = 1.0  # Start at full chain count (== static initial). Moldable advantage now lives in tracking chain GROWTH across iterations, not in starting low. R1 cap=0.5 was a self-handicap: it forced every wf to lanes=ceil(chains/2), saturating pool with half-throughput wfs and denying scale-ups. cap=1.0 = identical to static at iter 0; wins via late-iter scale-ups when pool clears. See HPO/results/r1_moldable_edf_5/R1_R2_FINALIZED.md.
 
 # ====================================================================================
 # SIMULATION PARAMETERS
@@ -213,10 +241,10 @@ AVG_INTERARRIVAL_TIME = 720  # seconds between HPO workflow submissions
 """
 Constraint formula consistent with Plain SeisSol (epoch ↔ TinyDA iteration):
 
-Deadline per workflow (epoch_time × 20 × 4 × 2):
-- VGG19:       22.17 × 20 × 4 × 2 = 3,547s (59 min)
-- Wide_ResNet:  29.66 × 20 × 4 × 2 = 4,746s (79 min)
-- ConvNeXt:    34.03 × 20 × 4 × 2 = 5,445s (91 min)
+Deadline per workflow (epoch_time × 20 × 4 × 3):
+- VGG19:       22.17 × 20 × 4 × 3 = 5,321s (89 min)
+- Wide_ResNet:  29.66 × 20 × 4 × 3 = 7,118s (119 min)
+- ConvNeXt:    34.03 × 20 × 4 × 3 = 8,167s (136 min)
 
 Budget per workflow (epoch_cost × 3 × 20 × 4):
 - VGG19:       ~$1.10
@@ -256,15 +284,16 @@ if __name__ == "__main__":
   Plain: workflow iterations (4)          ↔  HPO: workflow iterations (4)
 
 ### Constraint Formula (identical structure to Plain)
-  deadline = epoch_runtime × avg_epochs × workflow_iterations × 2x_contention
+  deadline = epoch_runtime × avg_epochs × workflow_iterations × 3x_contention
   budget   = epoch_cost   × trials     × avg_epochs          × workflow_iterations
 
 Base unit is pure compute per epoch on worst-case instance — NO cold start baked in.
-Cold start and queuing delays are covered by the 2x contention factor (same as Plain).
+Cold start (~330s measured), queuing delays, and moldable lane-allocation races
+are covered by the 3x contention factor.
 
 ### Example: vgg19 deadline
   epoch_runtime = 266.02s / 12 = 22.17 s/epoch (g4dn, 1 GPU, pure compute)
-  deadline = 22.17 × 20 × 4 × 2 = 3,547s (59 min)
+  deadline = 22.17 × 20 × 4 × 3 = 5,321s (89 min)
 
 ### Example: vgg19 budget
   epoch_cost = (198.00 / 12) / 3600 × $1.006 = $0.00461/epoch (g5 on-demand)

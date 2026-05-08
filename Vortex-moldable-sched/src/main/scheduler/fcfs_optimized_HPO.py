@@ -315,8 +315,16 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             runtime_func = type_runtime[inst_type]
             total_free = sum(free for _, free in slots)
 
+            # When cap >= 1.0, pin initial allocation to chains (or pool max) so
+            # moldable starts identical to static at iter 0. See edf_optimized_HPO.py
+            # for full rationale.
+            if MOLDABLE_INITIAL_CAP >= 1.0 and total_free >= 1:
+                num_hosts_range = [min(max_initial, total_free)]
+            else:
+                num_hosts_range = range(1, min(max_initial, total_free) + 1)
+
             # Only try up to available free slots (can't allocate more than exists)
-            for num_hosts in range(1, min(max_initial, total_free) + 1):
+            for num_hosts in num_hosts_range:
                 # Calculate runtime
                 if num_hosts >= trials:
                     workers_per_trial = num_hosts // trials
@@ -399,7 +407,13 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
         # Calculate iteration-weighted constraints
         ind = request['iteration']
-        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
+        # Full remaining time — used for scale-up feasibility. Parallelism shrinks per-iteration
+        # runtime, so the original DFACTOR slice (designed to PACE iterations within the deadline)
+        # is too tight for the scale-up gate in HPO workloads where per-iter runtimes are short
+        # (5-10 min) relative to the deadline (1-2 hr). Decoupling: full time for scale-up,
+        # paced slice for scale-down.
+        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim))
+        paced_available_time = available_time * OPTIM_FCFS_DFACTOR[ind]
 
         # Current allocation
         current_instance = instances[0][0]
@@ -420,7 +434,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
         while trials_per_instance > 0:
             runtime = trials_per_instance * runtime_per_trial
-            if runtime < available_time:
+            if runtime < paced_available_time:
                 min_needed_instances = min_needed_trials // trials_per_instance + bool(min_needed_trials % trials_per_instance)
                 if current_trials > min_needed_instances:
                     # Free excess instances

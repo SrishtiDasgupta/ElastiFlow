@@ -55,6 +55,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         self.resource_request_heap = []
         self.workflow_counter = 0
         self.resource_request_counter = 0
+        self._heap_log_counter = 0   # for periodic [HEAP] visibility log
 
         super().__init__(queue, finish_queue, resource_request_queue)
 
@@ -102,6 +103,12 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             workflows = getAllElements(wf_mb, self.queue, None)
 
             if workflows:
+                # Defensive log: which wfs just left the queue?
+                try:
+                    drained_ids = [eval(w).get('id', '?') for w in workflows]
+                except Exception as e:
+                    drained_ids = [f'<eval-error: {e}>']
+                print(f"[SCHED] Drained {len(workflows)} wf(s) from queue: {drained_ids}")
                 self.processWorkflowsByDeadline(workflows)
 
             wf_plan = self.peekWorkflow(self.workflow_heap)
@@ -132,6 +139,13 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                     else:
                         self.resource_manager.setResourcesAvailable(False)
                         print('No HPO EDF moldable resources to allocate, waiting...')
+
+            # Periodic heap visibility (~ every 60s assuming WORKFLOW_POLLING=5s)
+            self._heap_log_counter += 1
+            if self._heap_log_counter >= 12:
+                heap_ids = [entry[2] for entry in self.workflow_heap]
+                print(f"[HEAP] size={len(self.workflow_heap)} ids={heap_ids}")
+                self._heap_log_counter = 0
 
             (sim or time).sleep(WORKFLOW_POLLING)
 
@@ -394,7 +408,17 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             runtime_func = type_runtime[inst_type]
             total_free = sum(free for _, free in slots)
 
-            for num_hosts in range(1, min(max_initial, total_free) + 1):
+            # When cap >= 1.0, pin initial allocation to chains (or pool max) so
+            # moldable starts identical to static at iter 0. The optimizer's score
+            # function otherwise prefers num_hosts=1 because cost is roughly flat
+            # under perfect parallelism — that would make moldable strictly slower
+            # than static at iter 0, defeating the cap=1.0 intent.
+            if MOLDABLE_INITIAL_CAP >= 1.0 and total_free >= 1:
+                num_hosts_range = [min(max_initial, total_free)]
+            else:
+                num_hosts_range = range(1, min(max_initial, total_free) + 1)
+
+            for num_hosts in num_hosts_range:
                 if num_hosts >= trials:
                     workers_per_trial = num_hosts // trials
                     runtime = runtime_func(workers_per_trial, model, epochs)
@@ -480,7 +504,13 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         (instances, budget, deadline, start_time, model) = self.resource_manager.getWorkflow(wf_id)
 
         ind = request['iteration']
-        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
+        # Full remaining time — used for scale-up feasibility. Parallelism shrinks per-iteration
+        # runtime, so the original DFACTOR slice (designed to PACE iterations within the deadline)
+        # is too tight for the scale-up gate in HPO workloads where per-iter runtimes are short
+        # (5-10 min) relative to the deadline (1-2 hr). Decoupling: full time for scale-up,
+        # paced slice for scale-down.
+        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim))
+        paced_available_time = available_time * OPTIM_FCFS_DFACTOR[ind]
 
         # Current allocation
         current_instance = instances[0][0]
@@ -535,7 +565,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         while trials_per_instance > 0 and not skip_scale_down:
             runtime = trials_per_instance * runtime_per_trial
-            if runtime < available_time:
+            if runtime < paced_available_time:
                 min_needed_instances = min_needed_trials // trials_per_instance + bool(min_needed_trials % trials_per_instance)
                 if current_trials > min_needed_instances:
                     request['count'] = current_trials - min_needed_instances
@@ -619,8 +649,8 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         # Record scale-up metrics
         if alloc_instances:
-            instances_added = sum(count for _, count in alloc_instances)
-            cores_added = sum(count * inst.cores for inst, count in alloc_instances)
+            instances_added = sum(count for _, count, *_ in alloc_instances)
+            cores_added = sum(count * inst.cores for inst, count, *_ in alloc_instances)
             self.metrics.recordScaleUpAttempt(
                 success=True,
                 instances_added=instances_added,
