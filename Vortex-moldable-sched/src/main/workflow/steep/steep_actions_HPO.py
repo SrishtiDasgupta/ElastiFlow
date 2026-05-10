@@ -13,6 +13,7 @@ import os as _os
 from config.constants_HPO import SIMULATE
 from utils.sim import getTime
 from utils.exec_sched import getClientInputs, getWorkflowConfig, setWorkflowComplete
+from utils import negotiation_log
 
 _PORTS_YAML = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))), 'config', 'ports.yaml')
 
@@ -100,7 +101,13 @@ class ExecuteAction(Action):
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                print(f"{self.wf_id} iteration {self.workflow_iterator} attempt {attempt}/{MAX_RETRIES} started at {time.time()}")
+                _t_iter_start = time.time()
+                print(f"{self.wf_id} iteration {self.workflow_iterator} attempt {attempt}/{MAX_RETRIES} started at {_t_iter_start}")
+                negotiation_log.log('iteration',
+                                    wf_id=self.wf_id,
+                                    iter_idx=self.workflow_iterator,
+                                    attempt=attempt,
+                                    t_iteration_started=_t_iter_start)
                 result = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
 
                 print(f"[DEBUG] Subprocess completed successfully")

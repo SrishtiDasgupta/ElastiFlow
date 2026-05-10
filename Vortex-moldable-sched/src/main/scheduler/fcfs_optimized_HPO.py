@@ -17,6 +17,7 @@ _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.ab
 from utils.sim import getTime, peekElement, removeElement
 from utils.resource import getConstraintsFromWorkflow, getEstimate
 from utils.request import ExecutorRequest, sendRequest, getConfig
+from utils import negotiation_log
 from scheduler.scheduler_HPO import Scheduler_HPO
 
 # HPO-specific Moldable FCFS Scheduler with Dedicated Executor Design
@@ -56,6 +57,15 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                 # Process moldable resource requests
                 start = time.time()
                 resource_request = eval(resource_request)
+                try:
+                    _rt_label = 'grow' if resource_request.get('request') == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
+                    negotiation_log.log('scheduler',
+                                        wf_id=resource_request.get('wf-id', '?'),
+                                        iter_idx=resource_request.get('iteration', ''),
+                                        request_type=_rt_label,
+                                        t_scheduler_request_observed=time.time())
+                except Exception as _e:
+                    print(f'[negotiation_log] obs parse fail: {_e}')
                 if getTime(sim) - resource_request['request-time'] > 300:  # 5 min timeout
                     removeElement(resource_request_mb, self.resource_request_queue)
                     continue
@@ -518,7 +528,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             else:
                 self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_compute', workflow_id=wf_id)
 
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
+        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None), iter_idx=request.get('iteration'))
 
     def checkNewResourcesHPO(self, resources, current_resources, budget, available_runtime, request, model, instance_type_filter, sim):
         """
@@ -651,7 +661,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         # Notify executor FIRST so it stops using freed IPs immediately.
         # Instance termination happens AFTER to avoid blocking the response
         # (termination can take 5+ minutes, exceeding executor's 210s timeout).
-        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
+        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None), iter_idx=request.get('iteration'))
 
         # Terminate freed on-demand EC2 instances AFTER notifying executor
         if request['count'] > 0 and not sim and not SIMULATE:
@@ -663,7 +673,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                     except Exception as e:
                         print(f"[ERROR] Scale-down termination failed: {e}")
 
-    def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip):
+    def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip, iter_idx=None):
         """Send new resources to executor.
         If send fails (executor dead/unreachable), terminate any on-demand instances
         that were just created to prevent leaks."""
@@ -680,6 +690,11 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             sim.process(processNewResourcesHPO, new_req)
         else:
             send_ok = sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        negotiation_log.log('scheduler',
+                            wf_id=wf_id, iter_idx=iter_idx if iter_idx is not None else '',
+                            request_type='grow',
+                            granted_count=negotiation_log.count_hosts(ips),
+                            t_scheduler_reply_sent=time.time())
 
         if not send_ok and not sim and not SIMULATE:
             # Executor is dead — terminate any on-demand instances we just created
@@ -702,7 +717,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
             self.metrics.updateResources(wf_id, alloc_resources, getTime(sim))
 
-    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip):
+    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip, iter_idx=None):
         """Send freed resources notification to executor"""
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
@@ -716,6 +731,11 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             sim.process(processNewResourcesHPO, new_req)
         else:
             sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        negotiation_log.log('scheduler',
+                            wf_id=wf_id, iter_idx=iter_idx if iter_idx is not None else '',
+                            request_type='shrink',
+                            granted_count=negotiation_log.count_hosts(response_instances),
+                            t_scheduler_reply_sent=time.time())
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
             self.metrics.updateResources(wf_id, to_free_instances, None, getTime(sim))

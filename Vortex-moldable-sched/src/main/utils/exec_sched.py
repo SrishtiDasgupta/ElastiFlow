@@ -5,6 +5,7 @@ import re
 from config.constants import FREE_RESOURCES, MOLDABLE, RESOURCE_REQUEST_TIMEOUT, SIMULATE
 from .sim import getTime
 from .request import ExecutorRequest, getConfig, sendRequest
+from . import negotiation_log
 from scripts.create_instance import createInstance, deleteInstanceFromIp
 
 import yaml
@@ -33,6 +34,10 @@ def detectWorkflowType(wf_id):
     config = getWorkflowConfig(wf_id)
     constraints = config.get('constraints', {})
     mesh = config.get('mesh')
+
+    # 0. Explicit adaptive opt-in via config.adaptive: true
+    if config.get('adaptive') is True:
+        return 'PLAIN_ADAPTIVE'
 
     # 1. Check for LA-specific fields (most specific)
     if 'license_pool' in constraints or 'software_id' in config:
@@ -226,6 +231,55 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
     }, hosts, sim
 
 
+def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
+    """
+    Handler for PLAIN_ADAPTIVE SeisSol workflows (convergence-driven).
+
+    Input format: (config_dict, hosts) where config_dict carries the previous
+    iteration's adaptive driver output: cohesion (scalar), next_links,
+    next_chains, next_cohesion_mean, next_cohesion_var.
+
+    On iteration 0 the dict comes from vars[0].value in the YAML and may only
+    contain {cohesion, next_links, next_chains}.
+    """
+    cfg = getWorkflowConfig(wf_id)
+    mesh = cfg['mesh']
+    sim = cfg['sim']
+    constraints = cfg.get('constraints', {})
+
+    inner = input[0] if isinstance(input[0], dict) else {'cohesion': input[0]}
+
+    if ind == 0:
+        chains = int(inner.get('next_chains', constraints.get('chains', 2)))
+        tinyda_iterations = int(inner.get('next_links',
+                                          constraints.get('tinydaIterations', 2)))
+    else:
+        chains = int(inner.get('next_chains', constraints.get('chains', 2)))
+        tinyda_iterations = int(inner.get('next_links',
+                                          constraints.get('tinydaIterations', 2)))
+
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+
+    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
+        port = getWorkflowOnpremPort()
+    else:
+        port = 4242
+
+    cumulative_cap = constraints.get('tinydaIterations',
+                                     cfg.get('workflowIterations', 10) * tinyda_iterations)
+
+    return {
+        'wf_id': wf_id,
+        'cohesion': inner,             # full dict carries adaptive feedback fields
+        'hosts': alloc_hosts,
+        'chains': chains,
+        'tinyda_iterations': tinyda_iterations,
+        'mesh': mesh,
+        'port': port,
+        'cumulative_links_cap': cumulative_cap,
+    }, hosts, sim
+
+
 def getClientInputs(wf_id, input: Tuple, ind):
     """
     Dispatcher function that routes to type-specific input handlers.
@@ -245,6 +299,8 @@ def getClientInputs(wf_id, input: Tuple, ind):
         return getClientInputs_LA(wf_id, input, ind)
     elif workflow_type == 'HPO':
         return getClientInputs_HPO(wf_id, input, ind)
+    elif workflow_type == 'PLAIN_ADAPTIVE':
+        return getClientInputs_PlainAdaptive(wf_id, input, ind)
     else:
         raise ValueError(f"Unknown workflow type: {workflow_type} for workflow {wf_id}")
 
@@ -322,6 +378,8 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
     setNewResources(wf_id, None)  # Clear any stale data from previous iterations
     setResourceRequestPending(wf_id, True)
 
+    rt_label = 'grow' if request_type == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
+    t_engine_request_sent = time.time()
     if sim:
         request['request-time'] = sim.now
         sim.sync().send(sim, 'resource_request_mb', str(request))
@@ -332,10 +390,14 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
     resources = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
     req_type = ExecutorRequest.FREE_RESOURCE.value # Only because less computation than merge
     start_time, timeout = getTime(sim), 30 + request_timeout # 30 sec network latency
+    outcome = 'timed_out'
+    t_engine_reply_received = ''
     while True:
         (sim or time).sleep(5)
         if getWorkflowConfig(wf_id).get('new_resources', None):
             req_type, resources = getWorkflowConfig(wf_id).get('new_resources')
+            t_engine_reply_received = time.time()
+            outcome = 'granted'
             setNewResources(wf_id, None)
             setResourceRequestPending(wf_id, False)
             break
@@ -344,6 +406,12 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
             setNewResources(wf_id, None)
             setResourceRequestPending(wf_id, False)  # Reject late responses
             break
+    negotiation_log.log('executor',
+                        wf_id=wf_id, iter_idx=ind, request_type=rt_label,
+                        requested_count=n,
+                        t_engine_request_sent=t_engine_request_sent,
+                        t_engine_reply_received=t_engine_reply_received,
+                        outcome=outcome)
     if req_type == ExecutorRequest.FREE_RESOURCE.value:
         return freeResources(resources, hosts, cur_hosts)
     else:
