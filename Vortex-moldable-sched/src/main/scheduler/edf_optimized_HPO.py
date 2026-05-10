@@ -104,12 +104,13 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 start = time.time()
                 if getTime(sim) - resource_request['request-time'] > 300:  # 5 min timeout
                     self.popWorkflow(self.resource_request_heap)
-                    removeElement(resource_request_mb, self.resource_request_queue)
+                    # NOTE: do NOT pop from resource_request_queue. getAllElements
+                    # already drained it when we heap-pushed (same data5-bug pattern).
                     continue
                 self.processMoldableRequestHPO(resource_request, sim)
                 print(f"  HPO EDF Moldable resource processing overhead: {time.time() - start}")
                 self.popWorkflow(self.resource_request_heap)
-                removeElement(resource_request_mb, self.resource_request_queue)
+                # NOTE: see above — queue was already drained, do not LPOP here.
                 continue
 
             # === PHASE 2: Schedule new workflows in EDF order ===
@@ -131,7 +132,11 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 # End the simulation and compute metrics
                 if wf_plan['id'] == 'END':
                     self.popWorkflow(self.workflow_heap)
-                    removeElement(wf_mb, self.queue)
+                    # NOTE: do NOT pop from wf_queue here. getAllElements already drained
+                    # the wf out of the queue when we heap-pushed it. A trailing
+                    # queue.pop() here LPOPs whatever happens to be at the head right
+                    # now — which, if a new wf was pushed during a slow allocation,
+                    # silently discards that new wf (the data5-disappears bug from R3/R7).
                     self.metrics.computeMetrics(file_prefix=self.file_prefix)
                     break
 
@@ -144,7 +149,9 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
                     if ips:
                         self.popWorkflow(self.workflow_heap)
-                        removeElement(wf_mb, self.queue)
+                        # NOTE: see END branch above — wf_queue.pop() here would
+                        # silently discard any newly-arrived wf. The wf was already
+                        # drained from the queue when it landed in the heap.
                         start_time = getTime(sim)
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
