@@ -3,8 +3,40 @@
 # Sets up any cloud instance as executor-capable (Redis + executor process)
 
 WORKER_IP=$1
+# Persist logs to local /tmp first (EFS not mounted yet); copy to EFS on exit.
+# Trap fires on success OR failure, so we get logs even when setup crashes.
+mkdir -p /tmp
+: > /tmp/setup.out
+: > /tmp/executor.out
+ln -sf /tmp/setup.out ~/setup.out
+ln -sf /tmp/executor.out ~/executor.out
+_persist_logs_to_efs() {
+    local ts=$(date +%Y%m%d_%H%M%S)
+    local efs_dir="/fsx/ondemand_logs/${WORKER_IP}_${ts}"
+    if mountpoint -q /fsx 2>/dev/null; then
+        sudo mkdir -p "$efs_dir" 2>/dev/null
+        sudo cp /tmp/setup.out "$efs_dir/setup.out" 2>/dev/null || true
+        sudo cp /tmp/executor.out "$efs_dir/executor.out" 2>/dev/null || true
+        sudo chown -R ubuntu:ubuntu "$efs_dir" 2>/dev/null || true
+        echo "Logs persisted to: $efs_dir"
+    else
+        echo "WARN: /fsx not mounted at exit, logs only on local /tmp (lost on terminate)"
+    fi
+}
+trap _persist_logs_to_efs EXIT
+
 
 set -e  # Exit immediately on any command failure
+
+# Robust apt-get update: retry up to 3x on transient mirror errors
+_apt_update_retry() {
+    for i in 1 2 3; do
+        if sudo apt-get update -y -o Acquire::Retries=3; then return 0; fi
+        echo "apt-get update failed (attempt $i/3), retrying in 15s..."
+        sleep 15
+    done
+    return 1
+}
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -13,6 +45,13 @@ echo "Starting HPO Worker setup on ${WORKER_IP}..."
 # Disable restart prompts
 sudo mkdir -p /etc/needrestart/conf.d/
 echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
+
+# Wait for cloud-init to finish (it rewrites /etc/apt/sources.list during boot).
+# Without this, apt-get races with cloud-init and sees a transient corrupt sources.list
+# (Type 'ty' is not known on line 51).
+echo "Waiting for cloud-init to finish..."
+sudo cloud-init status --wait || true
+echo "cloud-init done"
 
 # Wait for unattended-upgrades / dpkg lock to release before any apt calls
 echo "Waiting for dpkg lock..."
@@ -26,7 +65,7 @@ echo "dpkg lock free"
 sudo sed -i '/^ty /d' /etc/apt/sources.list 2>/dev/null || true
 
 # Mount EFS (replaces FSx Lustre — no Lustre client needed)
-sudo apt-get update -y >> ~/setup.out 2>&1
+_apt_update_retry >> ~/setup.out 2>&1
 sudo apt-get install -y nfs-common >> ~/setup.out 2>&1
 
 sudo mkdir -p /fsx
@@ -39,6 +78,25 @@ if ! mountpoint -q /fsx; then
     echo "FATAL: EFS mount failed"
     exit 1
 fi
+
+# --- Install + verify NVIDIA driver ---
+# Plain Ubuntu AMI ships without NVIDIA drivers. Install nvidia-driver-535-server
+# (supports Tesla T4 on g4dn and A10G on g5). After install, try modprobe; if it
+# fails (e.g. nouveau still loaded), the script exits and asks for a reboot.
+if ! command -v nvidia-smi &> /dev/null || ! nvidia-smi >/dev/null 2>&1; then
+    echo "NVIDIA driver missing — installing nvidia-driver-535-server..."
+    export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get install -y --no-install-recommends linux-headers-$(uname -r) build-essential dkms
+    sudo apt-get install -y nvidia-driver-535-server
+    lsmod | grep -q nouveau && sudo modprobe -r nouveau || true
+    sudo modprobe nvidia || true
+    if ! nvidia-smi >/dev/null 2>&1; then
+        echo "FATAL: NVIDIA driver installed but kernel module did not load. Reboot and re-run setup."
+        exit 1
+    fi
+fi
+nvidia-smi
+echo "GPU verified"
 
 # Install AWS CLI if not present
 if ! command -v aws &> /dev/null; then
@@ -64,7 +122,7 @@ cd /fsx
 
 # --- Python venv with PyTorch + Ray (must match reserved_instance_setup.sh) ---
 echo "Creating ~/rayenv Python venv..."
-sudo apt-get update -y >> ~/setup.out 2>&1
+_apt_update_retry >> ~/setup.out 2>&1
 sudo apt-get install -y python3.10-venv >> ~/setup.out 2>&1
 
 python3 -m venv ~/rayenv
@@ -73,13 +131,30 @@ pip install --upgrade pip >> ~/setup.out 2>&1
 pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu128 >> ~/setup.out 2>&1
 pip install "ray[default]" "ray[tune]" >> ~/setup.out 2>&1
 pip install numpy pandas filelock boto3 paramiko pyyaml redis scikit-learn requests >> ~/setup.out 2>&1
+# Patch torchvision to skip md5 check on EFS-hosted CIFAR (HF-rebuilt batches)
+~/rayenv/bin/python3 - <<'PYPATCH'
+import re, os
+fp = os.path.expanduser("~/rayenv/lib/python3.10/site-packages/torchvision/datasets/cifar.py")
+with open(fp) as f: s = f.read()
+n = re.sub(r'\["(data_batch_\d|test_batch)",\s*"[a-f0-9]{32}"\]', r'["\1",None]', s)
+n = re.sub(r'"md5":\s*"[a-f0-9]{32}"', '"md5": None', n)
+if n != s:
+    with open(fp, "w") as f: f.write(n)
+    print("torchvision: patched")
+else:
+   print("torchvision: already patched")
+PYPATCH
+
 
 echo "PyTorch + Ray venv created at ~/rayenv"
 
 cd ~
 
-# Copy Vortex codebase
-sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
+# Symlink Vortex codebase to EFS (single source of truth, no stale copy)
+if [ ! -L ~/Vortex-moldable-sched ]; then
+    rm -rf ~/Vortex-moldable-sched
+    ln -s /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+fi
 
 # Verify codebase exists
 if [ ! -f ~/Vortex-moldable-sched/src/main/executor_HPO.py ]; then
@@ -96,7 +171,7 @@ curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor --yes -o /usr/shar
 sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -sc) main" \
     | sudo tee /etc/apt/sources.list.d/redis.list
-sudo apt-get update -y >> ~/setup.out 2>&1
+_apt_update_retry >> ~/setup.out 2>&1
 sudo apt-get install -y redis-server >> ~/setup.out 2>&1
 
 # Verify Redis is actually installed
@@ -124,21 +199,12 @@ if [ -d "/fsx/hyperparameter_test/" ]; then
     sudo cp -r /fsx/hyperparameter_test/ ~/
 fi
 
-# Setup CIFAR-10 dataset if not exists
-source ~/rayenv/bin/activate
-if [ ! -d "$HOME/cifar10" ]; then
-    echo "Setting up CIFAR-10 dataset..."
-    python3 -c "
-import torchvision
-import torchvision.transforms as transforms
-import os
-
-# Download CIFAR-10 to standard location
-transform = transforms.Compose([transforms.ToTensor()])
-dataset = torchvision.datasets.CIFAR10(root=os.path.expanduser('~/cifar10'), train=True, download=True, transform=transform)
-print('CIFAR-10 dataset downloaded successfully')
-"
+# CIFAR-10 from EFS (no download — Toronto mirror is dead, batches pre-built)
+if [ ! -L ~/cifar10 ]; then
+     rm -rf ~/cifar10
+     ln -s /fsx/cifar10 ~/cifar10
 fi
+echo "CIFAR-10 symlinked from /fsx/cifar10"
 
 echo "Verifying Redis is accepting connections..."
 REDIS_OK=false

@@ -41,7 +41,16 @@ class CloudRunnerHPO:
         self.logger = logging.getLogger(__name__)
 
         # Extract components from request
+        # Self-derive local IP if executor-ip not in request (getClientInputs_HPO drops it).
+        # CloudRunnerHPO runs ON the executor machine, so local IP == executor IP.
         self.executor_ip = request.get('executor-ip')
+        if not self.executor_ip:
+            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                _s.connect(('8.8.8.8', 80))
+                self.executor_ip = _s.getsockname()[0]
+            finally:
+                _s.close()
         self.worker_hosts = request.get('hosts', {})
         self.workflow_plan = request.get('wf-plan', {})
         self.cohesion = request.get('cohesion', {})
@@ -161,6 +170,7 @@ class CloudRunnerHPO:
             cd /fsx/hyperparameter_test && \
             source /home/ubuntu/rayenv/bin/activate && \
             ray start --head \
+                --temp-dir=/tmp/ray \
                 --port={self.ray_port} \
                 --redis-password='{self.ray_password}' \
                 --num-gpus=1 \
@@ -178,10 +188,15 @@ class CloudRunnerHPO:
 
             ssh.close()
 
-            # Wait for Ray head to be ready
-            time.sleep(10)
-
-            return self.verify_ray_head()
+            # Poll until Ray head is ready (max 60s). Ray head can take >10s on cold start;
+            # the previous one-shot 10s sleep + verify caused false negatives.
+            deadline = time.time() + 60
+            while time.time() < deadline:
+                if self.verify_ray_head():
+                    return True
+                time.sleep(2)
+            self.logger.error("Ray head did not become ready within 60s")
+            return False
 
         except Exception as e:
             self.logger.error(f"Error starting Ray head: {e}")
@@ -215,6 +230,7 @@ class CloudRunnerHPO:
                 cd /fsx/hyperparameter_test && \
                 source /home/ubuntu/rayenv/bin/activate && \
                 ray start --address={ray_address} \
+                    --temp-dir=/tmp/ray \
                     --redis-password='{self.ray_password}' \
                     --num-gpus=1 \
                     --verbose
@@ -464,33 +480,11 @@ class CloudRunnerHPO:
                 self.logger.warning(f"Error stopping Ray on {worker_ip}: {e}")
 
     def send_results_to_executor(self, results: Dict) -> bool:
-        """
-        Send HPO results to the dedicated executor instance
-        """
-        self.logger.info(f"Sending results to executor {self.executor_ip}")
-
-        try:
-            # Send results via HTTP to executor's result endpoint
-            import requests
-
-            executor_url = f"http://{self.executor_ip}:8090/hpo_results"
-
-            response = requests.post(
-                executor_url,
-                json=results,
-                timeout=30
-            )
-
-            if response.status_code == 200:
-                self.logger.info("Results sent to executor successfully")
-                return True
-            else:
-                self.logger.error(f"Failed to send results to executor: {response.status_code}")
-                return False
-
-        except Exception as e:
-            self.logger.error(f"Error sending results to executor: {e}")
-            return False
+        """No-op stub. The :8090/hpo_results receiver was planned but never built;
+        results actually flow back via run_hpo.py stdout into Steep's subprocess capture.
+        Kept as method to preserve the call site for any future relay implementation."""
+        self.logger.debug(f"send_results_to_executor: no-op stub (results size={len(str(results))} bytes)")
+        return True
 
 
     def run(self) -> Dict:

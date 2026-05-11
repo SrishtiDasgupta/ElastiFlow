@@ -180,6 +180,20 @@ class ExecuteAction(Action):
         raise RuntimeError(f"{self.wf_id} iteration {self.workflow_iterator} failed after {MAX_RETRIES} attempts: {last_error}")
 
     def execute(self):
+        # Guard A: don't run beyond configured iteration count
+        # (prevents phantom iter N+1 + KeyError in setWorkflowComplete after workflow purge)
+        if self.workflow_iterator >= self.workflow_iterations:
+            print(f"[SKIP] {self.wf_id} iter {self.workflow_iterator} >= limit {self.workflow_iterations};not running")
+            return
+        # Guard B: dedupe — prevent the same iteration from running twice
+        # (subscriber race in output_parameters/enumerator chain can otherwise re-trigger execute())
+        if not hasattr(self, '_iters_started'):
+            self._iters_started = set()
+        if self.workflow_iterator in self._iters_started:
+            print(f"[SKIP] {self.wf_id} iter {self.workflow_iterator} already in flight/done; ignoring duplicate trigger")
+            return
+        self._iters_started.add(self.workflow_iterator)
+
         # We assume there is only 1 input in the list - (cohesion, hosts) for next wf iteration
         next_trials=0
         input = self.input_parameters[0].getValue()

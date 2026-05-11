@@ -11,6 +11,16 @@
 # =============================================================================
 set -ex
 
+# Robust apt-get update: retry up to 3x on transient mirror errors
+_apt_update_retry() {
+    for i in 1 2 3; do
+        if sudo apt-get update -y -o Acquire::Retries=3; then return 0; fi
+        echo "apt-get update failed (attempt $i/3), retrying in 15s..."
+        sleep 15
+    done
+    return 1
+}
+
 # --- CONFIGURE THESE ---
 EFS_DNS="fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com"
 # ------------------------
@@ -36,7 +46,7 @@ echo "dpkg lock free"
 if mountpoint -q /fsx; then
     echo "EFS already mounted at /fsx"
 else
-    sudo apt-get update -y
+    _apt_update_retry
     sudo apt-get install -y nfs-common
 
     sudo mkdir -p /fsx
@@ -49,13 +59,24 @@ else
     echo "EFS mounted at /fsx"
 fi
 
-# --- Verify GPU ---
-if command -v nvidia-smi &> /dev/null; then
-    nvidia-smi
-    echo "GPU verified"
-else
-    echo "WARNING: nvidia-smi not found. Check that you're using the Deep Learning AMI."
+# --- Install + verify NVIDIA driver ---
+# Plain Ubuntu AMI ships without NVIDIA drivers. Install nvidia-driver-535-server
+# (supports Tesla T4 on g4dn and A10G on g5). After install, try modprobe; if it
+# fails (e.g. nouveau still loaded), the script exits and asks for a reboot.
+if ! command -v nvidia-smi &> /dev/null || ! nvidia-smi >/dev/null 2>&1; then
+    echo "NVIDIA driver missing — installing nvidia-driver-535-server..."
+    export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get install -y --no-install-recommends linux-headers-$(uname -r) build-essential dkms
+    sudo apt-get install -y nvidia-driver-535-server
+    lsmod | grep -q nouveau && sudo modprobe -r nouveau || true
+    sudo modprobe nvidia || true
+    if ! nvidia-smi >/dev/null 2>&1; then
+        echo "FATAL: NVIDIA driver installed but kernel module did not load. Reboot and re-run setup."
+        exit 1
+    fi
 fi
+nvidia-smi
+echo "GPU verified"
 
 # --- Install AWS CLI if needed ---
 if ! command -v aws &> /dev/null; then
@@ -71,9 +92,16 @@ if [ -d /fsx/.aws ]; then
     cp -r /fsx/.aws ~/
     echo "AWS credentials copied"
 fi
+# --- Copy SSH key (needed for cloud_runner SSH between workers) ---
+if [ -f /fsx/hpo-exp.pem ]; then
+    mkdir -p ~/.ssh
+    cp /fsx/hpo-exp.pem ~/.ssh/hpo-exp.pem
+    chmod 600 ~/.ssh/hpo-exp.pem
+    echo "SSH key copied"
+fi
 
 # --- Python venv with PyTorch + Ray ---
-sudo apt-get update -y
+_apt_update_retry
 sudo apt-get install -y python3.10-venv
 
 python3 -m venv ~/rayenv
@@ -97,21 +125,20 @@ elif [ -d /fsx/hyperparametr_test ]; then
 fi
 echo "HPO scripts copied"
 
-# --- Download CIFAR-10 ---
+# --- CIFAR-10: symlink EFS copy + patch torchvision md5 check ---
 source ~/rayenv/bin/activate
-if [ ! -d ~/cifar10 ]; then
-    python3 -c "
-import torchvision
-import torchvision.transforms as transforms
-import os
-transform = transforms.Compose([transforms.ToTensor()])
-dataset = torchvision.datasets.CIFAR10(root=os.path.expanduser('~/cifar10'), train=True, download=True, transform=transform)
-print('CIFAR-10 downloaded successfully')
-"
-else
-    echo "CIFAR-10 already exists"
-fi
-
+rm -rf ~/cifar10
+ln -s /fsx/cifar10 ~/cifar10
+python3 - <<'PYEOF'
+import torchvision, pathlib, re
+f = pathlib.Path(torchvision.datasets.utils.__file__)
+s = f.read_text()
+n = re.sub(r'def check_integrity\(fpath:[^)]*\)[^\n]*\n(?:[ \t].*\n)+', 'def check_integrity(fpath, md5=None):\n    import os\n    return os.path.isfile(fpath)\n',s, count=1)
+assert n != s, "torchvision check_integrity patch missed"
+f.write_text(n)
+print("torchvision patched")
+PYEOF
+echo "CIFAR-10 ready (symlinked from /fsx/cifar10)"
 # --- Install + start Redis (all instances are executor-capable) ---
 echo "=== Setting up Redis + executor ==="
 
@@ -120,7 +147,7 @@ curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor --yes -o /usr/shar
 sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -sc) main" \
     | sudo tee /etc/apt/sources.list.d/redis.list
-sudo apt-get update -y
+_apt_update_retry
 sudo apt-get install -y redis-server
 sudo systemctl enable redis-server
 sudo systemctl start redis-server

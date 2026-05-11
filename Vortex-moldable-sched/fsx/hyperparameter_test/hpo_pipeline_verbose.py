@@ -918,7 +918,7 @@ def refine_space(best_config):
             logger.info(f"  Image size: fixed at {v}")
         elif k == "epoch":
             low = max(1, int(v * 0.8))
-            high = min(10, int(v * 1.5))
+            high = max(low + 1, int(v * 1.5))  # was min(10, ...) — broke for v > 6
             new_space[k] = tune.randint(low, high)
             logger.info(f"  Epoch range: {low} to {high}")
         elif isinstance(v, float):
