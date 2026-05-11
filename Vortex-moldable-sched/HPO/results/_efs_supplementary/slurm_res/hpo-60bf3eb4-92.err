@@ -1,0 +1,255 @@
++ source /home/ubuntu/rayenv/bin/activate
+++ deactivate nondestructive
+++ '[' -n '' ']'
+++ '[' -n '' ']'
+++ '[' -n /bin/bash -o -n '' ']'
+++ hash -r
+++ '[' -n '' ']'
+++ unset VIRTUAL_ENV
+++ unset VIRTUAL_ENV_PROMPT
+++ '[' '!' nondestructive = nondestructive ']'
+++ VIRTUAL_ENV=/home/ubuntu/rayenv
+++ export VIRTUAL_ENV
+++ _OLD_VIRTUAL_PATH=/opt/slurm/bin:/home/ubuntu/rayenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+++ PATH=/home/ubuntu/rayenv/bin:/opt/slurm/bin:/home/ubuntu/rayenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+++ export PATH
+++ '[' -n '' ']'
+++ '[' -z '' ']'
+++ _OLD_VIRTUAL_PS1=
+++ PS1='(rayenv) '
+++ export PS1
+++ VIRTUAL_ENV_PROMPT='(rayenv) '
+++ export VIRTUAL_ENV_PROMPT
+++ '[' -n /bin/bash -o -n '' ']'
+++ hash -r
++ module load libfabric-aws/1.22.0amzn5.0
+/var/spool/slurmd/job00092/slurm_script: line 16: module: command not found
++ true
+++ scontrol show hostnames 'gpu-compute-st-g4dn-nodes-[1-2]'
++ nodes='gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2'
+++ echo 'gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2'
+++ head -n1
++ head_node=gpu-compute-st-g4dn-nodes-1
+++ srun -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 hostname -I
+++ awk '{print $1}'
++ head_ip=172.31.9.149
++ port=7188
++ echo '[INFO] Cluster nodes: gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2'
++ echo '[INFO] Head Node: gpu-compute-st-g4dn-nodes-1 (172.31.9.149)'
++ echo '[INFO] Using RAY_ADDRESS=172.31.9.149:7188'
++ trap cleanup EXIT
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-2 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ echo '[INFO] Waiting for Ray head GCS on 172.31.9.149:7188 ...'
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -c 'source ~/rayenv/bin/activate && ray start --head --node-ip-address=172.31.9.149 --port=7188 --block'
+++ seq 1 12
++ for attempt in $(seq 1 12)
++ python3 -c 'import socket; s=socket.socket(); s.settimeout(2); s.connect(('\''172.31.9.149'\'',7188)); s.close(); print('\''READY'\'')'
++ grep -q READY
++ '[' 1 -eq 12 ']'
++ echo '[INFO] GCS not ready yet (attempt 1/12), waiting 5s...'
++ sleep 5
++ for attempt in $(seq 1 12)
++ python3 -c 'import socket; s=socket.socket(); s.settimeout(2); s.connect(('\''172.31.9.149'\'',7188)); s.close(); print('\''READY'\'')'
++ grep -q READY
++ echo '[INFO] Ray head GCS ready after 10s'
++ break
+++ echo 'gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2'
+++ tail -n +2
++ for node in $(echo "$nodes" | tail -n +2)
++ echo '[INFO] Waiting 15s for Ray workers to join ...'
++ sleep 15
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-2 bash -c 'source ~/rayenv/bin/activate && ray start --address=172.31.9.149:7188 --block'
++ echo '[INFO] Running HPO pipeline on head ....'
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -lc '
+export RAY_ADDRESS='\''172.31.9.149:7188'\''
+echo '\''{"learning_rate": 0.007338511663929899, "momentum": 0.943938742480782, "next_trials": 6, "epochs": 6}'\''       | python3 /fsx/Vortex-mid/Vortex-moldable-sched/fsx/hyperparameter_test/hpo_pipeline_verbose.py --hosts 2 '
+2026-05-08 14:38:56,070	INFO worker.py:1672 -- Using address 172.31.9.149:7188 set in the environment variable RAY_ADDRESS
+2026-05-08 14:38:56,074	INFO worker.py:1814 -- Connecting to existing Ray cluster at address: 172.31.9.149:7188...
+2026-05-08 14:38:56,099	INFO worker.py:2003 -- Connected to Ray cluster. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/worker.py:2051: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+2026-05-08 14:38:56,887	INFO registry.py:112 -- Detected unknown callable for trainable. Converting to class.
+[36m(TrainController pid=6086)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=6086)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=5652, ip=172.31.14.105)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=5652, ip=172.31.14.105)[0m Started training worker group of size 1: 
+[36m(TrainController pid=5652, ip=172.31.14.105)[0m - (ip=172.31.14.105, pid=5693) world_rank=0, local_rank=0, node_rank=0
+[36m(TrainController pid=5652, ip=172.31.14.105)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m 
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m current device index = 0
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m =====================================================
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m 
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m 🔍 FULL CONFIG: epochs=12, lr=0.0009611158906474585, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=6189)[0m 
+[36m(RayTrainWorker pid=6189)[0m 
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.5585, 'best_accuracy': 0.5585, 'avg_epoch_time_s': 21.631653371000084}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=6086)[0m Started training worker group of size 1: 
+[36m(TrainController pid=6086)[0m - (ip=172.31.9.149, pid=6189) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=6189)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=6189)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=6189)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=6189)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=6189)[0m current device index = 0
+[36m(RayTrainWorker pid=6189)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=6189)[0m =====================================================
+[36m(RayTrainWorker pid=6189)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=6189)[0m 🔍 FULL CONFIG: epochs=12, lr=0.018517118680520903, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=6189)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5671, 'best_accuracy': 0.5671, 'avg_epoch_time_s': 21.366238383999985}, validation=False)[32m [repeated 2x across cluster] (Ray deduplicates logs by default. Set RAY_DEDUP_LOGS=0 to disable log deduplication, or see https://docs.ray.io/en/master/ray-observability/user-guides/configure-logging.html#log-deduplication for more options.)[0m
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5555, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.388791870999967}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5818, 'best_accuracy': 0.5818, 'avg_epoch_time_s': 21.267694197000008}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5237, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.34206399533332}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5876, 'best_accuracy': 0.5876, 'avg_epoch_time_s': 21.249152653500005}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5369, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.42786792000004}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5779, 'best_accuracy': 0.5876, 'avg_epoch_time_s': 21.25713323}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5163, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.312782915800017}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.5869, 'best_accuracy': 0.5876, 'avg_epoch_time_s': 21.27497664566666}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.5484, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.32303473666669}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.6029, 'best_accuracy': 0.6029, 'avg_epoch_time_s': 21.281011803142842}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.598, 'best_accuracy': 0.6029, 'avg_epoch_time_s': 21.259489911000003}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5255, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.30411950685714}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.6035, 'best_accuracy': 0.6035, 'avg_epoch_time_s': 21.208198113777776}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.536, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.305083553750023}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.6071, 'best_accuracy': 0.6071, 'avg_epoch_time_s': 21.186486270499994}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.5195, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.296069197333306}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.5989, 'best_accuracy': 0.6071, 'avg_epoch_time_s': 21.174192484090927}, validation=False)
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.5021, 'best_accuracy': 0.5555, 'avg_epoch_time_s': 24.282966299300007}, validation=False)
+[36m(RayTrainWorker pid=5693, ip=172.31.14.105)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.6067, 'best_accuracy': 0.6071, 'avg_epoch_time_s': 21.17898811083332}, validation=False)
+[36m(TrainController pid=6270, ip=172.31.14.105)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=6270, ip=172.31.14.105)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.5617, 'best_accuracy': 0.5617, 'avg_epoch_time_s': 24.296570539090887}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=6270, ip=172.31.14.105)[0m Started training worker group of size 1: 
+[36m(TrainController pid=6270, ip=172.31.14.105)[0m - (ip=172.31.14.105, pid=6311) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m 
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m current device index = 0
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m =====================================================
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m 
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m 🔍 FULL CONFIG: epochs=12, lr=0.0018765700395349885, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=6189)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5417, 'best_accuracy': 0.5617, 'avg_epoch_time_s': 24.321443543916683}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.5604, 'best_accuracy': 0.5604, 'avg_epoch_time_s': 21.691350948000036}, validation=False)
+[36m(TrainController pid=7832)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=7832)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=7878)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=7832)[0m Started training worker group of size 1: 
+[36m(TrainController pid=7832)[0m - (ip=172.31.9.149, pid=7878) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=7878)[0m 
+[36m(RayTrainWorker pid=7878)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=7878)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=7878)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=7878)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=7878)[0m current device index = 0
+[36m(RayTrainWorker pid=7878)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=7878)[0m =====================================================
+[36m(RayTrainWorker pid=7878)[0m 
+[36m(RayTrainWorker pid=7878)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=7878)[0m 🔍 FULL CONFIG: epochs=12, lr=0.07139358896561915, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=7878)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5733, 'best_accuracy': 0.5733, 'avg_epoch_time_s': 21.08309457900009}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5887, 'best_accuracy': 0.5887, 'avg_epoch_time_s': 21.027234638000056}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.4819, 'best_accuracy': 0.4819, 'avg_epoch_time_s': 24.956077818999802}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5921, 'best_accuracy': 0.5921, 'avg_epoch_time_s': 20.991430566499957}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.4639, 'best_accuracy': 0.4819, 'avg_epoch_time_s': 24.58717637399991}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5904, 'best_accuracy': 0.5921, 'avg_epoch_time_s': 21.009376276800047}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.4719, 'best_accuracy': 0.4819, 'avg_epoch_time_s': 24.528857504999905}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.5889, 'best_accuracy': 0.5921, 'avg_epoch_time_s': 20.952075119666688}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.4929, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.448429122499988}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5974, 'best_accuracy': 0.5974, 'avg_epoch_time_s': 20.96551571828572}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.4729, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.45859633680002}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.6233, 'best_accuracy': 0.6233, 'avg_epoch_time_s': 20.990619938500004}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.4682, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.41822156950002}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.601, 'best_accuracy': 0.6233, 'avg_epoch_time_s': 20.973816108400023}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.6035, 'best_accuracy': 0.6233, 'avg_epoch_time_s': 20.959832149}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.468, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.382661133499994}, validation=False)
+[36m(RayTrainWorker pid=6311, ip=172.31.14.105)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.6129, 'best_accuracy': 0.6233, 'avg_epoch_time_s': 20.94363443750001}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.4721, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.38455134277779}, validation=False)
+[36m(TrainController pid=6877, ip=172.31.14.105)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=6877, ip=172.31.14.105)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=6877, ip=172.31.14.105)[0m Started training worker group of size 1: 
+[36m(TrainController pid=6877, ip=172.31.14.105)[0m - (ip=172.31.14.105, pid=6918) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m 
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m current device index = 0
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m =====================================================
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m 
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m 🔍 FULL CONFIG: epochs=12, lr=0.0503786138289307, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.4884, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.420956515099988}, validation=False)
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.4115, 'best_accuracy': 0.4115, 'avg_epoch_time_s': 21.27727421199961}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.4314, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.39393344727271}, validation=False)
+[36m(RayTrainWorker pid=7878)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.4736, 'best_accuracy': 0.4929, 'avg_epoch_time_s': 24.41460176758331}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(TrainController pid=7177, ip=172.31.14.105)[0m Requesting resources: {'GPU': 1} * 1
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.461, 'best_accuracy': 0.461, 'avg_epoch_time_s': 20.940632327999992}, validation=False)
+[36m(TrainController pid=7177, ip=172.31.14.105)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.3954, 'best_accuracy': 0.461, 'avg_epoch_time_s': 21.404390673249964}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(RayTrainWorker pid=9510)[0m 
+[36m(RayTrainWorker pid=9510)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=9510)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=9510)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=9510)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=9510)[0m current device index = 0
+[36m(RayTrainWorker pid=9510)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=9510)[0m =====================================================
+[36m(RayTrainWorker pid=9510)[0m 
+[36m(RayTrainWorker pid=9510)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=9510)[0m 🔍 FULL CONFIG: epochs=12, lr=0.044503842111335734, batch_size=64, image_size=64
+[36m(TrainController pid=7177, ip=172.31.14.105)[0m Started training worker group of size 1: 
+[36m(TrainController pid=7177, ip=172.31.14.105)[0m - (ip=172.31.9.149, pid=9510) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=9510)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.4447, 'best_accuracy': 0.461, 'avg_epoch_time_s': 21.295956569199916}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.468, 'best_accuracy': 0.468, 'avg_epoch_time_s': 25.107406100999924}, validation=False)
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.466, 'best_accuracy': 0.466, 'avg_epoch_time_s': 21.25510800133331}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.4664, 'best_accuracy': 0.468, 'avg_epoch_time_s': 24.6938466444999}, validation=False)
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5155, 'best_accuracy': 0.5155, 'avg_epoch_time_s': 21.184319703999986}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.4773, 'best_accuracy': 0.4773, 'avg_epoch_time_s': 24.453444734999874}, validation=False)
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.4883, 'best_accuracy': 0.5155, 'avg_epoch_time_s': 21.162515960625}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.4672, 'best_accuracy': 0.4773, 'avg_epoch_time_s': 24.379673846999935}, validation=False)
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.477, 'best_accuracy': 0.5155, 'avg_epoch_time_s': 21.14750591349998}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.467, 'best_accuracy': 0.5155, 'avg_epoch_time_s': 21.132826100090906}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=6918, ip=172.31.14.105)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.4983, 'best_accuracy': 0.5155, 'avg_epoch_time_s': 21.0904097970833}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.48, 'best_accuracy': 0.4859, 'avg_epoch_time_s': 24.342720706857108}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.4891, 'best_accuracy': 0.4891, 'avg_epoch_time_s': 24.325712357374982}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.4916, 'best_accuracy': 0.4916, 'avg_epoch_time_s': 24.314721065333288}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.4735, 'best_accuracy': 0.4916, 'avg_epoch_time_s': 24.285061201999998}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.4731, 'best_accuracy': 0.4916, 'avg_epoch_time_s': 24.253988624363625}, validation=False)
+[36m(RayTrainWorker pid=9510)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.4767, 'best_accuracy': 0.4916, 'avg_epoch_time_s': 24.235413905666633}, validation=False)
+2026-05-08 14:54:43,459	INFO tune.py:1001 -- Wrote the latest version of all result files and experiment state to '/fsx/ray_results/pytorch_hpo_phase1' in 0.0826s.
++ echo '[INFO] Shutting down Ray Cluster ..........'
++ srun --label bash -c 'ray stop'
++ echo '[INFO] HPO Completed!'
++ cleanup
++ echo '[INFO] Cleaning up Ray on all nodes...'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-2 bash -c 'source ~/rayenv/bin/activate && ray stop'
