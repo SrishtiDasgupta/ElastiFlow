@@ -1,0 +1,7181 @@
+=== COMMAND ===
+/home/ubuntu/rayenv/bin/python3 /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py {"wf_id": "hpo-0a5998a0", "cohesion": {"batch_size": 64, "epochs": 20, "learning_rate": 0.0643, "model": "convnext_large", "momentum": 0.8, "next_trials": 2}, "hosts": {"g5.xlarge": ["172.31.39.199"]}, "chains": 2, "tinyda_iterations": 20, "mesh": "convnext_large", "port": 4242}
+
+=== STDOUT ===
+hpo-0a5998a0
+{"config": {"accuracy": 0.9021, "model_name": "convnext_large", "epoch": 28, "learning_rate": 0.01547057214934211, "momentum": 0.7883831916940598, "batch_size": 64, "hidden": 10, "image_size": 64, "next_trials": 3}, "status": "ok", "wf_id": "hpo-0a5998a0", "mode": "cloud"}
+
+
+=== STDERR ===
+INFO:cloud_runner_HPO_new:Starting HPO Cloud Runner execution...
+INFO:cloud_runner_HPO_new:Setting up HPO Ray cluster...
+INFO:cloud_runner_HPO_new:Extracted 1 worker IPs: ['172.31.39.199']
+INFO:cloud_runner_HPO_new:Ray Head: 172.31.39.199
+INFO:cloud_runner_HPO_new:Ray Workers: []
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray port 6380 on 172.31.39.199 is free after stop
+INFO:cloud_runner_HPO_new:Ray head startup output: 2026-05-05 11:03:21,997	INFO usage_lib.py:474 -- Usage stats collection is enabled by default without user confirmation because this terminal is detected to be non-interactive. To disable this, add `--disable-usage-stats` to the command that starts the cluster, or run the following command: `ray disable-usage-stats` before starting the cluster. See https://docs.ray.io/en/master/cluster/usage-stats.html for more details.
+2026-05-05 11:03:21,997	INFO scripts.py:940 -- [37mLocal node IP[39m: [1m172.31.39.199[22m
+2026-05-05 11:03:28,109	SUCC scripts.py:979 -- [32m--------------------[39m
+2026-05-05 11:03:28,109	SUCC scripts.py:980 -- [32mRay runtime started.[39m
+2026-05-05 11:03:28,109	SUCC scripts.py:981 -- [32m--------------------[39m
+2026-05-05 11:03:28,109	INFO scripts.py:983 -- [36mNext steps[39m
+2026-05-05 11:03:28,109	INFO scripts.py:986 -- To add another node to this Ray cluster, run
+2026-05-05 11:03:28,109	INFO scripts.py:989 -- [1m  ray start --address='172.31.39.199:6380'[22m
+2026-05-05 11:03:28,109	INFO scripts.py:1000 -- To connect to this Ray cluster:
+2026-05-05 11:03:28,109	INFO scripts.py:1002 -- [35mimport[39m[26m ray
+2026-05-05 11:03:28,109	INFO scripts.py:1003 -- ray[35m.[39m[26minit()
+2026-05-05 11:03:28,109	INFO scripts.py:1017 -- To submit a Ray job using the Ray Jobs CLI:
+2026-05-05 11:03:28,109	INFO scripts.py:1018 -- [1m  RAY_API_SERVER_ADDRESS='http://127.0.0.1:8265' ray job submit --working-dir . -- python my_script.py[22m
+2026-05-05 11:03:28,109	INFO scripts.py:1027 -- See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/index.html 
+2026-05-05 11:03:28,109	INFO scripts.py:1031 -- for more information on submitting Ray jobs to the Ray cluster.
+2026-05-05 11:03:28,109	INFO scripts.py:1036 -- To terminate the Ray runtime, run
+2026-05-05 11:03:28,110	INFO scripts.py:1037 -- [1m  ray stop[22m
+2026-05-05 11:03:28,110	INFO scripts.py:1040 -- To view the status of the cluster, use
+2026-05-05 11:03:28,110	INFO scripts.py:1041 --   [1mray status[22m[26m
+2026-05-05 11:03:28,110	INFO scripts.py:1045 -- To monitor and debug Ray, view the dashboard at 
+2026-05-05 11:03:28,110	INFO scripts.py:1046 --   [1m127.0.0.1:8265[22m[26m
+2026-05-05 11:03:28,110	INFO scripts.py:1053 -- [4mIf connection to the dashboard fails, check your firewall settings and network configuration.[24m
+
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray head ports reachable; assuming healthy.
+INFO:cloud_runner_HPO_new:No additional Ray workers to start
+INFO:cloud_runner_HPO_new:Ray cluster setup completed successfully
+INFO:cloud_runner_HPO_new:Starting HPO pipeline execution...
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:⚠️  HPO CONFIG PREPARED:
+INFO:cloud_runner_HPO_new:    model_name: convnext_large
+INFO:cloud_runner_HPO_new:    epochs: 20
+INFO:cloud_runner_HPO_new:    trials: 2
+INFO:cloud_runner_HPO_new:    Full config: {'model_name': 'convnext_large', 'epoch': 20, 'next_trials': 2, 'learning_rate': 0.0643, 'momentum': 0.8, 'batch_size': 64, 'hidden': 10, 'image_size': 64, 'amp': True, 'train_backbone': False, 'data_dir': '/home/ubuntu/cifar10'}
+INFO:paramiko.transport.sftp:[chan 0] Opened sftp connection (server version 3)
+INFO:paramiko.transport.sftp:[chan 0] sftp session closed.
+INFO:cloud_runner_HPO_new:Extracted 1 worker IPs: ['172.31.39.199']
+INFO:cloud_runner_HPO_new:Executing HPO pipeline...
+WARNING:cloud_runner_HPO_new:HPO pipeline warnings: 2026-05-05 11:03:33,176	INFO worker.py:1672 -- Using address 172.31.39.199:6380 set in the environment variable RAY_ADDRESS
+2026-05-05 11:03:33,180	INFO worker.py:1814 -- Connecting to existing Ray cluster at address: 172.31.39.199:6380...
+2026-05-05 11:03:33,205	INFO worker.py:2003 -- Connected to Ray cluster. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/worker.py:2051: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+2026-05-05 11:03:33,958	INFO registry.py:112 -- Detected unknown callable for trainable. Converting to class.
+[36m(TrainController pid=5684)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=5684)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=5776)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=5684)[0m Started training worker group of size 1: 
+[36m(TrainController pid=5684)[0m - (ip=172.31.39.199, pid=5776) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=5776)[0m 
+[36m(RayTrainWorker pid=5776)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=5776)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=5776)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=5776)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=5776)[0m current device index = 0
+[36m(RayTrainWorker pid=5776)[0m device name = NVIDIA A10G
+[36m(RayTrainWorker pid=5776)[0m =====================================================
+[36m(RayTrainWorker pid=5776)[0m 
+[36m(RayTrainWorker pid=5776)[0m 🔍 TRAINING WITH MODEL: convnext_large
+[36m(RayTrainWorker pid=5776)[0m 🔍 FULL CONFIG: epochs=24, lr=0.007719644204457357, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=5776)[0m 
+0.0%
+0.0%
+0.0%
+0.1%
+0.1%
+0.1%
+0.1%
+0.1%
+0.1%
+0.2%
+0.2%
+0.2%
+0.2%
+0.2%
+0.2%
+0.3%
+0.3%
+0.3%
+0.3%
+0.3%
+0.3%
+0.4%
+0.4%
+0.4%
+0.4%
+0.4%
+0.4%
+0.5%
+0.5%
+0.5%
+0.5%
+0.5%
+0.5%
+0.6%
+0.6%
+0.6%
+0.6%
+0.6%
+0.6%
+0.7%
+0.7%
+0.7%
+0.7%
+0.7%
+0.7%
+0.8%
+0.8%
+0.8%
+0.8%
+0.8%
+0.8%
+0.9%
+0.9%
+0.9%
+0.9%
+0.9%
+0.9%
+1.0%
+1.0%
+1.0%
+1.0%
+1.0%
+1.0%
+1.1%
+1.1%
+1.1%
+1.1%
+1.1%
+1.1%
+1.2%
+1.2%
+1.2%
+1.2%
+1.2%
+1.2%
+1.3%
+1.3%
+1.3%
+1.3%
+1.3%
+1.3%
+1.4%
+1.4%
+1.4%
+1.4%
+1.4%
+1.4%
+1.5%
+1.5%
+1.5%
+1.5%
+1.5%
+1.5%
+1.6%
+1.6%
+1.6%
+1.6%
+1.6%
+1.6%
+1.7%
+1.7%
+1.7%
+1.7%
+1.7%
+1.7%
+1.8%
+1.8%
+1.8%
+1.8%
+1.8%
+1.8%
+1.9%
+1.9%
+1.9%
+1.9%
+1.9%
+1.9%
+2.0%
+2.0%
+2.0%
+2.0%
+2.0%
+2.0%
+2.1%
+2.1%
+2.1%
+2.1%
+2.1%
+2.1%
+2.2%
+2.2%
+2.2%
+2.2%
+2.2%
+2.2%
+2.3%
+2.3%
+2.3%
+2.3%
+2.3%
+2.3%
+2.4%
+2.4%
+2.4%
+2.4%
+2.4%
+2.4%
+2.5%
+2.5%
+2.5%
+2.5%
+2.5%
+2.5%
+2.6%
+2.6%
+2.6%
+2.6%
+2.6%
+2.6%
+2.7%
+2.7%
+2.7%
+2.7%
+2.7%
+2.7%
+2.8%
+2.8%
+2.8%
+[36m(RayTrainWorker pid=5776)[0m 
+2.8%
+2.8%
+2.8%
+2.8%
+[36m(RayTrainWorker pid=5776)[0m 
+2.9%
+2.9%
+[36m(RayTrainWorker pid=5776)[0m 
+2.9%
+2.9%
+2.9%
+2.9%
+3.0%
+[36m(RayTrainWorker pid=5776)[0m 
+3.0%
+3.0%
+3.0%
+3.0%
+3.0%
+3.1%
+3.1%
+[36m(RayTrainWorker pid=5776)[0m 
+3.1%
+3.1%
+3.1%
+3.1%
+[36m(RayTrainWorker pid=5776)[0m 
+3.2%
+3.2%
+3.2%
+[36m(RayTrainWorker pid=5776)[0m 
+3.2%
+3.2%
+3.2%
+3.3%
+3.3%
+3.3%
+3.3%
+3.3%
+3.3%
+3.4%
+3.4%
+3.4%
+3.4%
+[36m(RayTrainWorker pid=5776)[0m 
+3.4%
+3.4%
+3.5%
+3.5%
+3.5%
+[36m(RayTrainWorker pid=5776)[0m 
+3.5%
+3.5%
+3.5%
+3.6%
+[36m(RayTrainWorker pid=5776)[0m 
+3.6%
+3.6%
+3.6%
+3.6%
+3.6%
+3.7%
+[36m(RayTrainWorker pid=5776)[0m 
+3.7%
+3.7%
+3.7%
+3.7%
+3.7%
+[36m(RayTrainWorker pid=5776)[0m 
+3.8%
+3.8%
+3.8%
+3.8%
+3.8%
+3.8%
+3.9%
+[36m(RayTrainWorker pid=5776)[0m 
+3.9%
+3.9%
+3.9%
+3.9%
+3.9%
+4.0%
+4.0%
+4.0%
+4.0%
+4.0%
+4.0%
+[36m(RayTrainWorker pid=5776)[0m 
+4.1%
+4.1%
+4.1%
+4.1%
+4.1%
+4.1%
+4.2%
+4.2%
+4.2%
+[36m(RayTrainWorker pid=5776)[0m 
+4.2%
+4.2%
+4.2%
+4.3%
+4.3%
+[36m(RayTrainWorker pid=5776)[0m 
+4.3%
+4.3%
+4.3%
+4.3%
+4.4%
+4.4%
+4.4%
+4.4%
+4.4%
+4.4%
+4.5%
+4.5%
+[36m(RayTrainWorker pid=5776)[0m 
+4.5%
+[36m(RayTrainWorker pid=5776)[0m 
+4.5%
+4.5%
+[36m(RayTrainWorker pid=5776)[0m 
+4.5%
+4.6%
+4.6%
+4.6%
+4.6%
+4.6%
+4.6%
+4.7%
+4.7%
+4.7%
+[36m(RayTrainWorker pid=5776)[0m 
+4.7%
+4.7%
+4.7%
+4.8%
+[36m(RayTrainWorker pid=5776)[0m 
+4.8%
+4.8%
+4.8%
+[36m(RayTrainWorker pid=5776)[0m 
+4.8%
+4.8%
+4.9%
+4.9%
+4.9%
+[36m(RayTrainWorker pid=5776)[0m 
+4.9%
+4.9%
+4.9%
+5.0%
+[36m(RayTrainWorker pid=5776)[0m 
+5.0%
+5.0%
+5.0%
+5.0%
+[36m(RayTrainWorker pid=5776)[0m 
+5.0%
+5.1%
+5.1%
+5.1%
+5.1%
+5.1%
+5.1%
+5.2%
+5.2%
+5.2%
+5.2%
+5.2%
+5.2%
+5.3%
+5.3%
+5.3%
+5.3%
+5.3%
+5.3%
+5.4%
+5.4%
+5.4%
+5.4%
+5.4%
+5.4%
+5.5%
+5.5%
+5.5%
+5.5%
+5.5%
+5.5%
+5.5%
+5.6%
+5.6%
+5.6%
+5.6%
+5.6%
+5.6%
+5.7%
+5.7%
+5.7%
+5.7%
+5.7%
+5.7%
+5.8%
+5.8%
+5.8%
+5.8%
+5.8%
+5.8%
+5.9%
+5.9%
+5.9%
+5.9%
+5.9%
+5.9%
+6.0%
+6.0%
+6.0%
+6.0%
+6.0%
+6.0%
+6.1%
+6.1%
+6.1%
+6.1%
+6.1%
+6.1%
+6.2%
+6.2%
+6.2%
+6.2%
+6.2%
+6.2%
+6.3%
+6.3%
+6.3%
+6.3%
+6.3%
+6.3%
+6.4%
+6.4%
+6.4%
+6.4%
+6.4%
+6.4%
+6.5%
+6.5%
+6.5%
+6.5%
+6.5%
+6.5%
+6.6%
+6.6%
+6.6%
+6.6%
+6.6%
+6.6%
+6.7%
+6.7%
+6.7%
+6.7%
+6.7%
+6.7%
+6.8%
+6.8%
+6.8%
+6.8%
+6.8%
+6.8%
+6.9%
+6.9%
+6.9%
+6.9%
+6.9%
+6.9%
+7.0%
+7.0%
+7.0%
+7.0%
+7.0%
+7.0%
+7.1%
+7.1%
+7.1%
+7.1%
+7.1%
+7.1%
+7.2%
+7.2%
+7.2%
+7.2%
+7.2%
+7.2%
+7.3%
+7.3%
+7.3%
+7.3%
+7.3%
+7.3%
+7.4%
+7.4%
+7.4%
+7.4%
+7.4%
+7.4%
+7.5%
+7.5%
+7.5%
+7.5%
+7.5%
+7.5%
+7.6%
+7.6%
+7.6%
+7.6%
+7.6%
+7.6%
+7.7%
+7.7%
+7.7%
+7.7%
+7.7%
+7.7%
+[36m(RayTrainWorker pid=5776)[0m 
+7.8%
+[36m(RayTrainWorker pid=5776)[0m 
+7.8%
+7.8%
+7.8%
+[36m(RayTrainWorker pid=5776)[0m 
+7.8%
+[36m(RayTrainWorker pid=5776)[0m 
+7.8%
+7.9%
+7.9%
+7.9%
+7.9%
+7.9%
+7.9%
+[36m(RayTrainWorker pid=5776)[0m 
+8.0%
+8.0%
+8.0%
+8.0%
+8.0%
+8.0%
+8.1%
+8.1%
+8.1%
+8.1%
+8.1%
+[36m(RayTrainWorker pid=5776)[0m 
+8.1%
+8.2%
+8.2%
+8.2%
+8.2%
+[36m(RayTrainWorker pid=5776)[0m 
+8.2%
+8.2%
+8.3%
+8.3%
+[36m(RayTrainWorker pid=5776)[0m 
+8.3%
+8.3%
+8.3%
+8.3%
+8.3%
+[36m(RayTrainWorker pid=5776)[0m 
+8.4%
+8.4%
+8.4%
+8.4%
+8.4%
+8.4%
+[36m(RayTrainWorker pid=5776)[0m 
+8.5%
+8.5%
+8.5%
+8.5%
+8.5%
+8.5%
+8.6%
+[36m(RayTrainWorker pid=5776)[0m 
+8.6%
+8.6%
+8.6%
+8.6%
+8.6%
+[36m(RayTrainWorker pid=5776)[0m 
+8.7%
+8.7%
+8.7%
+8.7%
+8.7%
+8.7%
+8.8%
+[36m(RayTrainWorker pid=5776)[0m 
+8.8%
+8.8%
+8.8%
+8.8%
+8.8%
+8.9%
+8.9%
+[36m(RayTrainWorker pid=5776)[0m 
+8.9%
+8.9%
+8.9%
+8.9%
+[36m(RayTrainWorker pid=5776)[0m 
+9.0%
+9.0%
+9.0%
+9.0%
+9.0%
+9.0%
+9.1%
+[36m(RayTrainWorker pid=5776)[0m 
+9.1%
+[36m(RayTrainWorker pid=5776)[0m 
+9.1%
+[36m(RayTrainWorker pid=5776)[0m 
+9.1%
+9.1%
+[36m(RayTrainWorker pid=5776)[0m 
+9.1%
+9.2%
+9.2%
+9.2%
+[36m(RayTrainWorker pid=5776)[0m 
+9.2%
+9.2%
+[36m(RayTrainWorker pid=5776)[0m 
+9.2%
+9.3%
+9.3%
+[36m(RayTrainWorker pid=5776)[0m 
+9.3%
+9.3%
+9.3%
+9.3%
+[36m(RayTrainWorker pid=5776)[0m 
+9.4%
+9.4%
+9.4%
+9.4%
+9.4%
+[36m(RayTrainWorker pid=5776)[0m 
+9.4%
+9.5%
+9.5%
+[36m(RayTrainWorker pid=5776)[0m 
+9.5%
+9.5%
+[36m(RayTrainWorker pid=5776)[0m 
+9.5%
+[36m(RayTrainWorker pid=5776)[0m 
+9.5%
+9.6%
+9.6%
+[36m(RayTrainWorker pid=5776)[0m 
+9.6%
+9.6%
+9.6%
+9.6%
+9.7%
+9.7%
+9.7%
+9.7%
+9.7%
+9.7%
+9.8%
+9.8%
+9.8%
+9.8%
+9.8%
+9.8%
+9.9%
+9.9%
+9.9%
+9.9%
+9.9%
+9.9%
+10.0%
+10.0%
+10.0%
+10.0%
+10.0%
+10.0%
+10.1%
+10.1%
+10.1%
+10.1%
+10.1%
+10.1%
+10.2%
+10.2%
+10.2%
+10.2%
+10.2%
+10.2%
+10.3%
+10.3%
+10.3%
+10.3%
+10.3%
+10.3%
+10.4%
+10.4%
+10.4%
+10.4%
+10.4%
+10.4%
+10.5%
+10.5%
+10.5%
+10.5%
+10.5%
+10.5%
+10.6%
+10.6%
+10.6%
+10.6%
+10.6%
+10.6%
+10.7%
+10.7%
+10.7%
+10.7%
+10.7%
+10.7%
+10.8%
+10.8%
+10.8%
+10.8%
+10.8%
+10.8%
+10.9%
+10.9%
+10.9%
+10.9%
+10.9%
+10.9%
+11.0%
+11.0%
+11.0%
+11.0%
+11.0%
+11.0%
+11.0%
+11.1%
+11.1%
+11.1%
+11.1%
+11.1%
+11.1%
+11.2%
+11.2%
+11.2%
+11.2%
+11.2%
+11.2%
+11.3%
+11.3%
+11.3%
+11.3%
+11.3%
+11.3%
+11.4%
+11.4%
+11.4%
+11.4%
+11.4%
+11.4%
+11.5%
+11.5%
+11.5%
+11.5%
+11.5%
+11.5%
+11.6%
+11.6%
+11.6%
+11.6%
+11.6%
+11.6%
+11.7%
+11.7%
+11.7%
+11.7%
+11.7%
+11.7%
+11.8%
+11.8%
+11.8%
+11.8%
+11.8%
+11.8%
+11.9%
+11.9%
+11.9%
+11.9%
+11.9%
+11.9%
+12.0%
+12.0%
+12.0%
+12.0%
+12.0%
+12.0%
+12.1%
+12.1%
+12.1%
+12.1%
+12.1%
+12.1%
+12.2%
+12.2%
+12.2%
+12.2%
+12.2%
+12.2%
+12.3%
+12.3%
+12.3%
+12.3%
+12.3%
+12.3%
+12.4%
+12.4%
+12.4%
+12.4%
+12.4%
+12.4%
+12.5%
+12.5%
+12.5%
+12.5%
+12.5%
+[36m(RayTrainWorker pid=5776)[0m 
+12.5%
+12.6%
+12.6%
+12.6%
+[36m(RayTrainWorker pid=5776)[0m 
+12.6%
+12.6%
+12.6%
+12.7%
+12.7%
+[36m(RayTrainWorker pid=5776)[0m 
+12.7%
+[36m(RayTrainWorker pid=5776)[0m 
+12.7%
+12.7%
+12.7%
+[36m(RayTrainWorker pid=5776)[0m 
+12.8%
+12.8%
+12.8%
+[36m(RayTrainWorker pid=5776)[0m 
+12.8%
+12.8%
+12.8%
+12.9%
+[36m(RayTrainWorker pid=5776)[0m 
+12.9%
+12.9%
+12.9%
+12.9%
+12.9%
+13.0%
+13.0%
+13.0%
+13.0%
+[36m(RayTrainWorker pid=5776)[0m 
+13.0%
+13.0%
+13.1%
+13.1%
+13.1%
+13.1%
+[36m(RayTrainWorker pid=5776)[0m 
+13.1%
+13.1%
+13.2%
+13.2%
+13.2%
+13.2%
+13.2%
+13.2%
+[36m(RayTrainWorker pid=5776)[0m 
+13.3%
+13.3%
+13.3%
+13.3%
+13.3%
+[36m(RayTrainWorker pid=5776)[0m 
+13.3%
+13.4%
+13.4%
+[36m(RayTrainWorker pid=5776)[0m 
+13.4%
+13.4%
+13.4%
+[36m(RayTrainWorker pid=5776)[0m 
+13.4%
+13.5%
+13.5%
+[36m(RayTrainWorker pid=5776)[0m 
+13.5%
+13.5%
+[36m(RayTrainWorker pid=5776)[0m 
+13.5%
+13.5%
+13.6%
+[36m(RayTrainWorker pid=5776)[0m 
+13.6%
+13.6%
+13.6%
+[36m(RayTrainWorker pid=5776)[0m 
+13.6%
+13.6%
+13.7%
+13.7%
+[36m(RayTrainWorker pid=5776)[0m 
+13.7%
+13.7%
+13.7%
+13.7%
+13.8%
+[36m(RayTrainWorker pid=5776)[0m 
+13.8%
+13.8%
+13.8%
+13.8%
+[36m(RayTrainWorker pid=5776)[0m 
+13.8%
+13.8%
+13.9%
+13.9%
+[36m(RayTrainWorker pid=5776)[0m 
+13.9%
+13.9%
+13.9%
+13.9%
+14.0%
+[36m(RayTrainWorker pid=5776)[0m 
+14.0%
+14.0%
+14.0%
+[36m(RayTrainWorker pid=5776)[0m 
+14.0%
+14.0%
+14.1%
+14.1%
+14.1%
+14.1%
+14.1%
+14.1%
+[36m(RayTrainWorker pid=5776)[0m 
+14.2%
+14.2%
+14.2%
+14.2%
+14.2%
+14.2%
+14.3%
+14.3%
+14.3%
+[36m(RayTrainWorker pid=5776)[0m 
+14.3%
+14.3%
+14.3%
+14.4%
+14.4%
+14.4%
+14.4%
+14.4%
+14.4%
+[36m(RayTrainWorker pid=5776)[0m 
+14.5%
+14.5%
+14.5%
+14.5%
+14.5%
+14.5%
+14.6%
+14.6%
+14.6%
+14.6%
+14.6%
+14.6%
+14.7%
+14.7%
+14.7%
+14.7%
+14.7%
+14.7%
+14.8%
+14.8%
+14.8%
+14.8%
+14.8%
+14.8%
+14.9%
+14.9%
+14.9%
+14.9%
+14.9%
+14.9%
+15.0%
+15.0%
+15.0%
+15.0%
+15.0%
+15.0%
+15.1%
+15.1%
+15.1%
+15.1%
+15.1%
+15.1%
+15.2%
+15.2%
+15.2%
+15.2%
+15.2%
+15.2%
+15.3%
+15.3%
+15.3%
+15.3%
+15.3%
+15.3%
+15.4%
+15.4%
+15.4%
+15.4%
+15.4%
+15.4%
+15.5%
+15.5%
+15.5%
+15.5%
+15.5%
+15.5%
+15.6%
+15.6%
+15.6%
+15.6%
+15.6%
+15.6%
+15.7%
+15.7%
+15.7%
+15.7%
+15.7%
+15.7%
+15.8%
+15.8%
+15.8%
+15.8%
+15.8%
+15.8%
+15.9%
+15.9%
+15.9%
+15.9%
+15.9%
+15.9%
+16.0%
+16.0%
+16.0%
+16.0%
+16.0%
+16.0%
+16.1%
+16.1%
+16.1%
+16.1%
+16.1%
+16.1%
+16.2%
+16.2%
+16.2%
+16.2%
+16.2%
+16.2%
+16.3%
+16.3%
+16.3%
+16.3%
+16.3%
+16.3%
+16.4%
+16.4%
+16.4%
+16.4%
+16.4%
+16.4%
+16.5%
+16.5%
+16.5%
+16.5%
+16.5%
+16.5%
+16.5%
+16.6%
+16.6%
+16.6%
+16.6%
+16.6%
+16.6%
+16.7%
+16.7%
+16.7%
+16.7%
+16.7%
+16.7%
+16.8%
+16.8%
+16.8%
+16.8%
+16.8%
+16.8%
+16.9%
+16.9%
+16.9%
+16.9%
+16.9%
+16.9%
+17.0%
+17.0%
+17.0%
+17.0%
+17.0%
+17.0%
+17.1%
+17.1%
+17.1%
+17.1%
+17.1%
+17.1%
+17.2%
+17.2%
+17.2%
+17.2%
+17.2%
+17.2%
+17.3%
+17.3%
+[36m(RayTrainWorker pid=5776)[0m 
+17.3%
+17.3%
+17.3%
+17.3%
+[36m(RayTrainWorker pid=5776)[0m 
+17.4%
+17.4%
+17.4%
+[36m(RayTrainWorker pid=5776)[0m 
+17.4%
+17.4%
+17.4%
+[36m(RayTrainWorker pid=5776)[0m 
+17.5%
+17.5%
+17.5%
+[36m(RayTrainWorker pid=5776)[0m 
+17.5%
+17.5%
+[36m(RayTrainWorker pid=5776)[0m 
+17.5%
+17.6%
+17.6%
+[36m(RayTrainWorker pid=5776)[0m 
+17.6%
+17.6%
+17.6%
+[36m(RayTrainWorker pid=5776)[0m 
+17.6%
+17.7%
+[36m(RayTrainWorker pid=5776)[0m 
+17.7%
+17.7%
+17.7%
+[36m(RayTrainWorker pid=5776)[0m 
+17.7%
+17.7%
+17.8%
+17.8%
+[36m(RayTrainWorker pid=5776)[0m 
+17.8%
+17.8%
+[36m(RayTrainWorker pid=5776)[0m 
+17.8%
+17.8%
+[36m(RayTrainWorker pid=5776)[0m 
+17.9%
+17.9%
+17.9%
+[36m(RayTrainWorker pid=5776)[0m 
+17.9%
+17.9%
+[36m(RayTrainWorker pid=5776)[0m 
+17.9%
+18.0%
+18.0%
+[36m(RayTrainWorker pid=5776)[0m 
+18.0%
+18.0%
+[36m(RayTrainWorker pid=5776)[0m 
+18.0%
+18.0%
+18.1%
+[36m(RayTrainWorker pid=5776)[0m 
+18.1%
+18.1%
+18.1%
+18.1%
+[36m(RayTrainWorker pid=5776)[0m 
+18.1%
+18.2%
+18.2%
+[36m(RayTrainWorker pid=5776)[0m 
+18.2%
+18.2%
+18.2%
+[36m(RayTrainWorker pid=5776)[0m 
+18.2%
+18.3%
+18.3%
+18.3%
+[36m(RayTrainWorker pid=5776)[0m 
+18.3%
+18.3%
+18.3%
+[36m(RayTrainWorker pid=5776)[0m 
+18.4%
+18.4%
+18.4%
+18.4%
+[36m(RayTrainWorker pid=5776)[0m 
+18.4%
+18.4%
+18.5%
+[36m(RayTrainWorker pid=5776)[0m 
+18.5%
+18.5%
+18.5%
+18.5%
+[36m(RayTrainWorker pid=5776)[0m 
+18.5%
+18.6%
+18.6%
+[36m(RayTrainWorker pid=5776)[0m 
+18.6%
+18.6%
+18.6%
+18.6%
+[36m(RayTrainWorker pid=5776)[0m 
+18.7%
+18.7%
+18.7%
+18.7%
+[36m(RayTrainWorker pid=5776)[0m 
+18.7%
+18.7%
+18.8%
+18.8%
+[36m(RayTrainWorker pid=5776)[0m 
+18.8%
+18.8%
+18.8%
+18.8%
+[36m(RayTrainWorker pid=5776)[0m 
+18.9%
+18.9%
+18.9%
+18.9%
+[36m(RayTrainWorker pid=5776)[0m 
+18.9%
+18.9%
+19.0%
+19.0%
+[36m(RayTrainWorker pid=5776)[0m 
+19.0%
+19.0%
+19.0%
+[36m(RayTrainWorker pid=5776)[0m 
+19.0%
+19.1%
+19.1%
+[36m(RayTrainWorker pid=5776)[0m 
+19.1%
+19.1%
+[36m(RayTrainWorker pid=5776)[0m 
+19.1%
+19.1%
+[36m(RayTrainWorker pid=5776)[0m 
+19.2%
+19.2%
+19.2%
+[36m(RayTrainWorker pid=5776)[0m 
+19.2%
+19.2%
+19.2%
+19.3%
+[36m(RayTrainWorker pid=5776)[0m 
+19.3%
+19.3%
+19.3%
+[36m(RayTrainWorker pid=5776)[0m 
+19.3%
+19.3%
+19.3%
+19.4%
+[36m(RayTrainWorker pid=5776)[0m 
+19.4%
+19.4%
+19.4%
+[36m(RayTrainWorker pid=5776)[0m 
+19.4%
+19.4%
+19.5%
+19.5%
+[36m(RayTrainWorker pid=5776)[0m 
+19.5%
+19.5%
+[36m(RayTrainWorker pid=5776)[0m 
+19.5%
+19.5%
+19.6%
+19.6%
+[36m(RayTrainWorker pid=5776)[0m 
+19.6%
+19.6%
+19.6%
+[36m(RayTrainWorker pid=5776)[0m 
+19.6%
+19.7%
+19.7%
+19.7%
+[36m(RayTrainWorker pid=5776)[0m 
+19.7%
+19.7%
+19.7%
+[36m(RayTrainWorker pid=5776)[0m 
+19.8%
+19.8%
+19.8%
+[36m(RayTrainWorker pid=5776)[0m 
+19.8%
+19.8%
+19.8%
+[36m(RayTrainWorker pid=5776)[0m 
+19.9%
+19.9%
+19.9%
+[36m(RayTrainWorker pid=5776)[0m 
+19.9%
+19.9%
+19.9%
+[36m(RayTrainWorker pid=5776)[0m 
+20.0%
+20.0%
+20.0%
+[36m(RayTrainWorker pid=5776)[0m 
+20.0%
+20.0%
+20.0%
+[36m(RayTrainWorker pid=5776)[0m 
+20.1%
+20.1%
+[36m(RayTrainWorker pid=5776)[0m 
+20.1%
+[36m(RayTrainWorker pid=5776)[0m 
+20.1%
+20.1%
+20.1%
+20.2%
+[36m(RayTrainWorker pid=5776)[0m 
+20.2%
+20.2%
+20.2%
+[36m(RayTrainWorker pid=5776)[0m 
+20.2%
+20.2%
+20.3%
+[36m(RayTrainWorker pid=5776)[0m 
+20.3%
+20.3%
+20.3%
+[36m(RayTrainWorker pid=5776)[0m 
+20.3%
+20.3%
+20.4%
+[36m(RayTrainWorker pid=5776)[0m 
+20.4%
+20.4%
+20.4%
+[36m(RayTrainWorker pid=5776)[0m 
+20.4%
+20.4%
+[36m(RayTrainWorker pid=5776)[0m 
+20.5%
+20.5%
+[36m(RayTrainWorker pid=5776)[0m 
+20.5%
+20.5%
+[36m(RayTrainWorker pid=5776)[0m 
+20.5%
+20.5%
+20.6%
+[36m(RayTrainWorker pid=5776)[0m 
+20.6%
+20.6%
+20.6%
+[36m(RayTrainWorker pid=5776)[0m 
+20.6%
+20.6%
+20.7%
+[36m(RayTrainWorker pid=5776)[0m 
+20.7%
+20.7%
+20.7%
+[36m(RayTrainWorker pid=5776)[0m 
+20.7%
+20.7%
+20.8%
+20.8%
+[36m(RayTrainWorker pid=5776)[0m 
+20.8%
+20.8%
+20.8%
+[36m(RayTrainWorker pid=5776)[0m 
+20.8%
+20.9%
+20.9%
+[36m(RayTrainWorker pid=5776)[0m 
+20.9%
+20.9%
+20.9%
+[36m(RayTrainWorker pid=5776)[0m 
+20.9%
+21.0%
+21.0%
+21.0%
+[36m(RayTrainWorker pid=5776)[0m 
+21.0%
+21.0%
+21.0%
+[36m(RayTrainWorker pid=5776)[0m 
+21.1%
+21.1%
+21.1%
+21.1%
+21.1%
+21.1%
+21.2%
+21.2%
+21.2%
+21.2%
+21.2%
+21.2%
+21.3%
+21.3%
+21.3%
+21.3%
+21.3%
+21.3%
+21.4%
+21.4%
+21.4%
+21.4%
+21.4%
+21.4%
+21.5%
+21.5%
+21.5%
+21.5%
+21.5%
+21.5%
+21.6%
+21.6%
+21.6%
+21.6%
+21.6%
+21.6%
+21.7%
+21.7%
+21.7%
+21.7%
+21.7%
+21.7%
+21.8%
+21.8%
+21.8%
+21.8%
+21.8%
+21.8%
+21.9%
+21.9%
+21.9%
+21.9%
+21.9%
+21.9%
+22.0%
+22.0%
+22.0%
+22.0%
+22.0%
+22.0%
+22.0%
+22.1%
+22.1%
+22.1%
+22.1%
+22.1%
+22.1%
+22.2%
+22.2%
+22.2%
+22.2%
+22.2%
+22.2%
+22.3%
+22.3%
+22.3%
+22.3%
+22.3%
+22.3%
+22.4%
+22.4%
+[36m(RayTrainWorker pid=5776)[0m 
+22.4%
+22.4%
+22.4%
+22.4%
+22.5%
+22.5%
+[36m(RayTrainWorker pid=5776)[0m 
+22.5%
+22.5%
+22.5%
+22.5%
+22.6%
+[36m(RayTrainWorker pid=5776)[0m 
+22.6%
+[36m(RayTrainWorker pid=5776)[0m 
+22.6%
+22.6%
+22.6%
+22.6%
+22.7%
+22.7%
+22.7%
+22.7%
+22.7%
+22.7%
+22.8%
+22.8%
+22.8%
+22.8%
+22.8%
+22.8%
+22.9%
+22.9%
+22.9%
+22.9%
+22.9%
+22.9%
+23.0%
+23.0%
+23.0%
+23.0%
+23.0%
+23.0%
+23.1%
+23.1%
+23.1%
+23.1%
+23.1%
+23.1%
+23.2%
+23.2%
+23.2%
+23.2%
+23.2%
+23.2%
+23.3%
+23.3%
+23.3%
+23.3%
+23.3%
+23.3%
+23.4%
+23.4%
+23.4%
+23.4%
+23.4%
+23.4%
+23.5%
+23.5%
+23.5%
+23.5%
+23.5%
+23.5%
+23.6%
+23.6%
+23.6%
+23.6%
+[36m(RayTrainWorker pid=5776)[0m 
+23.6%
+23.6%
+23.7%
+23.7%
+23.7%
+[36m(RayTrainWorker pid=5776)[0m 
+23.7%
+23.7%
+23.7%
+[36m(RayTrainWorker pid=5776)[0m 
+23.8%
+23.8%
+23.8%
+23.8%
+23.8%
+[36m(RayTrainWorker pid=5776)[0m 
+23.8%
+23.9%
+23.9%
+23.9%
+[36m(RayTrainWorker pid=5776)[0m 
+23.9%
+23.9%
+23.9%
+24.0%
+[36m(RayTrainWorker pid=5776)[0m 
+24.0%
+24.0%
+24.0%
+[36m(RayTrainWorker pid=5776)[0m 
+24.0%
+24.0%
+24.1%
+24.1%
+24.1%
+[36m(RayTrainWorker pid=5776)[0m 
+24.1%
+24.1%
+24.1%
+24.2%
+[36m(RayTrainWorker pid=5776)[0m 
+24.2%
+24.2%
+24.2%
+24.2%
+24.2%
+[36m(RayTrainWorker pid=5776)[0m 
+24.3%
+24.3%
+24.3%
+24.3%
+24.3%
+[36m(RayTrainWorker pid=5776)[0m 
+24.3%
+24.4%
+24.4%
+24.4%
+24.4%
+24.4%
+[36m(RayTrainWorker pid=5776)[0m 
+24.4%
+24.5%
+24.5%
+24.5%
+24.5%
+[36m(RayTrainWorker pid=5776)[0m 
+24.5%
+24.5%
+24.6%
+24.6%
+24.6%
+24.6%
+[36m(RayTrainWorker pid=5776)[0m 
+24.6%
+24.6%
+24.7%
+24.7%
+[36m(RayTrainWorker pid=5776)[0m 
+24.7%
+24.7%
+24.7%
+24.7%
+24.8%
+24.8%
+24.8%
+[36m(RayTrainWorker pid=5776)[0m 
+24.8%
+24.8%
+24.8%
+24.8%
+24.9%
+24.9%
+24.9%
+[36m(RayTrainWorker pid=5776)[0m 
+24.9%
+24.9%
+24.9%
+25.0%
+[36m(RayTrainWorker pid=5776)[0m 
+25.0%
+25.0%
+25.0%
+25.0%
+25.0%
+[36m(RayTrainWorker pid=5776)[0m 
+25.1%
+25.1%
+25.1%
+25.1%
+25.1%
+[36m(RayTrainWorker pid=5776)[0m 
+25.1%
+25.2%
+25.2%
+25.2%
+25.2%
+25.2%
+[36m(RayTrainWorker pid=5776)[0m 
+25.2%
+25.3%
+25.3%
+25.3%
+[36m(RayTrainWorker pid=5776)[0m 
+25.3%
+25.3%
+25.3%
+25.4%
+25.4%
+25.4%
+25.4%
+[36m(RayTrainWorker pid=5776)[0m 
+25.4%
+25.4%
+25.5%
+25.5%
+25.5%
+[36m(RayTrainWorker pid=5776)[0m 
+25.5%
+25.5%
+25.5%
+25.6%
+25.6%
+25.6%
+25.6%
+25.6%
+[36m(RayTrainWorker pid=5776)[0m 
+25.6%
+25.7%
+25.7%
+25.7%
+25.7%
+25.7%
+25.7%
+25.8%
+25.8%
+25.8%
+25.8%
+[36m(RayTrainWorker pid=5776)[0m 
+25.8%
+25.8%
+25.9%
+25.9%
+25.9%
+25.9%
+[36m(RayTrainWorker pid=5776)[0m 
+25.9%
+25.9%
+26.0%
+26.0%
+26.0%
+[36m(RayTrainWorker pid=5776)[0m 
+26.0%
+26.0%
+26.0%
+[36m(RayTrainWorker pid=5776)[0m 
+26.1%
+26.1%
+26.1%
+[36m(RayTrainWorker pid=5776)[0m 
+26.1%
+26.1%
+26.1%
+[36m(RayTrainWorker pid=5776)[0m 
+26.2%
+26.2%
+26.2%
+[36m(RayTrainWorker pid=5776)[0m 
+26.2%
+26.2%
+[36m(RayTrainWorker pid=5776)[0m 
+26.2%
+26.3%
+26.3%
+[36m(RayTrainWorker pid=5776)[0m 
+26.3%
+26.3%
+26.3%
+26.3%
+[36m(RayTrainWorker pid=5776)[0m 
+26.4%
+26.4%
+26.4%
+26.4%
+26.4%
+26.4%
+[36m(RayTrainWorker pid=5776)[0m 
+26.5%
+26.5%
+[36m(RayTrainWorker pid=5776)[0m 
+26.5%
+26.5%
+26.5%
+26.5%
+[36m(RayTrainWorker pid=5776)[0m 
+26.6%
+26.6%
+26.6%
+26.6%
+26.6%
+[36m(RayTrainWorker pid=5776)[0m 
+26.6%
+26.7%
+26.7%
+26.7%
+[36m(RayTrainWorker pid=5776)[0m 
+26.7%
+26.7%
+26.7%
+[36m(RayTrainWorker pid=5776)[0m 
+26.8%
+26.8%
+26.8%
+26.8%
+[36m(RayTrainWorker pid=5776)[0m 
+26.8%
+26.8%
+26.9%
+[36m(RayTrainWorker pid=5776)[0m 
+26.9%
+26.9%
+26.9%
+26.9%
+26.9%
+27.0%
+[36m(RayTrainWorker pid=5776)[0m 
+27.0%
+27.0%
+27.0%
+27.0%
+27.0%
+[36m(RayTrainWorker pid=5776)[0m 
+27.1%
+27.1%
+27.1%
+27.1%
+[36m(RayTrainWorker pid=5776)[0m 
+27.1%
+27.1%
+27.2%
+27.2%
+[36m(RayTrainWorker pid=5776)[0m 
+27.2%
+27.2%
+27.2%
+27.2%
+[36m(RayTrainWorker pid=5776)[0m 
+27.3%
+27.3%
+27.3%
+27.3%
+27.3%
+[36m(RayTrainWorker pid=5776)[0m 
+27.3%
+27.4%
+27.4%
+27.4%
+[36m(RayTrainWorker pid=5776)[0m 
+27.4%
+27.4%
+27.4%
+27.5%
+27.5%
+[36m(RayTrainWorker pid=5776)[0m 
+27.5%
+27.5%
+27.5%
+27.5%
+[36m(RayTrainWorker pid=5776)[0m 
+27.6%
+27.6%
+27.6%
+[36m(RayTrainWorker pid=5776)[0m 
+27.6%
+27.6%
+27.6%
+27.6%
+27.7%
+[36m(RayTrainWorker pid=5776)[0m 
+27.7%
+27.7%
+27.7%
+27.7%
+[36m(RayTrainWorker pid=5776)[0m 
+27.7%
+27.8%
+27.8%
+[36m(RayTrainWorker pid=5776)[0m 
+27.8%
+27.8%
+27.8%
+27.8%
+27.9%
+[36m(RayTrainWorker pid=5776)[0m 
+27.9%
+27.9%
+27.9%
+27.9%
+[36m(RayTrainWorker pid=5776)[0m 
+27.9%
+28.0%
+28.0%
+28.0%
+[36m(RayTrainWorker pid=5776)[0m 
+28.0%
+28.0%
+28.0%
+28.1%
+28.1%
+[36m(RayTrainWorker pid=5776)[0m 
+28.1%
+28.1%
+28.1%
+28.1%
+[36m(RayTrainWorker pid=5776)[0m 
+28.2%
+28.2%
+28.2%
+28.2%
+[36m(RayTrainWorker pid=5776)[0m 
+28.2%
+28.2%
+28.3%
+28.3%
+[36m(RayTrainWorker pid=5776)[0m 
+28.3%
+28.3%
+28.3%
+28.3%
+28.4%
+28.4%
+[36m(RayTrainWorker pid=5776)[0m 
+28.4%
+28.4%
+28.4%
+28.4%
+28.5%
+[36m(RayTrainWorker pid=5776)[0m 
+28.5%
+28.5%
+28.5%
+28.5%
+[36m(RayTrainWorker pid=5776)[0m 
+28.5%
+28.6%
+28.6%
+28.6%
+28.6%
+[36m(RayTrainWorker pid=5776)[0m 
+28.6%
+28.6%
+28.7%
+28.7%
+28.7%
+28.7%
+28.7%
+[36m(RayTrainWorker pid=5776)[0m 
+28.7%
+28.8%
+28.8%
+28.8%
+28.8%
+[36m(RayTrainWorker pid=5776)[0m 
+28.8%
+28.8%
+28.9%
+28.9%
+28.9%
+[36m(RayTrainWorker pid=5776)[0m 
+28.9%
+28.9%
+28.9%
+29.0%
+29.0%
+[36m(RayTrainWorker pid=5776)[0m 
+29.0%
+29.0%
+29.0%
+29.0%
+[36m(RayTrainWorker pid=5776)[0m 
+29.1%
+29.1%
+29.1%
+29.1%
+29.1%
+[36m(RayTrainWorker pid=5776)[0m 
+29.1%
+29.2%
+29.2%
+29.2%
+[36m(RayTrainWorker pid=5776)[0m 
+29.2%
+29.2%
+29.2%
+[36m(RayTrainWorker pid=5776)[0m 
+29.3%
+29.3%
+29.3%
+29.3%
+[36m(RayTrainWorker pid=5776)[0m 
+29.3%
+29.3%
+29.4%
+29.4%
+[36m(RayTrainWorker pid=5776)[0m 
+29.4%
+29.4%
+29.4%
+29.4%
+29.5%
+29.5%
+29.5%
+29.5%
+29.5%
+29.5%
+29.6%
+29.6%
+29.6%
+29.6%
+29.6%
+29.6%
+29.7%
+29.7%
+29.7%
+29.7%
+29.7%
+29.7%
+29.8%
+29.8%
+29.8%
+29.8%
+29.8%
+29.8%
+29.9%
+29.9%
+29.9%
+29.9%
+29.9%
+29.9%
+30.0%
+30.0%
+30.0%
+30.0%
+30.0%
+30.0%
+30.1%
+30.1%
+30.1%
+30.1%
+30.1%
+30.1%
+30.2%
+30.2%
+30.2%
+30.2%
+30.2%
+30.2%
+30.3%
+30.3%
+30.3%
+30.3%
+30.3%
+30.3%
+30.3%
+30.4%
+30.4%
+30.4%
+30.4%
+30.4%
+30.4%
+30.5%
+30.5%
+30.5%
+30.5%
+30.5%
+30.5%
+30.6%
+30.6%
+30.6%
+30.6%
+30.6%
+30.6%
+30.7%
+30.7%
+30.7%
+30.7%
+30.7%
+30.7%
+30.8%
+30.8%
+30.8%
+30.8%
+30.8%
+30.8%
+30.9%
+30.9%
+30.9%
+[36m(RayTrainWorker pid=5776)[0m 
+30.9%
+30.9%
+30.9%
+[36m(RayTrainWorker pid=5776)[0m 
+31.0%
+31.0%
+31.0%
+[36m(RayTrainWorker pid=5776)[0m 
+31.0%
+31.0%
+[36m(RayTrainWorker pid=5776)[0m 
+31.0%
+31.1%
+31.1%
+[36m(RayTrainWorker pid=5776)[0m 
+31.1%
+31.1%
+31.1%
+[36m(RayTrainWorker pid=5776)[0m 
+31.1%
+31.2%
+31.2%
+[36m(RayTrainWorker pid=5776)[0m 
+31.2%
+31.2%
+31.2%
+31.2%
+[36m(RayTrainWorker pid=5776)[0m 
+31.3%
+31.3%
+31.3%
+31.3%
+31.3%
+[36m(RayTrainWorker pid=5776)[0m 
+31.3%
+31.4%
+[36m(RayTrainWorker pid=5776)[0m 
+31.4%
+31.4%
+31.4%
+31.4%
+31.4%
+31.5%
+31.5%
+31.5%
+[36m(RayTrainWorker pid=5776)[0m 
+31.5%
+31.5%
+31.5%
+31.6%
+[36m(RayTrainWorker pid=5776)[0m 
+31.6%
+31.6%
+31.6%
+31.6%
+[36m(RayTrainWorker pid=5776)[0m 
+31.6%
+31.7%
+31.7%
+[36m(RayTrainWorker pid=5776)[0m 
+31.7%
+31.7%
+[36m(RayTrainWorker pid=5776)[0m 
+31.7%
+31.7%
+[36m(RayTrainWorker pid=5776)[0m 
+31.8%
+31.8%
+[36m(RayTrainWorker pid=5776)[0m 
+31.8%
+31.8%
+[36m(RayTrainWorker pid=5776)[0m 
+31.8%
+[36m(RayTrainWorker pid=5776)[0m 
+31.8%
+31.9%
+31.9%
+[36m(RayTrainWorker pid=5776)[0m 
+31.9%
+31.9%
+31.9%
+[36m(RayTrainWorker pid=5776)[0m 
+31.9%
+32.0%
+32.0%
+32.0%
+32.0%
+[36m(RayTrainWorker pid=5776)[0m 
+32.0%
+32.0%
+[36m(RayTrainWorker pid=5776)[0m 
+32.1%
+[36m(RayTrainWorker pid=5776)[0m 
+32.1%
+[36m(RayTrainWorker pid=5776)[0m 
+32.1%
+32.1%
+32.1%
+32.1%
+[36m(RayTrainWorker pid=5776)[0m 
+32.2%
+32.2%
+32.2%
+[36m(RayTrainWorker pid=5776)[0m 
+32.2%
+32.2%
+32.2%
+[36m(RayTrainWorker pid=5776)[0m 
+32.3%
+32.3%
+32.3%
+[36m(RayTrainWorker pid=5776)[0m 
+32.3%
+32.3%
+32.3%
+[36m(RayTrainWorker pid=5776)[0m 
+32.4%
+32.4%
+32.4%
+[36m(RayTrainWorker pid=5776)[0m 
+32.4%
+32.4%
+[36m(RayTrainWorker pid=5776)[0m 
+32.4%
+32.5%
+[36m(RayTrainWorker pid=5776)[0m 
+32.5%
+32.5%
+32.5%
+[36m(RayTrainWorker pid=5776)[0m 
+32.5%
+32.5%
+32.6%
+[36m(RayTrainWorker pid=5776)[0m 
+32.6%
+32.6%
+[36m(RayTrainWorker pid=5776)[0m 
+32.6%
+32.6%
+32.6%
+[36m(RayTrainWorker pid=5776)[0m 
+32.7%
+32.7%
+[36m(RayTrainWorker pid=5776)[0m 
+32.7%
+[36m(RayTrainWorker pid=5776)[0m 
+32.7%
+32.7%
+32.7%
+[36m(RayTrainWorker pid=5776)[0m 
+32.8%
+32.8%
+32.8%
+[36m(RayTrainWorker pid=5776)[0m 
+32.8%
+32.8%
+32.8%
+[36m(RayTrainWorker pid=5776)[0m 
+32.9%
+32.9%
+32.9%
+32.9%
+[36m(RayTrainWorker pid=5776)[0m 
+32.9%
+32.9%
+33.0%
+[36m(RayTrainWorker pid=5776)[0m 
+33.0%
+33.0%
+33.0%
+[36m(RayTrainWorker pid=5776)[0m 
+33.0%
+33.0%
+[36m(RayTrainWorker pid=5776)[0m 
+33.1%
+[36m(RayTrainWorker pid=5776)[0m 
+33.1%
+33.1%
+33.1%
+33.1%
+33.1%
+33.1%
+33.2%
+33.2%
+33.2%
+33.2%
+33.2%
+33.2%
+33.3%
+33.3%
+33.3%
+33.3%
+33.3%
+33.3%
+33.4%
+33.4%
+33.4%
+33.4%
+33.4%
+33.4%
+33.5%
+33.5%
+33.5%
+33.5%
+33.5%
+33.5%
+33.6%
+33.6%
+33.6%
+33.6%
+33.6%
+33.6%
+33.7%
+33.7%
+33.7%
+33.7%
+33.7%
+33.7%
+33.8%
+33.8%
+33.8%
+33.8%
+33.8%
+33.8%
+33.9%
+33.9%
+33.9%
+33.9%
+33.9%
+33.9%
+34.0%
+34.0%
+34.0%
+34.0%
+34.0%
+34.0%
+34.1%
+34.1%
+34.1%
+34.1%
+34.1%
+34.1%
+34.2%
+34.2%
+34.2%
+34.2%
+34.2%
+34.2%
+34.3%
+34.3%
+34.3%
+34.3%
+34.3%
+34.3%
+34.4%
+34.4%
+34.4%
+34.4%
+34.4%
+34.4%
+34.5%
+34.5%
+34.5%
+34.5%
+34.5%
+34.5%
+34.6%
+34.6%
+34.6%
+34.6%
+34.6%
+34.6%
+34.7%
+34.7%
+34.7%
+34.7%
+34.7%
+34.7%
+34.8%
+34.8%
+34.8%
+34.8%
+34.8%
+34.8%
+34.9%
+34.9%
+34.9%
+34.9%
+34.9%
+34.9%
+35.0%
+35.0%
+35.0%
+35.0%
+35.0%
+35.0%
+35.1%
+35.1%
+35.1%
+35.1%
+35.1%
+35.1%
+35.2%
+35.2%
+35.2%
+35.2%
+35.2%
+35.2%
+35.3%
+35.3%
+35.3%
+35.3%
+35.3%
+35.3%
+35.4%
+35.4%
+35.4%
+35.4%
+35.4%
+35.4%
+35.5%
+35.5%
+35.5%
+35.5%
+35.5%
+35.5%
+35.6%
+35.6%
+35.6%
+35.6%
+35.6%
+35.6%
+35.7%
+35.7%
+35.7%
+35.7%
+35.7%
+35.7%
+35.8%
+35.8%
+35.8%
+35.8%
+35.8%
+35.8%
+35.8%
+35.9%
+35.9%
+35.9%
+35.9%
+35.9%
+35.9%
+36.0%
+36.0%
+36.0%
+36.0%
+36.0%
+36.0%
+36.1%
+36.1%
+36.1%
+36.1%
+36.1%
+36.1%
+36.2%
+36.2%
+36.2%
+36.2%
+36.2%
+36.2%
+36.3%
+36.3%
+36.3%
+36.3%
+36.3%
+36.3%
+36.4%
+36.4%
+36.4%
+36.4%
+36.4%
+36.4%
+36.5%
+36.5%
+36.5%
+36.5%
+36.5%
+36.5%
+36.6%
+36.6%
+36.6%
+36.6%
+36.6%
+36.6%
+36.7%
+36.7%
+36.7%
+36.7%
+36.7%
+36.7%
+36.8%
+36.8%
+36.8%
+36.8%
+36.8%
+36.8%
+36.9%
+36.9%
+36.9%
+36.9%
+36.9%
+36.9%
+37.0%
+37.0%
+37.0%
+37.0%
+37.0%
+37.0%
+37.1%
+37.1%
+37.1%
+37.1%
+37.1%
+37.1%
+37.2%
+37.2%
+37.2%
+37.2%
+37.2%
+37.2%
+37.3%
+37.3%
+37.3%
+37.3%
+37.3%
+[36m(RayTrainWorker pid=5776)[0m 
+37.3%
+37.4%
+37.4%
+37.4%
+[36m(RayTrainWorker pid=5776)[0m 
+37.4%
+[36m(RayTrainWorker pid=5776)[0m 
+37.4%
+37.4%
+[36m(RayTrainWorker pid=5776)[0m 
+37.5%
+37.5%
+37.5%
+[36m(RayTrainWorker pid=5776)[0m 
+37.5%
+37.5%
+37.5%
+37.6%
+37.6%
+[36m(RayTrainWorker pid=5776)[0m 
+37.6%
+37.6%
+37.6%
+[36m(RayTrainWorker pid=5776)[0m 
+37.6%
+37.7%
+37.7%
+37.7%
+[36m(RayTrainWorker pid=5776)[0m 
+37.7%
+37.7%
+37.7%
+37.8%
+[36m(RayTrainWorker pid=5776)[0m 
+37.8%
+37.8%
+37.8%
+[36m(RayTrainWorker pid=5776)[0m 
+37.8%
+37.8%
+37.9%
+37.9%
+37.9%
+37.9%
+[36m(RayTrainWorker pid=5776)[0m 
+37.9%
+37.9%
+38.0%
+38.0%
+[36m(RayTrainWorker pid=5776)[0m 
+38.0%
+38.0%
+38.0%
+[36m(RayTrainWorker pid=5776)[0m 
+38.0%
+38.1%
+38.1%
+[36m(RayTrainWorker pid=5776)[0m 
+38.1%
+38.1%
+38.1%
+38.1%
+[36m(RayTrainWorker pid=5776)[0m 
+38.2%
+38.2%
+38.2%
+38.2%
+[36m(RayTrainWorker pid=5776)[0m 
+38.2%
+38.2%
+[36m(RayTrainWorker pid=5776)[0m 
+38.3%
+38.3%
+38.3%
+[36m(RayTrainWorker pid=5776)[0m 
+38.3%
+38.3%
+38.3%
+[36m(RayTrainWorker pid=5776)[0m 
+38.4%
+38.4%
+38.4%
+38.4%
+[36m(RayTrainWorker pid=5776)[0m 
+38.4%
+38.4%
+38.5%
+[36m(RayTrainWorker pid=5776)[0m 
+38.5%
+38.5%
+38.5%
+[36m(RayTrainWorker pid=5776)[0m 
+38.5%
+[36m(RayTrainWorker pid=5776)[0m 
+38.5%
+38.6%
+38.6%
+38.6%
+38.6%
+[36m(RayTrainWorker pid=5776)[0m 
+38.6%
+38.6%
+38.6%
+38.7%
+[36m(RayTrainWorker pid=5776)[0m 
+38.7%
+38.7%
+38.7%
+38.7%
+[36m(RayTrainWorker pid=5776)[0m 
+38.7%
+38.8%
+38.8%
+38.8%
+38.8%
+[36m(RayTrainWorker pid=5776)[0m 
+38.8%
+38.8%
+38.9%
+38.9%
+38.9%
+38.9%
+38.9%
+[36m(RayTrainWorker pid=5776)[0m 
+38.9%
+39.0%
+39.0%
+[36m(RayTrainWorker pid=5776)[0m 
+39.0%
+39.0%
+39.0%
+[36m(RayTrainWorker pid=5776)[0m 
+39.0%
+39.1%
+39.1%
+39.1%
+[36m(RayTrainWorker pid=5776)[0m 
+39.1%
+[36m(RayTrainWorker pid=5776)[0m 
+39.1%
+39.1%
+39.2%
+39.2%
+[36m(RayTrainWorker pid=5776)[0m 
+39.2%
+39.2%
+[36m(RayTrainWorker pid=5776)[0m 
+39.2%
+39.2%
+39.3%
+39.3%
+[36m(RayTrainWorker pid=5776)[0m 
+39.3%
+39.3%
+39.3%
+39.3%
+[36m(RayTrainWorker pid=5776)[0m 
+39.4%
+39.4%
+39.4%
+[36m(RayTrainWorker pid=5776)[0m 
+39.4%
+[36m(RayTrainWorker pid=5776)[0m 
+39.4%
+39.4%
+39.5%
+[36m(RayTrainWorker pid=5776)[0m 
+39.5%
+39.5%
+39.5%
+39.5%
+39.5%
+[36m(RayTrainWorker pid=5776)[0m 
+39.6%
+39.6%
+39.6%
+39.6%
+[36m(RayTrainWorker pid=5776)[0m 
+39.6%
+39.6%
+[36m(RayTrainWorker pid=5776)[0m 
+39.7%
+39.7%
+39.7%
+[36m(RayTrainWorker pid=5776)[0m 
+39.7%
+39.7%
+39.7%
+39.8%
+[36m(RayTrainWorker pid=5776)[0m 
+39.8%
+39.8%
+39.8%
+39.8%
+39.8%
+[36m(RayTrainWorker pid=5776)[0m 
+39.9%
+39.9%
+39.9%
+39.9%
+39.9%
+[36m(RayTrainWorker pid=5776)[0m 
+39.9%
+40.0%
+40.0%
+[36m(RayTrainWorker pid=5776)[0m 
+40.0%
+40.0%
+40.0%
+[36m(RayTrainWorker pid=5776)[0m 
+40.0%
+40.1%
+40.1%
+[36m(RayTrainWorker pid=5776)[0m 
+40.1%
+40.1%
+40.1%
+[36m(RayTrainWorker pid=5776)[0m 
+40.1%
+40.2%
+[36m(RayTrainWorker pid=5776)[0m 
+40.2%
+40.2%
+40.2%
+40.2%
+40.2%
+[36m(RayTrainWorker pid=5776)[0m 
+40.3%
+40.3%
+40.3%
+[36m(RayTrainWorker pid=5776)[0m 
+40.3%
+40.3%
+40.3%
+[36m(RayTrainWorker pid=5776)[0m 
+40.4%
+40.4%
+40.4%
+[36m(RayTrainWorker pid=5776)[0m 
+40.4%
+40.4%
+40.4%
+40.5%
+[36m(RayTrainWorker pid=5776)[0m 
+40.5%
+40.5%
+40.5%
+40.5%
+[36m(RayTrainWorker pid=5776)[0m 
+40.5%
+40.6%
+40.6%
+40.6%
+40.6%
+[36m(RayTrainWorker pid=5776)[0m 
+40.6%
+40.6%
+40.7%
+[36m(RayTrainWorker pid=5776)[0m 
+40.7%
+40.7%
+40.7%
+40.7%
+[36m(RayTrainWorker pid=5776)[0m 
+40.7%
+40.8%
+40.8%
+[36m(RayTrainWorker pid=5776)[0m 
+40.8%
+40.8%
+40.8%
+[36m(RayTrainWorker pid=5776)[0m 
+40.8%
+40.9%
+40.9%
+[36m(RayTrainWorker pid=5776)[0m 
+40.9%
+40.9%
+40.9%
+40.9%
+[36m(RayTrainWorker pid=5776)[0m 
+41.0%
+41.0%
+41.0%
+[36m(RayTrainWorker pid=5776)[0m 
+41.0%
+41.0%
+41.0%
+[36m(RayTrainWorker pid=5776)[0m 
+41.1%
+41.1%
+41.1%
+[36m(RayTrainWorker pid=5776)[0m 
+41.1%
+41.1%
+41.1%
+41.2%
+[36m(RayTrainWorker pid=5776)[0m 
+41.2%
+41.2%
+41.2%
+[36m(RayTrainWorker pid=5776)[0m 
+41.2%
+41.2%
+41.3%
+[36m(RayTrainWorker pid=5776)[0m 
+41.3%
+41.3%
+41.3%
+[36m(RayTrainWorker pid=5776)[0m 
+41.3%
+41.3%
+41.3%
+[36m(RayTrainWorker pid=5776)[0m 
+41.4%
+41.4%
+41.4%
+41.4%
+[36m(RayTrainWorker pid=5776)[0m 
+41.4%
+41.4%
+41.5%
+[36m(RayTrainWorker pid=5776)[0m 
+41.5%
+41.5%
+41.5%
+[36m(RayTrainWorker pid=5776)[0m 
+41.5%
+41.5%
+41.6%
+[36m(RayTrainWorker pid=5776)[0m 
+41.6%
+41.6%
+41.6%
+[36m(RayTrainWorker pid=5776)[0m 
+41.6%
+41.6%
+41.7%
+41.7%
+[36m(RayTrainWorker pid=5776)[0m 
+41.7%
+41.7%
+41.7%
+[36m(RayTrainWorker pid=5776)[0m 
+41.7%
+41.8%
+41.8%
+[36m(RayTrainWorker pid=5776)[0m 
+41.8%
+41.8%
+41.8%
+[36m(RayTrainWorker pid=5776)[0m 
+41.8%
+41.9%
+41.9%
+[36m(RayTrainWorker pid=5776)[0m 
+41.9%
+41.9%
+41.9%
+[36m(RayTrainWorker pid=5776)[0m 
+41.9%
+42.0%
+42.0%
+42.0%
+[36m(RayTrainWorker pid=5776)[0m 
+42.0%
+42.0%
+42.0%
+42.1%
+42.1%
+[36m(RayTrainWorker pid=5776)[0m 
+42.1%
+42.1%
+42.1%
+42.1%
+[36m(RayTrainWorker pid=5776)[0m 
+42.2%
+42.2%
+42.2%
+42.2%
+42.2%
+[36m(RayTrainWorker pid=5776)[0m 
+42.2%
+42.3%
+42.3%
+42.3%
+[36m(RayTrainWorker pid=5776)[0m 
+42.3%
+42.3%
+42.3%
+[36m(RayTrainWorker pid=5776)[0m 
+42.4%
+42.4%
+42.4%
+42.4%
+[36m(RayTrainWorker pid=5776)[0m 
+42.4%
+42.4%
+42.5%
+[36m(RayTrainWorker pid=5776)[0m 
+42.5%
+[36m(RayTrainWorker pid=5776)[0m 
+42.5%
+42.5%
+42.5%
+[36m(RayTrainWorker pid=5776)[0m 
+42.5%
+42.6%
+[36m(RayTrainWorker pid=5776)[0m 
+42.6%
+42.6%
+[36m(RayTrainWorker pid=5776)[0m 
+42.6%
+42.6%
+[36m(RayTrainWorker pid=5776)[0m 
+42.6%
+42.7%
+42.7%
+[36m(RayTrainWorker pid=5776)[0m 
+42.7%
+42.7%
+[36m(RayTrainWorker pid=5776)[0m 
+42.7%
+42.7%
+[36m(RayTrainWorker pid=5776)[0m 
+42.8%
+42.8%
+[36m(RayTrainWorker pid=5776)[0m 
+42.8%
+42.8%
+[36m(RayTrainWorker pid=5776)[0m 
+42.8%
+42.8%
+[36m(RayTrainWorker pid=5776)[0m 
+42.9%
+42.9%
+[36m(RayTrainWorker pid=5776)[0m 
+42.9%
+42.9%
+42.9%
+[36m(RayTrainWorker pid=5776)[0m 
+42.9%
+43.0%
+[36m(RayTrainWorker pid=5776)[0m 
+43.0%
+43.0%
+43.0%
+[36m(RayTrainWorker pid=5776)[0m 
+43.0%
+43.0%
+[36m(RayTrainWorker pid=5776)[0m 
+43.1%
+43.1%
+[36m(RayTrainWorker pid=5776)[0m 
+43.1%
+43.1%
+43.1%
+[36m(RayTrainWorker pid=5776)[0m 
+43.1%
+43.2%
+43.2%
+[36m(RayTrainWorker pid=5776)[0m 
+43.2%
+43.2%
+[36m(RayTrainWorker pid=5776)[0m 
+43.2%
+43.2%
+43.3%
+[36m(RayTrainWorker pid=5776)[0m 
+43.3%
+43.3%
+[36m(RayTrainWorker pid=5776)[0m 
+43.3%
+43.3%
+43.3%
+[36m(RayTrainWorker pid=5776)[0m 
+43.4%
+43.4%
+43.4%
+[36m(RayTrainWorker pid=5776)[0m 
+43.4%
+43.4%
+[36m(RayTrainWorker pid=5776)[0m 
+43.4%
+43.5%
+43.5%
+[36m(RayTrainWorker pid=5776)[0m 
+43.5%
+43.5%
+[36m(RayTrainWorker pid=5776)[0m 
+43.5%
+43.5%
+43.6%
+[36m(RayTrainWorker pid=5776)[0m 
+43.6%
+43.6%
+43.6%
+[36m(RayTrainWorker pid=5776)[0m 
+43.6%
+43.6%
+[36m(RayTrainWorker pid=5776)[0m 
+43.7%
+43.7%
+43.7%
+[36m(RayTrainWorker pid=5776)[0m 
+43.7%
+43.7%
+[36m(RayTrainWorker pid=5776)[0m 
+43.7%
+43.8%
+[36m(RayTrainWorker pid=5776)[0m 
+43.8%
+43.8%
+43.8%
+[36m(RayTrainWorker pid=5776)[0m 
+43.8%
+43.8%
+[36m(RayTrainWorker pid=5776)[0m 
+43.9%
+43.9%
+43.9%
+[36m(RayTrainWorker pid=5776)[0m 
+43.9%
+43.9%
+43.9%
+[36m(RayTrainWorker pid=5776)[0m 
+44.0%
+44.0%
+[36m(RayTrainWorker pid=5776)[0m 
+44.0%
+44.0%
+44.0%
+[36m(RayTrainWorker pid=5776)[0m 
+44.0%
+44.1%
+44.1%
+[36m(RayTrainWorker pid=5776)[0m 
+44.1%
+44.1%
+44.1%
+44.1%
+44.1%
+[36m(RayTrainWorker pid=5776)[0m 
+44.2%
+44.2%
+44.2%
+44.2%
+44.2%
+[36m(RayTrainWorker pid=5776)[0m 
+44.2%
+44.3%
+44.3%
+44.3%
+[36m(RayTrainWorker pid=5776)[0m 
+44.3%
+44.3%
+44.3%
+44.4%
+[36m(RayTrainWorker pid=5776)[0m 
+44.4%
+44.4%
+44.4%
+44.4%
+44.4%
+[36m(RayTrainWorker pid=5776)[0m 
+44.5%
+44.5%
+44.5%
+44.5%
+44.5%
+44.5%
+[36m(RayTrainWorker pid=5776)[0m 
+44.6%
+44.6%
+44.6%
+44.6%
+44.6%
+[36m(RayTrainWorker pid=5776)[0m 
+44.6%
+44.7%
+44.7%
+[36m(RayTrainWorker pid=5776)[0m 
+44.7%
+44.7%
+44.7%
+44.7%
+[36m(RayTrainWorker pid=5776)[0m 
+44.8%
+44.8%
+44.8%
+44.8%
+[36m(RayTrainWorker pid=5776)[0m 
+44.8%
+44.8%
+44.9%
+[36m(RayTrainWorker pid=5776)[0m 
+44.9%
+44.9%
+44.9%
+44.9%
+44.9%
+[36m(RayTrainWorker pid=5776)[0m 
+45.0%
+45.0%
+45.0%
+[36m(RayTrainWorker pid=5776)[0m 
+45.0%
+45.0%
+45.0%
+45.1%
+[36m(RayTrainWorker pid=5776)[0m 
+45.1%
+45.1%
+45.1%
+[36m(RayTrainWorker pid=5776)[0m 
+45.1%
+45.1%
+45.2%
+45.2%
+[36m(RayTrainWorker pid=5776)[0m 
+45.2%
+45.2%
+45.2%
+[36m(RayTrainWorker pid=5776)[0m 
+45.2%
+45.3%
+45.3%
+45.3%
+[36m(RayTrainWorker pid=5776)[0m 
+45.3%
+45.3%
+45.3%
+[36m(RayTrainWorker pid=5776)[0m 
+45.4%
+45.4%
+45.4%
+45.4%
+[36m(RayTrainWorker pid=5776)[0m 
+45.4%
+45.4%
+45.5%
+45.5%
+[36m(RayTrainWorker pid=5776)[0m 
+45.5%
+45.5%
+45.5%
+[36m(RayTrainWorker pid=5776)[0m 
+45.5%
+45.6%
+[36m(RayTrainWorker pid=5776)[0m 
+45.6%
+45.6%
+45.6%
+[36m(RayTrainWorker pid=5776)[0m 
+45.6%
+45.6%
+45.7%
+[36m(RayTrainWorker pid=5776)[0m 
+45.7%
+45.7%
+45.7%
+[36m(RayTrainWorker pid=5776)[0m 
+45.7%
+45.7%
+[36m(RayTrainWorker pid=5776)[0m 
+45.8%
+45.8%
+[36m(RayTrainWorker pid=5776)[0m 
+45.8%
+45.8%
+45.8%
+[36m(RayTrainWorker pid=5776)[0m 
+45.8%
+45.9%
+[36m(RayTrainWorker pid=5776)[0m 
+45.9%
+45.9%
+[36m(RayTrainWorker pid=5776)[0m 
+45.9%
+45.9%
+45.9%
+[36m(RayTrainWorker pid=5776)[0m 
+46.0%
+46.0%
+[36m(RayTrainWorker pid=5776)[0m 
+46.0%
+46.0%
+46.0%
+[36m(RayTrainWorker pid=5776)[0m 
+46.0%
+46.1%
+46.1%
+[36m(RayTrainWorker pid=5776)[0m 
+46.1%
+46.1%
+46.1%
+[36m(RayTrainWorker pid=5776)[0m 
+46.1%
+46.2%
+[36m(RayTrainWorker pid=5776)[0m 
+46.2%
+46.2%
+46.2%
+[36m(RayTrainWorker pid=5776)[0m 
+46.2%
+46.2%
+46.3%
+[36m(RayTrainWorker pid=5776)[0m 
+46.3%
+46.3%
+46.3%
+[36m(RayTrainWorker pid=5776)[0m 
+46.3%
+46.3%
+46.4%
+[36m(RayTrainWorker pid=5776)[0m 
+46.4%
+46.4%
+46.4%
+[36m(RayTrainWorker pid=5776)[0m 
+46.4%
+46.4%
+46.5%
+46.5%
+[36m(RayTrainWorker pid=5776)[0m 
+46.5%
+46.5%
+46.5%
+[36m(RayTrainWorker pid=5776)[0m 
+46.5%
+46.6%
+46.6%
+[36m(RayTrainWorker pid=5776)[0m 
+46.6%
+46.6%
+46.6%
+[36m(RayTrainWorker pid=5776)[0m 
+46.6%
+46.7%
+46.7%
+46.7%
+[36m(RayTrainWorker pid=5776)[0m 
+46.7%
+46.7%
+46.7%
+[36m(RayTrainWorker pid=5776)[0m 
+46.8%
+46.8%
+46.8%
+[36m(RayTrainWorker pid=5776)[0m 
+46.8%
+46.8%
+46.8%
+[36m(RayTrainWorker pid=5776)[0m 
+46.8%
+46.9%
+46.9%
+[36m(RayTrainWorker pid=5776)[0m 
+46.9%
+46.9%
+46.9%
+46.9%
+[36m(RayTrainWorker pid=5776)[0m 
+47.0%
+47.0%
+47.0%
+[36m(RayTrainWorker pid=5776)[0m 
+47.0%
+47.0%
+47.0%
+47.1%
+[36m(RayTrainWorker pid=5776)[0m 
+47.1%
+47.1%
+47.1%
+[36m(RayTrainWorker pid=5776)[0m 
+47.1%
+47.1%
+47.2%
+[36m(RayTrainWorker pid=5776)[0m 
+47.2%
+47.2%
+47.2%
+47.2%
+[36m(RayTrainWorker pid=5776)[0m 
+47.2%
+47.3%
+47.3%
+[36m(RayTrainWorker pid=5776)[0m 
+47.3%
+47.3%
+47.3%
+47.3%
+[36m(RayTrainWorker pid=5776)[0m 
+47.4%
+47.4%
+47.4%
+47.4%
+[36m(RayTrainWorker pid=5776)[0m 
+47.4%
+47.4%
+47.5%
+[36m(RayTrainWorker pid=5776)[0m 
+47.5%
+47.5%
+47.5%
+[36m(RayTrainWorker pid=5776)[0m 
+47.5%
+47.5%
+47.6%
+47.6%
+[36m(RayTrainWorker pid=5776)[0m 
+47.6%
+47.6%
+47.6%
+47.6%
+47.7%
+47.7%
+47.7%
+[36m(RayTrainWorker pid=5776)[0m 
+47.7%
+47.7%
+47.7%
+47.8%
+47.8%
+[36m(RayTrainWorker pid=5776)[0m 
+47.8%
+47.8%
+47.8%
+[36m(RayTrainWorker pid=5776)[0m 
+47.8%
+47.9%
+47.9%
+47.9%
+[36m(RayTrainWorker pid=5776)[0m 
+47.9%
+47.9%
+47.9%
+[36m(RayTrainWorker pid=5776)[0m 
+48.0%
+48.0%
+48.0%
+48.0%
+48.0%
+[36m(RayTrainWorker pid=5776)[0m 
+48.0%
+48.1%
+48.1%
+[36m(RayTrainWorker pid=5776)[0m 
+48.1%
+48.1%
+48.1%
+[36m(RayTrainWorker pid=5776)[0m 
+48.1%
+48.2%
+48.2%
+[36m(RayTrainWorker pid=5776)[0m 
+48.2%
+48.2%
+48.2%
+48.2%
+[36m(RayTrainWorker pid=5776)[0m 
+48.3%
+48.3%
+48.3%
+48.3%
+[36m(RayTrainWorker pid=5776)[0m 
+48.3%
+48.3%
+48.4%
+48.4%
+48.4%
+[36m(RayTrainWorker pid=5776)[0m 
+48.4%
+48.4%
+48.4%
+[36m(RayTrainWorker pid=5776)[0m 
+48.5%
+48.5%
+48.5%
+48.5%
+[36m(RayTrainWorker pid=5776)[0m 
+48.5%
+48.5%
+48.6%
+48.6%
+[36m(RayTrainWorker pid=5776)[0m 
+48.6%
+48.6%
+48.6%
+48.6%
+48.7%
+[36m(RayTrainWorker pid=5776)[0m 
+48.7%
+48.7%
+48.7%
+48.7%
+48.7%
+[36m(RayTrainWorker pid=5776)[0m 
+48.8%
+48.8%
+48.8%
+48.8%
+[36m(RayTrainWorker pid=5776)[0m 
+48.8%
+48.8%
+48.9%
+48.9%
+48.9%
+48.9%
+[36m(RayTrainWorker pid=5776)[0m 
+48.9%
+48.9%
+49.0%
+49.0%
+[36m(RayTrainWorker pid=5776)[0m 
+49.0%
+49.0%
+49.0%
+49.0%
+[36m(RayTrainWorker pid=5776)[0m 
+49.1%
+49.1%
+49.1%
+49.1%
+49.1%
+[36m(RayTrainWorker pid=5776)[0m 
+49.1%
+49.2%
+49.2%
+49.2%
+49.2%
+[36m(RayTrainWorker pid=5776)[0m 
+49.2%
+49.2%
+49.3%
+49.3%
+[36m(RayTrainWorker pid=5776)[0m 
+49.3%
+49.3%
+49.3%
+49.3%
+[36m(RayTrainWorker pid=5776)[0m 
+49.4%
+49.4%
+49.4%
+49.4%
+49.4%
+[36m(RayTrainWorker pid=5776)[0m 
+49.4%
+49.5%
+49.5%
+[36m(RayTrainWorker pid=5776)[0m 
+49.5%
+49.5%
+49.5%
+49.5%
+49.6%
+49.6%
+[36m(RayTrainWorker pid=5776)[0m 
+49.6%
+49.6%
+49.6%
+49.6%
+49.6%
+[36m(RayTrainWorker pid=5776)[0m 
+49.7%
+49.7%
+[36m(RayTrainWorker pid=5776)[0m 
+49.7%
+[36m(RayTrainWorker pid=5776)[0m 
+49.7%
+49.7%
+49.7%
+[36m(RayTrainWorker pid=5776)[0m 
+49.8%
+49.8%
+49.8%
+[36m(RayTrainWorker pid=5776)[0m 
+49.8%
+49.8%
+49.8%
+[36m(RayTrainWorker pid=5776)[0m 
+49.9%
+49.9%
+49.9%
+[36m(RayTrainWorker pid=5776)[0m 
+49.9%
+49.9%
+49.9%
+50.0%
+[36m(RayTrainWorker pid=5776)[0m 
+50.0%
+50.0%
+50.0%
+50.0%
+[36m(RayTrainWorker pid=5776)[0m 
+50.0%
+50.1%
+50.1%
+[36m(RayTrainWorker pid=5776)[0m 
+50.1%
+50.1%
+50.1%
+50.1%
+50.2%
+50.2%
+50.2%
+50.2%
+50.2%
+50.2%
+[36m(RayTrainWorker pid=5776)[0m 
+50.3%
+50.3%
+50.3%
+50.3%
+50.3%
+50.3%
+[36m(RayTrainWorker pid=5776)[0m 
+50.4%
+50.4%
+50.4%
+50.4%
+[36m(RayTrainWorker pid=5776)[0m 
+50.4%
+50.4%
+50.5%
+50.5%
+50.5%
+50.5%
+[36m(RayTrainWorker pid=5776)[0m 
+50.5%
+50.5%
+50.6%
+50.6%
+[36m(RayTrainWorker pid=5776)[0m 
+50.6%
+50.6%
+50.6%
+50.6%
+50.7%
+50.7%
+[36m(RayTrainWorker pid=5776)[0m 
+50.7%
+50.7%
+50.7%
+50.7%
+50.8%
+50.8%
+[36m(RayTrainWorker pid=5776)[0m 
+50.8%
+50.8%
+50.8%
+50.8%
+50.9%
+[36m(RayTrainWorker pid=5776)[0m 
+50.9%
+50.9%
+50.9%
+[36m(RayTrainWorker pid=5776)[0m 
+50.9%
+50.9%
+51.0%
+51.0%
+51.0%
+[36m(RayTrainWorker pid=5776)[0m 
+51.0%
+51.0%
+51.0%
+51.1%
+[36m(RayTrainWorker pid=5776)[0m 
+51.1%
+51.1%
+51.1%
+51.1%
+[36m(RayTrainWorker pid=5776)[0m 
+51.1%
+51.2%
+51.2%
+[36m(RayTrainWorker pid=5776)[0m 
+51.2%
+51.2%
+51.2%
+[36m(RayTrainWorker pid=5776)[0m 
+51.2%
+51.3%
+[36m(RayTrainWorker pid=5776)[0m 
+51.3%
+51.3%
+51.3%
+[36m(RayTrainWorker pid=5776)[0m 
+51.3%
+51.3%
+[36m(RayTrainWorker pid=5776)[0m 
+51.4%
+51.4%
+51.4%
+[36m(RayTrainWorker pid=5776)[0m 
+51.4%
+51.4%
+51.4%
+[36m(RayTrainWorker pid=5776)[0m 
+51.5%
+51.5%
+51.5%
+[36m(RayTrainWorker pid=5776)[0m 
+51.5%
+51.5%
+51.5%
+51.6%
+[36m(RayTrainWorker pid=5776)[0m 
+51.6%
+51.6%
+51.6%
+51.6%
+[36m(RayTrainWorker pid=5776)[0m 
+51.6%
+51.7%
+51.7%
+51.7%
+[36m(RayTrainWorker pid=5776)[0m 
+51.7%
+51.7%
+51.7%
+51.8%
+51.8%
+[36m(RayTrainWorker pid=5776)[0m 
+51.8%
+51.8%
+51.8%
+[36m(RayTrainWorker pid=5776)[0m 
+51.8%
+51.9%
+51.9%
+51.9%
+51.9%
+[36m(RayTrainWorker pid=5776)[0m 
+51.9%
+51.9%
+52.0%
+52.0%
+[36m(RayTrainWorker pid=5776)[0m 
+52.0%
+52.0%
+52.0%
+52.0%
+[36m(RayTrainWorker pid=5776)[0m 
+52.1%
+52.1%
+52.1%
+[36m(RayTrainWorker pid=5776)[0m 
+52.1%
+52.1%
+52.1%
+52.2%
+[36m(RayTrainWorker pid=5776)[0m 
+52.2%
+52.2%
+52.2%
+52.2%
+[36m(RayTrainWorker pid=5776)[0m 
+52.2%
+52.3%
+52.3%
+52.3%
+[36m(RayTrainWorker pid=5776)[0m 
+52.3%
+52.3%
+52.3%
+[36m(RayTrainWorker pid=5776)[0m 
+52.3%
+52.4%
+52.4%
+[36m(RayTrainWorker pid=5776)[0m 
+52.4%
+52.4%
+52.4%
+[36m(RayTrainWorker pid=5776)[0m 
+52.4%
+52.5%
+52.5%
+[36m(RayTrainWorker pid=5776)[0m 
+52.5%
+52.5%
+52.5%
+[36m(RayTrainWorker pid=5776)[0m 
+52.5%
+52.6%
+[36m(RayTrainWorker pid=5776)[0m 
+52.6%
+[36m(RayTrainWorker pid=5776)[0m 
+52.6%
+52.6%
+[36m(RayTrainWorker pid=5776)[0m 
+52.6%
+52.6%
+52.7%
+[36m(RayTrainWorker pid=5776)[0m 
+52.7%
+52.7%
+52.7%
+52.7%
+[36m(RayTrainWorker pid=5776)[0m 
+52.7%
+52.8%
+52.8%
+[36m(RayTrainWorker pid=5776)[0m 
+52.8%
+52.8%
+52.8%
+[36m(RayTrainWorker pid=5776)[0m 
+52.8%
+52.9%
+52.9%
+[36m(RayTrainWorker pid=5776)[0m 
+52.9%
+52.9%
+[36m(RayTrainWorker pid=5776)[0m 
+52.9%
+52.9%
+53.0%
+53.0%
+53.0%
+[36m(RayTrainWorker pid=5776)[0m 
+53.0%
+[36m(RayTrainWorker pid=5776)[0m 
+53.0%
+53.0%
+[36m(RayTrainWorker pid=5776)[0m 
+53.1%
+53.1%
+[36m(RayTrainWorker pid=5776)[0m 
+53.1%
+53.1%
+[36m(RayTrainWorker pid=5776)[0m 
+53.1%
+53.1%
+[36m(RayTrainWorker pid=5776)[0m 
+53.2%
+53.2%
+[36m(RayTrainWorker pid=5776)[0m 
+53.2%
+53.2%
+53.2%
+53.2%
+[36m(RayTrainWorker pid=5776)[0m 
+53.3%
+53.3%
+53.3%
+[36m(RayTrainWorker pid=5776)[0m 
+53.3%
+53.3%
+53.3%
+[36m(RayTrainWorker pid=5776)[0m 
+53.4%
+53.4%
+53.4%
+[36m(RayTrainWorker pid=5776)[0m 
+53.4%
+53.4%
+53.4%
+[36m(RayTrainWorker pid=5776)[0m 
+53.5%
+53.5%
+53.5%
+[36m(RayTrainWorker pid=5776)[0m 
+53.5%
+53.5%
+53.5%
+[36m(RayTrainWorker pid=5776)[0m 
+53.6%
+53.6%
+53.6%
+[36m(RayTrainWorker pid=5776)[0m 
+53.6%
+53.6%
+[36m(RayTrainWorker pid=5776)[0m 
+53.6%
+53.7%
+53.7%
+[36m(RayTrainWorker pid=5776)[0m 
+53.7%
+53.7%
+53.7%
+[36m(RayTrainWorker pid=5776)[0m 
+53.7%
+53.8%
+53.8%
+[36m(RayTrainWorker pid=5776)[0m 
+53.8%
+53.8%
+53.8%
+53.8%
+[36m(RayTrainWorker pid=5776)[0m 
+53.9%
+53.9%
+53.9%
+53.9%
+[36m(RayTrainWorker pid=5776)[0m 
+53.9%
+53.9%
+54.0%
+[36m(RayTrainWorker pid=5776)[0m 
+54.0%
+54.0%
+54.0%
+[36m(RayTrainWorker pid=5776)[0m 
+54.0%
+54.0%
+54.1%
+54.1%
+[36m(RayTrainWorker pid=5776)[0m 
+54.1%
+54.1%
+54.1%
+[36m(RayTrainWorker pid=5776)[0m 
+54.1%
+54.2%
+54.2%
+[36m(RayTrainWorker pid=5776)[0m 
+54.2%
+54.2%
+54.2%
+54.2%
+[36m(RayTrainWorker pid=5776)[0m 
+54.3%
+54.3%
+54.3%
+54.3%
+[36m(RayTrainWorker pid=5776)[0m 
+54.3%
+54.3%
+54.4%
+[36m(RayTrainWorker pid=5776)[0m 
+54.4%
+54.4%
+54.4%
+[36m(RayTrainWorker pid=5776)[0m 
+54.4%
+54.4%
+54.5%
+[36m(RayTrainWorker pid=5776)[0m 
+54.5%
+54.5%
+54.5%
+[36m(RayTrainWorker pid=5776)[0m 
+54.5%
+54.5%
+54.6%
+[36m(RayTrainWorker pid=5776)[0m 
+54.6%
+54.6%
+54.6%
+[36m(RayTrainWorker pid=5776)[0m 
+54.6%
+54.6%
+54.7%
+[36m(RayTrainWorker pid=5776)[0m 
+54.7%
+54.7%
+54.7%
+54.7%
+54.7%
+[36m(RayTrainWorker pid=5776)[0m 
+54.8%
+54.8%
+54.8%
+54.8%
+54.8%
+54.8%
+54.9%
+54.9%
+54.9%
+54.9%
+54.9%
+54.9%
+55.0%
+55.0%
+55.0%
+55.0%
+55.0%
+55.0%
+55.1%
+55.1%
+55.1%
+55.1%
+55.1%
+55.1%
+55.1%
+55.2%
+55.2%
+55.2%
+55.2%
+55.2%
+55.2%
+55.3%
+55.3%
+55.3%
+55.3%
+55.3%
+55.3%
+55.4%
+55.4%
+55.4%
+55.4%
+55.4%
+55.4%
+55.5%
+55.5%
+55.5%
+55.5%
+55.5%
+55.5%
+55.6%
+55.6%
+55.6%
+55.6%
+55.6%
+55.6%
+55.7%
+55.7%
+55.7%
+55.7%
+55.7%
+55.7%
+55.8%
+55.8%
+55.8%
+55.8%
+55.8%
+55.8%
+55.9%
+55.9%
+55.9%
+55.9%
+55.9%
+55.9%
+56.0%
+56.0%
+56.0%
+56.0%
+56.0%
+56.0%
+56.1%
+56.1%
+56.1%
+56.1%
+56.1%
+56.1%
+56.2%
+56.2%
+56.2%
+56.2%
+56.2%
+56.2%
+56.3%
+56.3%
+56.3%
+56.3%
+56.3%
+56.3%
+56.4%
+56.4%
+56.4%
+56.4%
+56.4%
+56.4%
+56.5%
+56.5%
+56.5%
+56.5%
+56.5%
+56.5%
+56.6%
+56.6%
+56.6%
+56.6%
+56.6%
+56.6%
+56.7%
+56.7%
+56.7%
+56.7%
+56.7%
+56.7%
+56.8%
+56.8%
+56.8%
+56.8%
+56.8%
+56.8%
+56.9%
+56.9%
+56.9%
+56.9%
+56.9%
+56.9%
+57.0%
+57.0%
+57.0%
+57.0%
+57.0%
+57.0%
+57.1%
+57.1%
+57.1%
+57.1%
+57.1%
+57.1%
+57.2%
+57.2%
+57.2%
+57.2%
+57.2%
+57.2%
+57.3%
+57.3%
+57.3%
+57.3%
+57.3%
+57.3%
+57.4%
+57.4%
+57.4%
+57.4%
+57.4%
+57.4%
+57.5%
+57.5%
+57.5%
+57.5%
+57.5%
+57.5%
+57.6%
+57.6%
+57.6%
+57.6%
+57.6%
+57.6%
+57.7%
+57.7%
+57.7%
+57.7%
+57.7%
+57.7%
+57.8%
+57.8%
+57.8%
+57.8%
+57.8%
+57.8%
+57.9%
+57.9%
+57.9%
+57.9%
+57.9%
+57.9%
+57.9%
+58.0%
+58.0%
+58.0%
+58.0%
+58.0%
+58.0%
+58.1%
+58.1%
+58.1%
+58.1%
+58.1%
+58.1%
+58.2%
+58.2%
+58.2%
+58.2%
+58.2%
+58.2%
+58.3%
+58.3%
+58.3%
+58.3%
+58.3%
+58.3%
+58.4%
+58.4%
+58.4%
+58.4%
+58.4%
+58.4%
+58.5%
+58.5%
+58.5%
+58.5%
+58.5%
+58.5%
+58.6%
+58.6%
+58.6%
+58.6%
+58.6%
+58.6%
+58.7%
+58.7%
+58.7%
+58.7%
+58.7%
+58.7%
+58.8%
+58.8%
+58.8%
+58.8%
+58.8%
+58.8%
+58.9%
+58.9%
+58.9%
+58.9%
+58.9%
+58.9%
+59.0%
+59.0%
+59.0%
+59.0%
+59.0%
+59.0%
+59.1%
+59.1%
+59.1%
+59.1%
+59.1%
+59.1%
+59.2%
+59.2%
+59.2%
+59.2%
+59.2%
+59.2%
+59.3%
+59.3%
+59.3%
+59.3%
+59.3%
+[36m(RayTrainWorker pid=5776)[0m 
+59.3%
+59.4%
+59.4%
+59.4%
+[36m(RayTrainWorker pid=5776)[0m 
+59.4%
+59.4%
+59.4%
+[36m(RayTrainWorker pid=5776)[0m 
+59.5%
+59.5%
+59.5%
+[36m(RayTrainWorker pid=5776)[0m 
+59.5%
+59.5%
+59.5%
+59.6%
+59.6%
+[36m(RayTrainWorker pid=5776)[0m 
+59.6%
+59.6%
+[36m(RayTrainWorker pid=5776)[0m 
+59.6%
+59.6%
+59.7%
+[36m(RayTrainWorker pid=5776)[0m 
+59.7%
+59.7%
+59.7%
+59.7%
+[36m(RayTrainWorker pid=5776)[0m 
+59.7%
+59.8%
+59.8%
+59.8%
+59.8%
+[36m(RayTrainWorker pid=5776)[0m 
+59.8%
+59.8%
+59.9%
+59.9%
+[36m(RayTrainWorker pid=5776)[0m 
+59.9%
+59.9%
+59.9%
+59.9%
+60.0%
+60.0%
+60.0%
+[36m(RayTrainWorker pid=5776)[0m 
+60.0%
+60.0%
+60.0%
+60.1%
+60.1%
+60.1%
+[36m(RayTrainWorker pid=5776)[0m 
+60.1%
+60.1%
+60.1%
+60.2%
+60.2%
+[36m(RayTrainWorker pid=5776)[0m 
+60.2%
+60.2%
+60.2%
+60.2%
+[36m(RayTrainWorker pid=5776)[0m 
+60.3%
+60.3%
+60.3%
+60.3%
+60.3%
+[36m(RayTrainWorker pid=5776)[0m 
+60.3%
+60.4%
+60.4%
+60.4%
+60.4%
+60.4%
+[36m(RayTrainWorker pid=5776)[0m 
+60.4%
+60.5%
+60.5%
+60.5%
+60.5%
+[36m(RayTrainWorker pid=5776)[0m 
+60.5%
+60.5%
+60.6%
+60.6%
+60.6%
+[36m(RayTrainWorker pid=5776)[0m 
+60.6%
+60.6%
+60.6%
+60.6%
+[36m(RayTrainWorker pid=5776)[0m 
+60.7%
+60.7%
+60.7%
+60.7%
+60.7%
+[36m(RayTrainWorker pid=5776)[0m 
+60.7%
+60.8%
+60.8%
+60.8%
+60.8%
+60.8%
+[36m(RayTrainWorker pid=5776)[0m 
+60.8%
+60.9%
+60.9%
+60.9%
+60.9%
+[36m(RayTrainWorker pid=5776)[0m 
+60.9%
+60.9%
+61.0%
+61.0%
+[36m(RayTrainWorker pid=5776)[0m 
+61.0%
+61.0%
+61.0%
+61.0%
+61.1%
+[36m(RayTrainWorker pid=5776)[0m 
+61.1%
+61.1%
+61.1%
+61.1%
+61.1%
+61.2%
+[36m(RayTrainWorker pid=5776)[0m 
+61.2%
+61.2%
+61.2%
+61.2%
+[36m(RayTrainWorker pid=5776)[0m 
+61.2%
+61.3%
+61.3%
+61.3%
+61.3%
+61.3%
+[36m(RayTrainWorker pid=5776)[0m 
+61.3%
+61.4%
+61.4%
+61.4%
+61.4%
+[36m(RayTrainWorker pid=5776)[0m 
+61.4%
+61.4%
+61.5%
+61.5%
+61.5%
+[36m(RayTrainWorker pid=5776)[0m 
+61.5%
+61.5%
+61.5%
+61.6%
+61.6%
+[36m(RayTrainWorker pid=5776)[0m 
+61.6%
+61.6%
+61.6%
+61.6%
+61.7%
+[36m(RayTrainWorker pid=5776)[0m 
+61.7%
+61.7%
+61.7%
+61.7%
+[36m(RayTrainWorker pid=5776)[0m 
+61.7%
+61.8%
+61.8%
+[36m(RayTrainWorker pid=5776)[0m 
+61.8%
+61.8%
+61.8%
+[36m(RayTrainWorker pid=5776)[0m 
+61.8%
+61.9%
+61.9%
+[36m(RayTrainWorker pid=5776)[0m 
+61.9%
+61.9%
+61.9%
+61.9%
+[36m(RayTrainWorker pid=5776)[0m 
+62.0%
+62.0%
+62.0%
+62.0%
+[36m(RayTrainWorker pid=5776)[0m 
+62.0%
+62.0%
+62.1%
+62.1%
+[36m(RayTrainWorker pid=5776)[0m 
+62.1%
+62.1%
+62.1%
+62.1%
+[36m(RayTrainWorker pid=5776)[0m 
+62.2%
+62.2%
+62.2%
+62.2%
+62.2%
+[36m(RayTrainWorker pid=5776)[0m 
+62.2%
+62.3%
+62.3%
+62.3%
+62.3%
+[36m(RayTrainWorker pid=5776)[0m 
+62.3%
+62.3%
+62.4%
+62.4%
+62.4%
+[36m(RayTrainWorker pid=5776)[0m 
+62.4%
+62.4%
+62.4%
+62.5%
+[36m(RayTrainWorker pid=5776)[0m 
+62.5%
+62.5%
+62.5%
+62.5%
+62.5%
+62.6%
+[36m(RayTrainWorker pid=5776)[0m 
+62.6%
+62.6%
+62.6%
+62.6%
+62.6%
+[36m(RayTrainWorker pid=5776)[0m 
+62.7%
+62.7%
+62.7%
+62.7%
+62.7%
+[36m(RayTrainWorker pid=5776)[0m 
+62.7%
+62.8%
+62.8%
+62.8%
+62.8%
+[36m(RayTrainWorker pid=5776)[0m 
+62.8%
+62.8%
+62.9%
+[36m(RayTrainWorker pid=5776)[0m 
+62.9%
+62.9%
+62.9%
+62.9%
+62.9%
+63.0%
+63.0%
+63.0%
+[36m(RayTrainWorker pid=5776)[0m 
+63.0%
+63.0%
+63.0%
+63.1%
+63.1%
+[36m(RayTrainWorker pid=5776)[0m 
+63.1%
+63.1%
+63.1%
+63.1%
+63.2%
+[36m(RayTrainWorker pid=5776)[0m 
+63.2%
+63.2%
+63.2%
+63.2%
+63.2%
+[36m(RayTrainWorker pid=5776)[0m 
+63.3%
+63.3%
+63.3%
+63.3%
+[36m(RayTrainWorker pid=5776)[0m 
+63.3%
+63.3%
+63.4%
+[36m(RayTrainWorker pid=5776)[0m 
+63.4%
+63.4%
+[36m(RayTrainWorker pid=5776)[0m 
+63.4%
+63.4%
+63.4%
+63.4%
+63.5%
+63.5%
+63.5%
+63.5%
+63.5%
+63.5%
+63.6%
+63.6%
+63.6%
+63.6%
+63.6%
+63.6%
+63.7%
+63.7%
+63.7%
+63.7%
+63.7%
+63.7%
+63.8%
+63.8%
+63.8%
+63.8%
+63.8%
+63.8%
+63.9%
+63.9%
+63.9%
+63.9%
+63.9%
+63.9%
+64.0%
+64.0%
+64.0%
+64.0%
+64.0%
+64.0%
+64.1%
+64.1%
+64.1%
+64.1%
+64.1%
+64.1%
+64.2%
+64.2%
+64.2%
+64.2%
+64.2%
+64.2%
+64.3%
+64.3%
+64.3%
+64.3%
+64.3%
+64.3%
+64.4%
+64.4%
+64.4%
+64.4%
+64.4%
+64.4%
+64.5%
+64.5%
+64.5%
+64.5%
+64.5%
+64.5%
+64.6%
+64.6%
+64.6%
+64.6%
+64.6%
+64.6%
+64.7%
+64.7%
+64.7%
+64.7%
+64.7%
+64.7%
+64.8%
+64.8%
+64.8%
+64.8%
+64.8%
+64.8%
+64.9%
+64.9%
+64.9%
+64.9%
+64.9%
+64.9%
+65.0%
+65.0%
+65.0%
+65.0%
+65.0%
+65.0%
+65.1%
+65.1%
+65.1%
+65.1%
+65.1%
+65.1%
+65.2%
+65.2%
+65.2%
+65.2%
+65.2%
+65.2%
+65.3%
+65.3%
+65.3%
+65.3%
+65.3%
+65.3%
+65.4%
+65.4%
+65.4%
+65.4%
+65.4%
+65.4%
+65.5%
+65.5%
+65.5%
+65.5%
+65.5%
+65.5%
+65.6%
+65.6%
+65.6%
+65.6%
+65.6%
+65.6%
+65.7%
+65.7%
+65.7%
+65.7%
+65.7%
+65.7%
+65.8%
+65.8%
+65.8%
+65.8%
+65.8%
+65.8%
+65.9%
+65.9%
+65.9%
+65.9%
+65.9%
+65.9%
+66.0%
+66.0%
+66.0%
+66.0%
+66.0%
+66.0%
+66.1%
+66.1%
+66.1%
+66.1%
+66.1%
+66.1%
+66.1%
+66.2%
+66.2%
+66.2%
+66.2%
+66.2%
+66.2%
+66.3%
+66.3%
+66.3%
+66.3%
+66.3%
+66.3%
+66.4%
+66.4%
+66.4%
+66.4%
+66.4%
+66.4%
+66.5%
+66.5%
+66.5%
+66.5%
+66.5%
+66.5%
+66.6%
+66.6%
+66.6%
+66.6%
+66.6%
+66.6%
+66.7%
+66.7%
+66.7%
+66.7%
+66.7%
+66.7%
+66.8%
+66.8%
+66.8%
+66.8%
+66.8%
+66.8%
+66.9%
+66.9%
+66.9%
+66.9%
+66.9%
+66.9%
+67.0%
+67.0%
+67.0%
+67.0%
+67.0%
+67.0%
+67.1%
+67.1%
+67.1%
+67.1%
+67.1%
+67.1%
+67.2%
+67.2%
+67.2%
+67.2%
+67.2%
+67.2%
+67.3%
+67.3%
+67.3%
+67.3%
+67.3%
+67.3%
+67.4%
+67.4%
+67.4%
+67.4%
+67.4%
+67.4%
+67.5%
+67.5%
+67.5%
+67.5%
+67.5%
+67.5%
+67.6%
+67.6%
+67.6%
+67.6%
+67.6%
+67.6%
+67.7%
+67.7%
+67.7%
+67.7%
+67.7%
+67.7%
+67.8%
+67.8%
+67.8%
+67.8%
+67.8%
+67.8%
+67.9%
+67.9%
+67.9%
+67.9%
+67.9%
+67.9%
+68.0%
+68.0%
+68.0%
+68.0%
+68.0%
+68.0%
+68.1%
+68.1%
+68.1%
+68.1%
+68.1%
+68.1%
+68.2%
+68.2%
+68.2%
+68.2%
+68.2%
+68.2%
+68.3%
+68.3%
+68.3%
+68.3%
+68.3%
+[36m(RayTrainWorker pid=5776)[0m 
+68.3%
+68.4%
+68.4%
+68.4%
+68.4%
+68.4%
+68.4%
+68.5%
+68.5%
+68.5%
+68.5%
+68.5%
+[36m(RayTrainWorker pid=5776)[0m 
+68.5%
+68.6%
+68.6%
+68.6%
+68.6%
+68.6%
+68.6%
+68.7%
+68.7%
+[36m(RayTrainWorker pid=5776)[0m 
+68.7%
+68.7%
+68.7%
+68.7%
+[36m(RayTrainWorker pid=5776)[0m 
+68.8%
+68.8%
+68.8%
+68.8%
+68.8%
+68.8%
+68.9%
+68.9%
+[36m(RayTrainWorker pid=5776)[0m 
+68.9%
+68.9%
+68.9%
+68.9%
+68.9%
+[36m(RayTrainWorker pid=5776)[0m 
+69.0%
+69.0%
+69.0%
+69.0%
+69.0%
+69.0%
+[36m(RayTrainWorker pid=5776)[0m 
+69.1%
+69.1%
+69.1%
+69.1%
+69.1%
+69.1%
+69.2%
+69.2%
+69.2%
+69.2%
+69.2%
+69.2%
+69.3%
+69.3%
+69.3%
+[36m(RayTrainWorker pid=5776)[0m 
+69.3%
+69.3%
+69.3%
+69.4%
+[36m(RayTrainWorker pid=5776)[0m 
+69.4%
+69.4%
+69.4%
+69.4%
+69.4%
+69.5%
+69.5%
+69.5%
+69.5%
+69.5%
+69.5%
+[36m(RayTrainWorker pid=5776)[0m 
+69.6%
+69.6%
+69.6%
+[36m(RayTrainWorker pid=5776)[0m 
+69.6%
+69.6%
+69.6%
+69.7%
+69.7%
+69.7%
+69.7%
+69.7%
+69.7%
+69.8%
+[36m(RayTrainWorker pid=5776)[0m 
+69.8%
+69.8%
+69.8%
+69.8%
+[36m(RayTrainWorker pid=5776)[0m 
+69.8%
+69.9%
+69.9%
+69.9%
+[36m(RayTrainWorker pid=5776)[0m 
+69.9%
+69.9%
+69.9%
+70.0%
+70.0%
+70.0%
+70.0%
+70.0%
+70.0%
+[36m(RayTrainWorker pid=5776)[0m 
+70.1%
+70.1%
+70.1%
+70.1%
+[36m(RayTrainWorker pid=5776)[0m 
+70.1%
+70.1%
+70.2%
+70.2%
+70.2%
+70.2%
+[36m(RayTrainWorker pid=5776)[0m 
+70.2%
+70.2%
+70.3%
+70.3%
+70.3%
+70.3%
+70.3%
+70.3%
+70.4%
+[36m(RayTrainWorker pid=5776)[0m 
+70.4%
+70.4%
+70.4%
+70.4%
+[36m(RayTrainWorker pid=5776)[0m 
+70.4%
+70.5%
+70.5%
+70.5%
+70.5%
+70.5%
+70.5%
+70.6%
+70.6%
+70.6%
+[36m(RayTrainWorker pid=5776)[0m 
+70.6%
+70.6%
+70.6%
+[36m(RayTrainWorker pid=5776)[0m 
+70.7%
+70.7%
+70.7%
+70.7%
+70.7%
+70.7%
+70.8%
+70.8%
+70.8%
+70.8%
+[36m(RayTrainWorker pid=5776)[0m 
+70.8%
+70.8%
+70.9%
+70.9%
+[36m(RayTrainWorker pid=5776)[0m 
+70.9%
+70.9%
+70.9%
+70.9%
+71.0%
+71.0%
+71.0%
+71.0%
+71.0%
+71.0%
+[36m(RayTrainWorker pid=5776)[0m 
+71.1%
+71.1%
+71.1%
+71.1%
+[36m(RayTrainWorker pid=5776)[0m 
+71.1%
+71.1%
+71.2%
+71.2%
+71.2%
+71.2%
+[36m(RayTrainWorker pid=5776)[0m 
+71.2%
+71.2%
+71.3%
+71.3%
+[36m(RayTrainWorker pid=5776)[0m 
+71.3%
+71.3%
+71.3%
+71.3%
+71.4%
+71.4%
+71.4%
+71.4%
+71.4%
+71.4%
+[36m(RayTrainWorker pid=5776)[0m 
+71.5%
+71.5%
+71.5%
+71.5%
+71.5%
+71.5%
+[36m(RayTrainWorker pid=5776)[0m 
+71.6%
+71.6%
+71.6%
+[36m(RayTrainWorker pid=5776)[0m 
+71.6%
+[36m(RayTrainWorker pid=5776)[0m 
+71.6%
+[36m(RayTrainWorker pid=5776)[0m 
+71.6%
+71.6%
+71.7%
+71.7%
+71.7%
+71.7%
+71.7%
+71.7%
+[36m(RayTrainWorker pid=5776)[0m 
+71.8%
+71.8%
+71.8%
+71.8%
+[36m(RayTrainWorker pid=5776)[0m 
+71.8%
+71.8%
+71.9%
+71.9%
+71.9%
+71.9%
+71.9%
+71.9%
+72.0%
+72.0%
+[36m(RayTrainWorker pid=5776)[0m 
+72.0%
+72.0%
+72.0%
+72.0%
+[36m(RayTrainWorker pid=5776)[0m 
+72.1%
+72.1%
+72.1%
+[36m(RayTrainWorker pid=5776)[0m 
+72.1%
+72.1%
+72.1%
+[36m(RayTrainWorker pid=5776)[0m 
+72.2%
+72.2%
+72.2%
+72.2%
+72.2%
+[36m(RayTrainWorker pid=5776)[0m 
+72.2%
+72.3%
+72.3%
+72.3%
+72.3%
+[36m(RayTrainWorker pid=5776)[0m 
+72.3%
+72.3%
+72.4%
+72.4%
+72.4%
+[36m(RayTrainWorker pid=5776)[0m 
+72.4%
+72.4%
+72.4%
+72.5%
+[36m(RayTrainWorker pid=5776)[0m 
+72.5%
+72.5%
+72.5%
+72.5%
+72.5%
+72.6%
+[36m(RayTrainWorker pid=5776)[0m 
+72.6%
+72.6%
+72.6%
+72.6%
+[36m(RayTrainWorker pid=5776)[0m 
+72.6%
+72.7%
+72.7%
+72.7%
+72.7%
+72.7%
+[36m(RayTrainWorker pid=5776)[0m 
+72.7%
+72.8%
+72.8%
+72.8%
+72.8%
+[36m(RayTrainWorker pid=5776)[0m 
+72.8%
+72.8%
+72.9%
+72.9%
+[36m(RayTrainWorker pid=5776)[0m 
+72.9%
+72.9%
+72.9%
+72.9%
+73.0%
+[36m(RayTrainWorker pid=5776)[0m 
+73.0%
+73.0%
+73.0%
+73.0%
+73.0%
+[36m(RayTrainWorker pid=5776)[0m 
+73.1%
+73.1%
+73.1%
+73.1%
+[36m(RayTrainWorker pid=5776)[0m 
+73.1%
+73.1%
+73.2%
+73.2%
+73.2%
+[36m(RayTrainWorker pid=5776)[0m 
+73.2%
+73.2%
+73.2%
+73.3%
+[36m(RayTrainWorker pid=5776)[0m 
+73.3%
+73.3%
+73.3%
+73.3%
+[36m(RayTrainWorker pid=5776)[0m 
+73.3%
+73.4%
+73.4%
+73.4%
+[36m(RayTrainWorker pid=5776)[0m 
+73.4%
+73.4%
+73.4%
+73.5%
+73.5%
+[36m(RayTrainWorker pid=5776)[0m 
+73.5%
+73.5%
+73.5%
+73.5%
+[36m(RayTrainWorker pid=5776)[0m 
+73.6%
+73.6%
+73.6%
+73.6%
+73.6%
+[36m(RayTrainWorker pid=5776)[0m 
+73.6%
+73.7%
+73.7%
+73.7%
+[36m(RayTrainWorker pid=5776)[0m 
+73.7%
+73.7%
+73.7%
+73.8%
+[36m(RayTrainWorker pid=5776)[0m 
+73.8%
+73.8%
+73.8%
+73.8%
+[36m(RayTrainWorker pid=5776)[0m 
+73.8%
+73.9%
+73.9%
+73.9%
+73.9%
+[36m(RayTrainWorker pid=5776)[0m 
+73.9%
+73.9%
+74.0%
+74.0%
+[36m(RayTrainWorker pid=5776)[0m 
+74.0%
+74.0%
+74.0%
+74.0%
+74.1%
+[36m(RayTrainWorker pid=5776)[0m 
+74.1%
+74.1%
+74.1%
+74.1%
+[36m(RayTrainWorker pid=5776)[0m 
+74.1%
+74.2%
+74.2%
+74.2%
+[36m(RayTrainWorker pid=5776)[0m 
+74.2%
+74.2%
+74.2%
+[36m(RayTrainWorker pid=5776)[0m 
+74.3%
+74.3%
+74.3%
+74.3%
+74.3%
+[36m(RayTrainWorker pid=5776)[0m 
+74.3%
+74.4%
+74.4%
+74.4%
+[36m(RayTrainWorker pid=5776)[0m 
+74.4%
+74.4%
+74.4%
+74.4%
+[36m(RayTrainWorker pid=5776)[0m 
+74.5%
+74.5%
+74.5%
+74.5%
+74.5%
+[36m(RayTrainWorker pid=5776)[0m 
+74.5%
+74.6%
+74.6%
+74.6%
+[36m(RayTrainWorker pid=5776)[0m 
+74.6%
+74.6%
+74.6%
+74.7%
+74.7%
+[36m(RayTrainWorker pid=5776)[0m 
+74.7%
+74.7%
+74.7%
+74.7%
+[36m(RayTrainWorker pid=5776)[0m 
+74.8%
+74.8%
+74.8%
+74.8%
+[36m(RayTrainWorker pid=5776)[0m 
+74.8%
+74.8%
+74.9%
+74.9%
+[36m(RayTrainWorker pid=5776)[0m 
+74.9%
+74.9%
+74.9%
+74.9%
+75.0%
+75.0%
+[36m(RayTrainWorker pid=5776)[0m 
+75.0%
+75.0%
+75.0%
+75.0%
+75.1%
+75.1%
+75.1%
+[36m(RayTrainWorker pid=5776)[0m 
+75.1%
+75.1%
+75.1%
+75.2%
+75.2%
+75.2%
+75.2%
+75.2%
+[36m(RayTrainWorker pid=5776)[0m 
+75.2%
+75.3%
+75.3%
+75.3%
+75.3%
+75.3%
+[36m(RayTrainWorker pid=5776)[0m 
+75.3%
+75.4%
+75.4%
+75.4%
+75.4%
+75.4%
+75.4%
+75.5%
+[36m(RayTrainWorker pid=5776)[0m 
+75.5%
+75.5%
+75.5%
+75.5%
+75.5%
+75.6%
+75.6%
+[36m(RayTrainWorker pid=5776)[0m 
+75.6%
+75.6%
+75.6%
+75.6%
+75.7%
+75.7%
+75.7%
+[36m(RayTrainWorker pid=5776)[0m 
+75.7%
+75.7%
+75.7%
+75.8%
+75.8%
+75.8%
+[36m(RayTrainWorker pid=5776)[0m 
+75.8%
+75.8%
+75.8%
+75.9%
+75.9%
+75.9%
+[36m(RayTrainWorker pid=5776)[0m 
+75.9%
+75.9%
+75.9%
+76.0%
+76.0%
+76.0%
+[36m(RayTrainWorker pid=5776)[0m 
+76.0%
+76.0%
+76.0%
+76.1%
+76.1%
+[36m(RayTrainWorker pid=5776)[0m 
+76.1%
+76.1%
+76.1%
+76.1%
+76.2%
+76.2%
+76.2%
+[36m(RayTrainWorker pid=5776)[0m 
+76.2%
+76.2%
+76.2%
+76.3%
+76.3%
+76.3%
+76.3%
+76.3%
+[36m(RayTrainWorker pid=5776)[0m 
+76.3%
+76.4%
+76.4%
+76.4%
+76.4%
+76.4%
+[36m(RayTrainWorker pid=5776)[0m 
+76.4%
+76.5%
+76.5%
+76.5%
+[36m(RayTrainWorker pid=5776)[0m 
+76.5%
+76.5%
+76.5%
+76.6%
+76.6%
+[36m(RayTrainWorker pid=5776)[0m 
+76.6%
+76.6%
+76.6%
+76.6%
+76.7%
+[36m(RayTrainWorker pid=5776)[0m 
+76.7%
+76.7%
+76.7%
+76.7%
+76.7%
+[36m(RayTrainWorker pid=5776)[0m 
+76.8%
+76.8%
+76.8%
+76.8%
+76.8%
+[36m(RayTrainWorker pid=5776)[0m 
+76.8%
+76.9%
+76.9%
+76.9%
+76.9%
+[36m(RayTrainWorker pid=5776)[0m 
+76.9%
+76.9%
+77.0%
+77.0%
+[36m(RayTrainWorker pid=5776)[0m 
+77.0%
+77.0%
+77.0%
+77.0%
+77.1%
+77.1%
+[36m(RayTrainWorker pid=5776)[0m 
+77.1%
+77.1%
+77.1%
+77.1%
+77.1%
+[36m(RayTrainWorker pid=5776)[0m 
+77.2%
+77.2%
+77.2%
+77.2%
+[36m(RayTrainWorker pid=5776)[0m 
+77.2%
+77.2%
+77.3%
+77.3%
+77.3%
+77.3%
+[36m(RayTrainWorker pid=5776)[0m 
+77.3%
+77.3%
+77.4%
+77.4%
+[36m(RayTrainWorker pid=5776)[0m 
+77.4%
+77.4%
+77.4%
+77.4%
+77.5%
+77.5%
+[36m(RayTrainWorker pid=5776)[0m 
+77.5%
+77.5%
+77.5%
+77.5%
+77.6%
+[36m(RayTrainWorker pid=5776)[0m 
+77.6%
+77.6%
+77.6%
+77.6%
+77.6%
+[36m(RayTrainWorker pid=5776)[0m 
+77.7%
+77.7%
+77.7%
+77.7%
+77.7%
+77.7%
+[36m(RayTrainWorker pid=5776)[0m 
+77.8%
+77.8%
+77.8%
+77.8%
+77.8%
+[36m(RayTrainWorker pid=5776)[0m 
+77.8%
+77.9%
+77.9%
+77.9%
+77.9%
+[36m(RayTrainWorker pid=5776)[0m 
+77.9%
+77.9%
+78.0%
+78.0%
+78.0%
+[36m(RayTrainWorker pid=5776)[0m 
+78.0%
+78.0%
+78.0%
+78.1%
+[36m(RayTrainWorker pid=5776)[0m 
+78.1%
+78.1%
+78.1%
+78.1%
+78.1%
+78.2%
+78.2%
+[36m(RayTrainWorker pid=5776)[0m 
+78.2%
+78.2%
+78.2%
+78.2%
+78.3%
+78.3%
+78.3%
+[36m(RayTrainWorker pid=5776)[0m 
+78.3%
+78.3%
+78.3%
+78.4%
+[36m(RayTrainWorker pid=5776)[0m 
+78.4%
+78.4%
+78.4%
+78.4%
+[36m(RayTrainWorker pid=5776)[0m 
+78.4%
+78.5%
+78.5%
+78.5%
+[36m(RayTrainWorker pid=5776)[0m 
+78.5%
+78.5%
+78.5%
+78.6%
+78.6%
+[36m(RayTrainWorker pid=5776)[0m 
+78.6%
+78.6%
+78.6%
+78.6%
+78.7%
+[36m(RayTrainWorker pid=5776)[0m 
+78.7%
+78.7%
+78.7%
+78.7%
+78.7%
+[36m(RayTrainWorker pid=5776)[0m 
+78.8%
+78.8%
+78.8%
+78.8%
+78.8%
+[36m(RayTrainWorker pid=5776)[0m 
+78.8%
+78.9%
+78.9%
+78.9%
+[36m(RayTrainWorker pid=5776)[0m 
+78.9%
+78.9%
+78.9%
+79.0%
+79.0%
+79.0%
+[36m(RayTrainWorker pid=5776)[0m 
+79.0%
+79.0%
+79.0%
+79.1%
+[36m(RayTrainWorker pid=5776)[0m 
+79.1%
+79.1%
+79.1%
+79.1%
+79.1%
+[36m(RayTrainWorker pid=5776)[0m 
+79.2%
+79.2%
+79.2%
+79.2%
+79.2%
+[36m(RayTrainWorker pid=5776)[0m 
+79.2%
+79.3%
+79.3%
+79.3%
+[36m(RayTrainWorker pid=5776)[0m 
+79.3%
+79.3%
+79.3%
+79.4%
+79.4%
+[36m(RayTrainWorker pid=5776)[0m 
+79.4%
+79.4%
+79.4%
+79.4%
+79.5%
+[36m(RayTrainWorker pid=5776)[0m 
+79.5%
+79.5%
+79.5%
+79.5%
+79.5%
+[36m(RayTrainWorker pid=5776)[0m 
+79.6%
+79.6%
+79.6%
+79.6%
+79.6%
+[36m(RayTrainWorker pid=5776)[0m 
+79.6%
+79.7%
+79.7%
+79.7%
+79.7%
+[36m(RayTrainWorker pid=5776)[0m 
+79.7%
+79.7%
+79.8%
+79.8%
+79.8%
+[36m(RayTrainWorker pid=5776)[0m 
+79.8%
+79.8%
+79.8%
+79.9%
+79.9%
+[36m(RayTrainWorker pid=5776)[0m 
+79.9%
+79.9%
+79.9%
+79.9%
+79.9%
+[36m(RayTrainWorker pid=5776)[0m 
+80.0%
+80.0%
+80.0%
+80.0%
+80.0%
+[36m(RayTrainWorker pid=5776)[0m 
+80.0%
+80.1%
+80.1%
+80.1%
+[36m(RayTrainWorker pid=5776)[0m 
+80.1%
+80.1%
+80.1%
+80.2%
+80.2%
+80.2%
+80.2%
+[36m(RayTrainWorker pid=5776)[0m 
+80.2%
+80.2%
+80.3%
+80.3%
+80.3%
+80.3%
+80.3%
+[36m(RayTrainWorker pid=5776)[0m 
+80.3%
+80.4%
+80.4%
+80.4%
+80.4%
+80.4%
+80.4%
+[36m(RayTrainWorker pid=5776)[0m 
+80.5%
+80.5%
+80.5%
+80.5%
+[36m(RayTrainWorker pid=5776)[0m 
+80.5%
+80.5%
+80.6%
+80.6%
+80.6%
+[36m(RayTrainWorker pid=5776)[0m 
+80.6%
+80.6%
+80.6%
+80.7%
+80.7%
+80.7%
+[36m(RayTrainWorker pid=5776)[0m 
+80.7%
+[36m(RayTrainWorker pid=5776)[0m 
+80.7%
+80.7%
+80.8%
+[36m(RayTrainWorker pid=5776)[0m 
+80.8%
+80.8%
+80.8%
+80.8%
+[36m(RayTrainWorker pid=5776)[0m 
+80.8%
+80.9%
+80.9%
+[36m(RayTrainWorker pid=5776)[0m 
+80.9%
+[36m(RayTrainWorker pid=5776)[0m 
+80.9%
+[36m(RayTrainWorker pid=5776)[0m 
+80.9%
+80.9%
+[36m(RayTrainWorker pid=5776)[0m 
+81.0%
+81.0%
+[36m(RayTrainWorker pid=5776)[0m 
+81.0%
+81.0%
+[36m(RayTrainWorker pid=5776)[0m 
+81.0%
+81.0%
+[36m(RayTrainWorker pid=5776)[0m 
+81.1%
+81.1%
+81.1%
+[36m(RayTrainWorker pid=5776)[0m 
+81.1%
+[36m(RayTrainWorker pid=5776)[0m 
+81.1%
+81.1%
+81.2%
+81.2%
+81.2%
+81.2%
+81.2%
+81.2%
+81.3%
+81.3%
+81.3%
+81.3%
+81.3%
+81.3%
+81.4%
+81.4%
+81.4%
+81.4%
+81.4%
+81.4%
+81.5%
+81.5%
+81.5%
+81.5%
+81.5%
+81.5%
+81.6%
+81.6%
+81.6%
+81.6%
+81.6%
+81.6%
+81.7%
+81.7%
+81.7%
+81.7%
+81.7%
+81.7%
+81.8%
+81.8%
+81.8%
+81.8%
+81.8%
+81.8%
+81.9%
+81.9%
+81.9%
+81.9%
+81.9%
+81.9%
+82.0%
+82.0%
+82.0%
+82.0%
+82.0%
+82.0%
+82.1%
+82.1%
+82.1%
+82.1%
+82.1%
+82.1%
+82.2%
+82.2%
+82.2%
+82.2%
+82.2%
+82.2%
+82.3%
+82.3%
+82.3%
+82.3%
+82.3%
+82.3%
+82.4%
+82.4%
+82.4%
+82.4%
+82.4%
+82.4%
+82.5%
+82.5%
+82.5%
+82.5%
+82.5%
+82.5%
+82.6%
+82.6%
+82.6%
+82.6%
+82.6%
+82.6%
+82.7%
+82.7%
+82.7%
+82.7%
+82.7%
+82.7%
+82.7%
+82.8%
+82.8%
+82.8%
+82.8%
+82.8%
+82.8%
+82.9%
+82.9%
+82.9%
+82.9%
+82.9%
+82.9%
+83.0%
+83.0%
+83.0%
+83.0%
+83.0%
+83.0%
+83.1%
+83.1%
+83.1%
+83.1%
+83.1%
+83.1%
+83.2%
+83.2%
+83.2%
+83.2%
+83.2%
+83.2%
+83.3%
+83.3%
+83.3%
+83.3%
+83.3%
+83.3%
+83.4%
+83.4%
+83.4%
+83.4%
+83.4%
+83.4%
+83.5%
+83.5%
+83.5%
+83.5%
+83.5%
+83.5%
+83.6%
+83.6%
+83.6%
+83.6%
+83.6%
+83.6%
+83.7%
+83.7%
+83.7%
+83.7%
+83.7%
+83.7%
+83.8%
+83.8%
+83.8%
+83.8%
+83.8%
+83.8%
+83.9%
+83.9%
+83.9%
+83.9%
+83.9%
+83.9%
+84.0%
+84.0%
+84.0%
+84.0%
+84.0%
+84.0%
+84.1%
+84.1%
+84.1%
+84.1%
+84.1%
+84.1%
+84.2%
+84.2%
+84.2%
+84.2%
+84.2%
+84.2%
+84.3%
+84.3%
+84.3%
+84.3%
+84.3%
+84.3%
+84.4%
+84.4%
+84.4%
+84.4%
+84.4%
+84.4%
+84.5%
+84.5%
+84.5%
+84.5%
+84.5%
+84.5%
+84.6%
+84.6%
+84.6%
+84.6%
+84.6%
+84.6%
+84.7%
+84.7%
+84.7%
+84.7%
+84.7%
+84.7%
+84.8%
+84.8%
+84.8%
+84.8%
+84.8%
+84.8%
+84.9%
+84.9%
+84.9%
+[36m(RayTrainWorker pid=5776)[0m 
+84.9%
+84.9%
+[36m(RayTrainWorker pid=5776)[0m 
+84.9%
+85.0%
+85.0%
+85.0%
+[36m(RayTrainWorker pid=5776)[0m 
+85.0%
+85.0%
+85.0%
+[36m(RayTrainWorker pid=5776)[0m 
+85.1%
+85.1%
+[36m(RayTrainWorker pid=5776)[0m 
+85.1%
+[36m(RayTrainWorker pid=5776)[0m 
+85.1%
+[36m(RayTrainWorker pid=5776)[0m 
+85.1%
+85.1%
+85.2%
+85.2%
+85.2%
+85.2%
+85.2%
+[36m(RayTrainWorker pid=5776)[0m 
+85.2%
+85.3%
+85.3%
+[36m(RayTrainWorker pid=5776)[0m 
+85.3%
+85.3%
+85.3%
+85.3%
+[36m(RayTrainWorker pid=5776)[0m 
+85.4%
+[36m(RayTrainWorker pid=5776)[0m 
+85.4%
+85.4%
+85.4%
+[36m(RayTrainWorker pid=5776)[0m 
+85.4%
+85.4%
+85.4%
+85.5%
+85.5%
+85.5%
+85.5%
+85.5%
+85.5%
+85.6%
+85.6%
+85.6%
+85.6%
+85.6%
+85.6%
+85.7%
+85.7%
+85.7%
+85.7%
+85.7%
+85.7%
+85.8%
+85.8%
+85.8%
+85.8%
+85.8%
+85.8%
+85.9%
+85.9%
+85.9%
+85.9%
+85.9%
+85.9%
+86.0%
+86.0%
+86.0%
+86.0%
+86.0%
+86.0%
+86.1%
+86.1%
+86.1%
+86.1%
+86.1%
+86.1%
+86.2%
+86.2%
+86.2%
+86.2%
+86.2%
+86.2%
+86.3%
+86.3%
+86.3%
+86.3%
+86.3%
+86.3%
+86.4%
+86.4%
+86.4%
+86.4%
+86.4%
+86.4%
+86.5%
+86.5%
+86.5%
+86.5%
+86.5%
+86.5%
+86.6%
+86.6%
+86.6%
+86.6%
+86.6%
+86.6%
+86.7%
+86.7%
+86.7%
+86.7%
+86.7%
+86.7%
+86.8%
+86.8%
+86.8%
+86.8%
+86.8%
+86.8%
+86.9%
+86.9%
+86.9%
+86.9%
+86.9%
+86.9%
+87.0%
+87.0%
+87.0%
+87.0%
+87.0%
+87.0%
+87.1%
+87.1%
+87.1%
+87.1%
+87.1%
+87.1%
+87.2%
+87.2%
+87.2%
+87.2%
+87.2%
+87.2%
+87.3%
+87.3%
+87.3%
+87.3%
+87.3%
+87.3%
+87.4%
+87.4%
+87.4%
+87.4%
+87.4%
+87.4%
+87.5%
+87.5%
+87.5%
+87.5%
+87.5%
+87.5%
+87.6%
+87.6%
+87.6%
+87.6%
+87.6%
+87.6%
+87.7%
+87.7%
+87.7%
+87.7%
+87.7%
+87.7%
+87.8%
+87.8%
+87.8%
+87.8%
+87.8%
+87.8%
+87.9%
+87.9%
+87.9%
+87.9%
+87.9%
+87.9%
+88.0%
+88.0%
+88.0%
+88.0%
+[36m(RayTrainWorker pid=5776)[0m 
+88.0%
+88.0%
+88.1%
+88.1%
+88.1%
+[36m(RayTrainWorker pid=5776)[0m 
+88.1%
+88.1%
+88.1%
+88.2%
+88.2%
+[36m(RayTrainWorker pid=5776)[0m 
+88.2%
+88.2%
+88.2%
+88.2%
+88.2%
+[36m(RayTrainWorker pid=5776)[0m 
+88.3%
+88.3%
+88.3%
+88.3%
+[36m(RayTrainWorker pid=5776)[0m 
+88.3%
+88.3%
+88.4%
+[36m(RayTrainWorker pid=5776)[0m 
+88.4%
+88.4%
+88.4%
+88.4%
+[36m(RayTrainWorker pid=5776)[0m 
+88.4%
+88.5%
+88.5%
+88.5%
+[36m(RayTrainWorker pid=5776)[0m 
+88.5%
+88.5%
+88.5%
+[36m(RayTrainWorker pid=5776)[0m 
+88.6%
+88.6%
+88.6%
+[36m(RayTrainWorker pid=5776)[0m 
+88.6%
+88.6%
+88.6%
+[36m(RayTrainWorker pid=5776)[0m 
+88.7%
+88.7%
+88.7%
+[36m(RayTrainWorker pid=5776)[0m 
+88.7%
+88.7%
+[36m(RayTrainWorker pid=5776)[0m 
+88.7%
+88.8%
+88.8%
+88.8%
+[36m(RayTrainWorker pid=5776)[0m 
+88.8%
+88.8%
+88.8%
+[36m(RayTrainWorker pid=5776)[0m 
+88.9%
+88.9%
+88.9%
+[36m(RayTrainWorker pid=5776)[0m 
+88.9%
+88.9%
+88.9%
+89.0%
+[36m(RayTrainWorker pid=5776)[0m 
+89.0%
+89.0%
+89.0%
+[36m(RayTrainWorker pid=5776)[0m 
+89.0%
+89.0%
+89.1%
+[36m(RayTrainWorker pid=5776)[0m 
+89.1%
+89.1%
+89.1%
+[36m(RayTrainWorker pid=5776)[0m 
+89.1%
+89.1%
+89.2%
+89.2%
+89.2%
+89.2%
+[36m(RayTrainWorker pid=5776)[0m 
+89.2%
+89.2%
+89.3%
+89.3%
+89.3%
+89.3%
+89.3%
+89.3%
+89.4%
+89.4%
+89.4%
+89.4%
+89.4%
+89.4%
+89.5%
+89.5%
+89.5%
+89.5%
+89.5%
+89.5%
+89.6%
+89.6%
+89.6%
+89.6%
+89.6%
+89.6%
+89.7%
+89.7%
+89.7%
+89.7%
+89.7%
+89.7%
+89.8%
+89.8%
+89.8%
+89.8%
+89.8%
+89.8%
+89.9%
+89.9%
+89.9%
+89.9%
+89.9%
+89.9%
+90.0%
+90.0%
+90.0%
+90.0%
+90.0%
+90.0%
+90.1%
+90.1%
+90.1%
+90.1%
+90.1%
+90.1%
+90.2%
+90.2%
+90.2%
+90.2%
+90.2%
+90.2%
+90.3%
+90.3%
+90.3%
+90.3%
+90.3%
+90.3%
+90.4%
+90.4%
+90.4%
+90.4%
+90.4%
+90.4%
+90.5%
+90.5%
+90.5%
+90.5%
+90.5%
+90.5%
+90.6%
+90.6%
+90.6%
+90.6%
+90.6%
+90.6%
+90.7%
+90.7%
+90.7%
+90.7%
+90.7%
+90.7%
+90.8%
+90.8%
+90.8%
+90.8%
+90.8%
+90.8%
+90.9%
+90.9%
+90.9%
+90.9%
+90.9%
+90.9%
+90.9%
+91.0%
+91.0%
+91.0%
+91.0%
+91.0%
+91.0%
+91.1%
+91.1%
+91.1%
+91.1%
+91.1%
+91.1%
+91.2%
+91.2%
+91.2%
+91.2%
+91.2%
+91.2%
+91.3%
+91.3%
+91.3%
+91.3%
+91.3%
+91.3%
+91.4%
+91.4%
+91.4%
+91.4%
+91.4%
+91.4%
+91.5%
+91.5%
+91.5%
+91.5%
+91.5%
+91.5%
+91.6%
+91.6%
+91.6%
+91.6%
+91.6%
+91.6%
+91.7%
+91.7%
+91.7%
+91.7%
+91.7%
+91.7%
+91.8%
+91.8%
+91.8%
+91.8%
+91.8%
+91.8%
+91.9%
+91.9%
+91.9%
+91.9%
+91.9%
+91.9%
+92.0%
+92.0%
+92.0%
+92.0%
+[36m(RayTrainWorker pid=5776)[0m 
+92.0%
+92.0%
+92.1%
+92.1%
+[36m(RayTrainWorker pid=5776)[0m 
+92.1%
+92.1%
+[36m(RayTrainWorker pid=5776)[0m 
+92.1%
+92.1%
+[36m(RayTrainWorker pid=5776)[0m 
+92.2%
+92.2%
+92.2%
+[36m(RayTrainWorker pid=5776)[0m 
+92.2%
+92.2%
+92.2%
+[36m(RayTrainWorker pid=5776)[0m 
+92.3%
+92.3%
+[36m(RayTrainWorker pid=5776)[0m 
+92.3%
+92.3%
+[36m(RayTrainWorker pid=5776)[0m 
+92.3%
+[36m(RayTrainWorker pid=5776)[0m 
+92.3%
+92.4%
+[36m(RayTrainWorker pid=5776)[0m 
+92.4%
+[36m(RayTrainWorker pid=5776)[0m 
+92.4%
+92.4%
+[36m(RayTrainWorker pid=5776)[0m 
+92.4%
+92.4%
+92.5%
+92.5%
+[36m(RayTrainWorker pid=5776)[0m 
+92.5%
+92.5%
+92.5%
+[36m(RayTrainWorker pid=5776)[0m 
+92.5%
+92.6%
+92.6%
+[36m(RayTrainWorker pid=5776)[0m 
+92.6%
+92.6%
+[36m(RayTrainWorker pid=5776)[0m 
+92.6%
+[36m(RayTrainWorker pid=5776)[0m 
+92.6%
+92.7%
+92.7%
+92.7%
+92.7%
+92.7%
+92.7%
+[36m(RayTrainWorker pid=5776)[0m 
+92.8%
+92.8%
+92.8%
+92.8%
+92.8%
+[36m(RayTrainWorker pid=5776)[0m 
+92.8%
+92.9%
+92.9%
+[36m(RayTrainWorker pid=5776)[0m 
+92.9%
+92.9%
+92.9%
+[36m(RayTrainWorker pid=5776)[0m 
+92.9%
+93.0%
+93.0%
+[36m(RayTrainWorker pid=5776)[0m 
+93.0%
+93.0%
+93.0%
+93.0%
+93.1%
+[36m(RayTrainWorker pid=5776)[0m 
+93.1%
+93.1%
+93.1%
+93.1%
+[36m(RayTrainWorker pid=5776)[0m 
+93.1%
+[36m(RayTrainWorker pid=5776)[0m 
+93.2%
+93.2%
+93.2%
+93.2%
+[36m(RayTrainWorker pid=5776)[0m 
+93.2%
+93.2%
+93.3%
+93.3%
+[36m(RayTrainWorker pid=5776)[0m 
+93.3%
+93.3%
+93.3%
+[36m(RayTrainWorker pid=5776)[0m 
+93.3%
+93.4%
+93.4%
+93.4%
+93.4%
+[36m(RayTrainWorker pid=5776)[0m 
+93.4%
+93.4%
+93.5%
+93.5%
+[36m(RayTrainWorker pid=5776)[0m 
+93.5%
+93.5%
+93.5%
+93.5%
+[36m(RayTrainWorker pid=5776)[0m 
+93.6%
+93.6%
+93.6%
+93.6%
+[36m(RayTrainWorker pid=5776)[0m 
+93.6%
+93.6%
+93.7%
+[36m(RayTrainWorker pid=5776)[0m 
+93.7%
+93.7%
+93.7%
+[36m(RayTrainWorker pid=5776)[0m 
+93.7%
+93.7%
+93.7%
+[36m(RayTrainWorker pid=5776)[0m 
+93.8%
+93.8%
+93.8%
+93.8%
+[36m(RayTrainWorker pid=5776)[0m 
+93.8%
+93.8%
+93.9%
+93.9%
+[36m(RayTrainWorker pid=5776)[0m 
+93.9%
+93.9%
+93.9%
+93.9%
+94.0%
+[36m(RayTrainWorker pid=5776)[0m 
+94.0%
+94.0%
+94.0%
+[36m(RayTrainWorker pid=5776)[0m 
+94.0%
+94.0%
+94.1%
+[36m(RayTrainWorker pid=5776)[0m 
+94.1%
+94.1%
+94.1%
+[36m(RayTrainWorker pid=5776)[0m 
+94.1%
+94.1%
+94.2%
+94.2%
+[36m(RayTrainWorker pid=5776)[0m 
+94.2%
+94.2%
+94.2%
+94.2%
+[36m(RayTrainWorker pid=5776)[0m 
+94.3%
+94.3%
+94.3%
+94.3%
+[36m(RayTrainWorker pid=5776)[0m 
+94.3%
+94.3%
+94.4%
+[36m(RayTrainWorker pid=5776)[0m 
+94.4%
+94.4%
+94.4%
+94.4%
+[36m(RayTrainWorker pid=5776)[0m 
+94.4%
+94.5%
+[36m(RayTrainWorker pid=5776)[0m 
+94.5%
+94.5%
+94.5%
+94.5%
+[36m(RayTrainWorker pid=5776)[0m 
+94.5%
+94.6%
+94.6%
+[36m(RayTrainWorker pid=5776)[0m 
+94.6%
+94.6%
+94.6%
+94.6%
+[36m(RayTrainWorker pid=5776)[0m 
+94.7%
+94.7%
+94.7%
+94.7%
+[36m(RayTrainWorker pid=5776)[0m 
+94.7%
+94.7%
+94.8%
+94.8%
+[36m(RayTrainWorker pid=5776)[0m 
+94.8%
+94.8%
+94.8%
+94.8%
+[36m(RayTrainWorker pid=5776)[0m 
+94.9%
+94.9%
+94.9%
+94.9%
+[36m(RayTrainWorker pid=5776)[0m 
+94.9%
+94.9%
+95.0%
+95.0%
+95.0%
+[36m(RayTrainWorker pid=5776)[0m 
+95.0%
+95.0%
+95.0%
+95.1%
+95.1%
+95.1%
+[36m(RayTrainWorker pid=5776)[0m 
+95.1%
+95.1%
+95.1%
+95.2%
+95.2%
+[36m(RayTrainWorker pid=5776)[0m 
+95.2%
+95.2%
+95.2%
+95.2%
+95.3%
+[36m(RayTrainWorker pid=5776)[0m 
+95.3%
+95.3%
+95.3%
+95.3%
+95.3%
+[36m(RayTrainWorker pid=5776)[0m 
+95.4%
+95.4%
+95.4%
+95.4%
+[36m(RayTrainWorker pid=5776)[0m 
+95.4%
+95.4%
+95.5%
+[36m(RayTrainWorker pid=5776)[0m 
+95.5%
+95.5%
+95.5%
+95.5%
+[36m(RayTrainWorker pid=5776)[0m 
+95.5%
+95.6%
+95.6%
+95.6%
+[36m(RayTrainWorker pid=5776)[0m 
+95.6%
+95.6%
+95.6%
+95.7%
+[36m(RayTrainWorker pid=5776)[0m 
+95.7%
+95.7%
+95.7%
+95.7%
+95.7%
+[36m(RayTrainWorker pid=5776)[0m 
+95.8%
+95.8%
+95.8%
+[36m(RayTrainWorker pid=5776)[0m 
+95.8%
+95.8%
+95.8%
+[36m(RayTrainWorker pid=5776)[0m 
+95.9%
+[36m(RayTrainWorker pid=5776)[0m 
+95.9%
+95.9%
+[36m(RayTrainWorker pid=5776)[0m 
+95.9%
+95.9%
+95.9%
+96.0%
+[36m(RayTrainWorker pid=5776)[0m 
+96.0%
+96.0%
+96.0%
+96.0%
+[36m(RayTrainWorker pid=5776)[0m 
+96.0%
+96.1%
+96.1%
+96.1%
+96.1%
+96.1%
+[36m(RayTrainWorker pid=5776)[0m 
+96.1%
+96.2%
+96.2%
+[36m(RayTrainWorker pid=5776)[0m 
+96.2%
+96.2%
+96.2%
+96.2%
+96.3%
+[36m(RayTrainWorker pid=5776)[0m 
+96.3%
+96.3%
+96.3%
+[36m(RayTrainWorker pid=5776)[0m 
+96.3%
+96.3%
+96.4%
+96.4%
+96.4%
+[36m(RayTrainWorker pid=5776)[0m 
+96.4%
+96.4%
+96.4%
+[36m(RayTrainWorker pid=5776)[0m 
+96.4%
+96.5%
+96.5%
+96.5%
+[36m(RayTrainWorker pid=5776)[0m 
+96.5%
+96.5%
+96.5%
+96.6%
+[36m(RayTrainWorker pid=5776)[0m 
+96.6%
+96.6%
+96.6%
+[36m(RayTrainWorker pid=5776)[0m 
+96.6%
+96.6%
+96.7%
+96.7%
+[36m(RayTrainWorker pid=5776)[0m 
+96.7%
+96.7%
+96.7%
+[36m(RayTrainWorker pid=5776)[0m 
+96.7%
+96.8%
+96.8%
+96.8%
+[36m(RayTrainWorker pid=5776)[0m 
+96.8%
+96.8%
+[36m(RayTrainWorker pid=5776)[0m 
+96.8%
+96.9%
+[36m(RayTrainWorker pid=5776)[0m 
+96.9%
+96.9%
+[36m(RayTrainWorker pid=5776)[0m 
+96.9%
+96.9%
+[36m(RayTrainWorker pid=5776)[0m 
+96.9%
+97.0%
+[36m(RayTrainWorker pid=5776)[0m 
+97.0%
+97.0%
+97.0%
+[36m(RayTrainWorker pid=5776)[0m 
+97.0%
+97.0%
+97.1%
+[36m(RayTrainWorker pid=5776)[0m 
+97.1%
+97.1%
+97.1%
+[36m(RayTrainWorker pid=5776)[0m 
+97.1%
+97.1%
+97.2%
+[36m(RayTrainWorker pid=5776)[0m 
+97.2%
+97.2%
+[36m(RayTrainWorker pid=5776)[0m 
+97.2%
+97.2%
+97.2%
+[36m(RayTrainWorker pid=5776)[0m 
+97.3%
+97.3%
+97.3%
+[36m(RayTrainWorker pid=5776)[0m 
+97.3%
+97.3%
+97.3%
+[36m(RayTrainWorker pid=5776)[0m 
+97.4%
+97.4%
+97.4%
+97.4%
+[36m(RayTrainWorker pid=5776)[0m 
+97.4%
+97.4%
+97.5%
+[36m(RayTrainWorker pid=5776)[0m 
+97.5%
+97.5%
+97.5%
+[36m(RayTrainWorker pid=5776)[0m 
+97.5%
+97.5%
+97.6%
+[36m(RayTrainWorker pid=5776)[0m 
+97.6%
+97.6%
+[36m(RayTrainWorker pid=5776)[0m 
+97.6%
+97.6%
+97.6%
+97.7%
+[36m(RayTrainWorker pid=5776)[0m 
+97.7%
+97.7%
+97.7%
+[36m(RayTrainWorker pid=5776)[0m 
+97.7%
+97.7%
+97.8%
+[36m(RayTrainWorker pid=5776)[0m 
+97.8%
+97.8%
+97.8%
+[36m(RayTrainWorker pid=5776)[0m 
+97.8%
+97.8%
+97.9%
+[36m(RayTrainWorker pid=5776)[0m 
+97.9%
+97.9%
+97.9%
+[36m(RayTrainWorker pid=5776)[0m 
+97.9%
+97.9%
+98.0%
+[36m(RayTrainWorker pid=5776)[0m 
+98.0%
+98.0%
+[36m(RayTrainWorker pid=5776)[0m 
+98.0%
+[36m(RayTrainWorker pid=5776)[0m 
+98.0%
+98.0%
+[36m(RayTrainWorker pid=5776)[0m 
+98.1%
+98.1%
+98.1%
+98.1%
+[36m(RayTrainWorker pid=5776)[0m 
+98.1%
+98.1%
+[36m(RayTrainWorker pid=5776)[0m 
+98.2%
+98.2%
+98.2%
+98.2%
+[36m(RayTrainWorker pid=5776)[0m 
+98.2%
+98.2%
+98.3%
+[36m(RayTrainWorker pid=5776)[0m 
+98.3%
+98.3%
+98.3%
+[36m(RayTrainWorker pid=5776)[0m 
+98.3%
+98.3%
+98.4%
+[36m(RayTrainWorker pid=5776)[0m 
+98.4%
+98.4%
+98.4%
+[36m(RayTrainWorker pid=5776)[0m 
+98.4%
+98.4%
+98.5%
+[36m(RayTrainWorker pid=5776)[0m 
+98.5%
+98.5%
+98.5%
+98.5%
+[36m(RayTrainWorker pid=5776)[0m 
+98.5%
+98.6%
+98.6%
+[36m(RayTrainWorker pid=5776)[0m 
+98.6%
+98.6%
+98.6%
+[36m(RayTrainWorker pid=5776)[0m 
+98.6%
+98.7%
+98.7%
+[36m(RayTrainWorker pid=5776)[0m 
+98.7%
+98.7%
+98.7%
+[36m(RayTrainWorker pid=5776)[0m 
+98.7%
+98.8%
+98.8%
+[36m(RayTrainWorker pid=5776)[0m 
+98.8%
+98.8%
+98.8%
+98.8%
+[36m(RayTrainWorker pid=5776)[0m 
+98.9%
+98.9%
+98.9%
+[36m(RayTrainWorker pid=5776)[0m 
+98.9%
+98.9%
+98.9%
+[36m(RayTrainWorker pid=5776)[0m 
+99.0%
+99.0%
+99.0%
+[36m(RayTrainWorker pid=5776)[0m 
+99.0%
+99.0%
+99.0%
+[36m(RayTrainWorker pid=5776)[0m 
+99.1%
+[36m(RayTrainWorker pid=5776)[0m 
+99.1%
+99.1%
+99.1%
+[36m(RayTrainWorker pid=5776)[0m 
+99.1%
+99.1%
+99.2%
+[36m(RayTrainWorker pid=5776)[0m 
+99.2%
+99.2%
+99.2%
+[36m(RayTrainWorker pid=5776)[0m 
+99.2%
+99.2%
+99.2%
+[36m(RayTrainWorker pid=5776)[0m 
+99.3%
+99.3%
+99.3%
+[36m(RayTrainWorker pid=5776)[0m 
+99.3%
+99.3%
+99.3%
+99.4%
+[36m(RayTrainWorker pid=5776)[0m 
+99.4%
+99.4%
+99.4%
+[36m(RayTrainWorker pid=5776)[0m 
+99.4%
+99.4%
+99.5%
+[36m(RayTrainWorker pid=5776)[0m 
+99.5%
+99.5%
+99.5%
+[36m(RayTrainWorker pid=5776)[0m 
+99.5%
+99.5%
+99.6%
+[36m(RayTrainWorker pid=5776)[0m 
+99.6%
+99.6%
+99.6%
+99.6%
+[36m(RayTrainWorker pid=5776)[0m 
+99.6%
+99.7%
+99.7%
+[36m(RayTrainWorker pid=5776)[0m 
+99.7%
+99.7%
+99.7%
+[36m(RayTrainWorker pid=5776)[0m 
+99.7%
+99.8%
+99.8%
+99.8%
+[36m(RayTrainWorker pid=5776)[0m 
+99.8%
+99.8%
+99.8%
+[36m(RayTrainWorker pid=5776)[0m 
+99.9%
+99.9%
+99.9%
+[36m(RayTrainWorker pid=5776)[0m 
+99.9%
+99.9%
+99.9%
+100.0%
+[36m(RayTrainWorker pid=5776)[0m 
+100.0%
+100.0%
+100.0%
+[36m(RayTrainWorker pid=5776)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.8751, 'best_accuracy': 0.8751, 'avg_epoch_time_s': 41.49291059900003}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.8804, 'best_accuracy': 0.8804, 'avg_epoch_time_s': 33.25282891750001}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.885, 'best_accuracy': 0.885, 'avg_epoch_time_s': 30.41541217300001}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.8881, 'best_accuracy': 0.8881, 'avg_epoch_time_s': 29.02201498650001}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.8894, 'best_accuracy': 0.8894, 'avg_epoch_time_s': 28.181523803800008}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.892, 'best_accuracy': 0.892, 'avg_epoch_time_s': 27.619534913333336}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.8929, 'best_accuracy': 0.8929, 'avg_epoch_time_s': 27.217683240857145}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.8923, 'best_accuracy': 0.8929, 'avg_epoch_time_s': 26.910245698375007}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.8941, 'best_accuracy': 0.8941, 'avg_epoch_time_s': 26.670594584666674}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.8932, 'best_accuracy': 0.8941, 'avg_epoch_time_s': 26.486461750400007}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.895, 'best_accuracy': 0.895, 'avg_epoch_time_s': 26.33507235881818}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.8953, 'best_accuracy': 0.8953, 'avg_epoch_time_s': 26.206395932833335}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 13: TrainingReport(checkpoint=None, metrics={'epoch': 13, 'accuracy': 0.8952, 'best_accuracy': 0.8953, 'avg_epoch_time_s': 26.10060330661539}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 14: TrainingReport(checkpoint=None, metrics={'epoch': 14, 'accuracy': 0.897, 'best_accuracy': 0.897, 'avg_epoch_time_s': 26.00997872485715}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 15: TrainingReport(checkpoint=None, metrics={'epoch': 15, 'accuracy': 0.8969, 'best_accuracy': 0.897, 'avg_epoch_time_s': 25.9309005702}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 16: TrainingReport(checkpoint=None, metrics={'epoch': 16, 'accuracy': 0.8958, 'best_accuracy': 0.897, 'avg_epoch_time_s': 25.867339752}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 17: TrainingReport(checkpoint=None, metrics={'epoch': 17, 'accuracy': 0.8981, 'best_accuracy': 0.8981, 'avg_epoch_time_s': 25.81268174011765}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 18: TrainingReport(checkpoint=None, metrics={'epoch': 18, 'accuracy': 0.8981, 'best_accuracy': 0.8981, 'avg_epoch_time_s': 25.755328010333333}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 19: TrainingReport(checkpoint=None, metrics={'epoch': 19, 'accuracy': 0.9003, 'best_accuracy': 0.9003, 'avg_epoch_time_s': 25.705822539368427}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 20: TrainingReport(checkpoint=None, metrics={'epoch': 20, 'accuracy': 0.8977, 'best_accuracy': 0.9003, 'avg_epoch_time_s': 25.6598446545}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 21: TrainingReport(checkpoint=None, metrics={'epoch': 21, 'accuracy': 0.8988, 'best_accuracy': 0.9003, 'avg_epoch_time_s': 25.62163218147619}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 22: TrainingReport(checkpoint=None, metrics={'epoch': 22, 'accuracy': 0.8991, 'best_accuracy': 0.9003, 'avg_epoch_time_s': 25.58472527681818}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 23: TrainingReport(checkpoint=None, metrics={'epoch': 23, 'accuracy': 0.8986, 'best_accuracy': 0.9003, 'avg_epoch_time_s': 25.55051475982609}, validation=False)
+[36m(RayTrainWorker pid=5776)[0m Reporting training result 24: TrainingReport(checkpoint=None, metrics={'epoch': 24, 'accuracy': 0.8995, 'best_accuracy': 0.9003, 'avg_epoch_time_s': 25.518818078458334}, validation=False)
+[36m(TrainController pid=8369)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=8369)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=8416)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=8369)[0m Started training worker group of size 1: 
+[36m(TrainController pid=8369)[0m - (ip=172.31.39.199, pid=8416) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=8416)[0m 
+[36m(RayTrainWorker pid=8416)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=8416)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=8416)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=8416)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=8416)[0m current device index = 0
+[36m(RayTrainWorker pid=8416)[0m device name = NVIDIA A10G
+[36m(RayTrainWorker pid=8416)[0m =====================================================
+[36m(RayTrainWorker pid=8416)[0m 
+[36m(RayTrainWorker pid=8416)[0m 🔍 TRAINING WITH MODEL: convnext_large
+[36m(RayTrainWorker pid=8416)[0m 🔍 FULL CONFIG: epochs=28, lr=0.01547057214934211, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=8416)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.882, 'best_accuracy': 0.882, 'avg_epoch_time_s': 34.11711079999998}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.8866, 'best_accuracy': 0.8866, 'avg_epoch_time_s': 29.655555477000007}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.8905, 'best_accuracy': 0.8905, 'avg_epoch_time_s': 28.114404088666635}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.8925, 'best_accuracy': 0.8925, 'avg_epoch_time_s': 27.33450339274998}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.8947, 'best_accuracy': 0.8947, 'avg_epoch_time_s': 26.87407607360001}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.8949, 'best_accuracy': 0.8949, 'avg_epoch_time_s': 26.555628953666655}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.8941, 'best_accuracy': 0.8949, 'avg_epoch_time_s': 26.34073152785715}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.8969, 'best_accuracy': 0.8969, 'avg_epoch_time_s': 26.176190672374986}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.8979, 'best_accuracy': 0.8979, 'avg_epoch_time_s': 26.051092620888895}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.898, 'best_accuracy': 0.898, 'avg_epoch_time_s': 25.94480650349999}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.8988, 'best_accuracy': 0.8988, 'avg_epoch_time_s': 25.864679948363634}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.8995, 'best_accuracy': 0.8995, 'avg_epoch_time_s': 25.791907776499993}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 13: TrainingReport(checkpoint=None, metrics={'epoch': 13, 'accuracy': 0.9005, 'best_accuracy': 0.9005, 'avg_epoch_time_s': 25.73599535815384}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 14: TrainingReport(checkpoint=None, metrics={'epoch': 14, 'accuracy': 0.8993, 'best_accuracy': 0.9005, 'avg_epoch_time_s': 25.688951326214287}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 15: TrainingReport(checkpoint=None, metrics={'epoch': 15, 'accuracy': 0.8998, 'best_accuracy': 0.9005, 'avg_epoch_time_s': 25.645691440799997}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 16: TrainingReport(checkpoint=None, metrics={'epoch': 16, 'accuracy': 0.8999, 'best_accuracy': 0.9005, 'avg_epoch_time_s': 25.615344154374995}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 17: TrainingReport(checkpoint=None, metrics={'epoch': 17, 'accuracy': 0.9011, 'best_accuracy': 0.9011, 'avg_epoch_time_s': 25.577680974588233}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 18: TrainingReport(checkpoint=None, metrics={'epoch': 18, 'accuracy': 0.8991, 'best_accuracy': 0.9011, 'avg_epoch_time_s': 25.549073154444436}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 19: TrainingReport(checkpoint=None, metrics={'epoch': 19, 'accuracy': 0.9009, 'best_accuracy': 0.9011, 'avg_epoch_time_s': 25.521591153526312}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 20: TrainingReport(checkpoint=None, metrics={'epoch': 20, 'accuracy': 0.9005, 'best_accuracy': 0.9011, 'avg_epoch_time_s': 25.495730592350004}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 21: TrainingReport(checkpoint=None, metrics={'epoch': 21, 'accuracy': 0.9014, 'best_accuracy': 0.9014, 'avg_epoch_time_s': 25.47554120828571}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 22: TrainingReport(checkpoint=None, metrics={'epoch': 22, 'accuracy': 0.8996, 'best_accuracy': 0.9014, 'avg_epoch_time_s': 25.447330312590907}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 23: TrainingReport(checkpoint=None, metrics={'epoch': 23, 'accuracy': 0.9021, 'best_accuracy': 0.9021, 'avg_epoch_time_s': 25.423972670695647}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 24: TrainingReport(checkpoint=None, metrics={'epoch': 24, 'accuracy': 0.9011, 'best_accuracy': 0.9021, 'avg_epoch_time_s': 25.40382173641667}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 25: TrainingReport(checkpoint=None, metrics={'epoch': 25, 'accuracy': 0.9012, 'best_accuracy': 0.9021, 'avg_epoch_time_s': 25.385894438079994}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 26: TrainingReport(checkpoint=None, metrics={'epoch': 26, 'accuracy': 0.9007, 'best_accuracy': 0.9021, 'avg_epoch_time_s': 25.371436428769226}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 27: TrainingReport(checkpoint=None, metrics={'epoch': 27, 'accuracy': 0.9, 'best_accuracy': 0.9021, 'avg_epoch_time_s': 25.35555118362963}, validation=False)
+[36m(RayTrainWorker pid=8416)[0m Reporting training result 28: TrainingReport(checkpoint=None, metrics={'epoch': 28, 'accuracy': 0.9015, 'best_accuracy': 0.9021, 'avg_epoch_time_s': 25.33315452914286}, validation=False)
+2026-05-05 11:26:29,300	INFO tune.py:1001 -- Wrote the latest version of all result files and experiment state to '/fsx/ray_results/pytorch_hpo_phase1' in 0.0451s.
+
+INFO:cloud_runner_HPO_new:Parsed HPO result: {'config': {'accuracy': 0.9021, 'model_name': 'convnext_large', 'epoch': 28, 'learning_rate': 0.01547057214934211, 'momentum': 0.7883831916940598, 'batch_size': 64, 'hidden': 10, 'image_size': 64, 'next_trials': 3}}
+INFO:cloud_runner_HPO_new:HPO pipeline completed successfully
+INFO:cloud_runner_HPO_new:Cleaning up Ray cluster...
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray stopped on 172.31.39.199
+INFO:cloud_runner_HPO_new:HPO execution completed successfully
+

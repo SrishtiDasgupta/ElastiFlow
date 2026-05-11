@@ -1,0 +1,11 @@
+=== WORKFLOW ERROR ===
+hpo-60bf3eb4 iteration 0 failed after 2 attempts: Subprocess exit code 1
+
+=== TRACEBACK ===
+Traceback (most recent call last):
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 215, in execute
+    result, is_sim = self._run_subprocess(args, command, env)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 173, in _run_subprocess
+    raise RuntimeError(f"{self.wf_id} iteration {self.workflow_iterator} failed after {MAX_RETRIES} attempts: {last_error}")
+RuntimeError: hpo-60bf3eb4 iteration 0 failed after 2 attempts: Subprocess exit code 1
+

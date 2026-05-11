@@ -1,0 +1,297 @@
+{
+  "data8": {
+    "full_id": "hpo-60bf3eb4",
+    "submit": 1778413716,
+    "deadline": 1778419876,
+    "deadline_min_from_submit": 102.7,
+    "model": "vgg19",
+    "n_iters": 3,
+    "iter_data": [
+      {
+        "iter": 0,
+        "ts_end": 1778414061.4635549,
+        "duration_s": 345.4635548591614,
+        "duration_min": 5.8,
+        "epoch_output": 10,
+        "next_trials_output": 6,
+        "accuracy": 0.5981
+      },
+      {
+        "iter": 1,
+        "ts_end": 1778415214.3827507,
+        "duration_s": 1152.9191958904266,
+        "duration_min": 19.2,
+        "epoch_output": 11,
+        "next_trials_output": 9,
+        "accuracy": 0.6192
+      },
+      {
+        "iter": 2,
+        "ts_end": 1778417352.8161452,
+        "duration_s": 2138.433394432068,
+        "duration_min": 35.6,
+        "epoch_output": 12,
+        "next_trials_output": 10,
+        "accuracy": 0.618
+      }
+    ]
+  },
+  "data9": {
+    "full_id": "hpo-b03a4442",
+    "submit": 1778413987,
+    "deadline": 1778422460,
+    "deadline_min_from_submit": 141.2,
+    "model": "convnext_large",
+    "n_iters": 5,
+    "iter_data": [
+      {
+        "iter": 0,
+        "ts_end": 1778415864.874908,
+        "duration_s": 1877.8749079704285,
+        "duration_min": 31.3,
+        "epoch_output": 28,
+        "next_trials_output": 3,
+        "accuracy": 0.9019
+      },
+      {
+        "iter": 1,
+        "ts_end": 1778418183.3858042,
+        "duration_s": 2318.510896205902,
+        "duration_min": 38.6,
+        "epoch_output": 40,
+        "next_trials_output": 3,
+        "accuracy": 0.9002
+      },
+      {
+        "iter": 2,
+        "ts_end": 1778421272.6929612,
+        "duration_s": 3089.3071570396423,
+        "duration_min": 51.5,
+        "epoch_output": 57,
+        "next_trials_output": 3,
+        "accuracy": 0.9021
+      },
+      {
+        "iter": 3,
+        "ts_end": 1778425475.60273,
+        "duration_s": 4202.909768819809,
+        "duration_min": 70.0,
+        "epoch_output": 65,
+        "next_trials_output": 3,
+        "accuracy": 0.9027
+      },
+      {
+        "iter": 4,
+        "ts_end": 1778430590.5250564,
+        "duration_s": 5114.92232632637,
+        "duration_min": 85.2,
+        "epoch_output": 95,
+        "next_trials_output": 3,
+        "accuracy": 0.9047
+      }
+    ]
+  },
+  "data5": {
+    "full_id": "hpo-df19b440",
+    "submit": 1778414106,
+    "deadline": 1778421395,
+    "deadline_min_from_submit": 121.5,
+    "model": "wide_resnet101_2",
+    "n_iters": 5,
+    "iter_data": [
+      {
+        "iter": 0,
+        "ts_end": 1778418422.2914588,
+        "duration_s": 4316.291458845139,
+        "duration_min": 71.9,
+        "epoch_output": 25,
+        "next_trials_output": 4,
+        "accuracy": 0.5272
+      },
+      {
+        "iter": 1,
+        "ts_end": 1778420754.4895685,
+        "duration_s": 2332.19810962677,
+        "duration_min": 38.9,
+        "epoch_output": 22,
+        "next_trials_output": 6,
+        "accuracy": 0.5399
+      },
+      {
+        "iter": 2,
+        "ts_end": 1778423507.08171,
+        "duration_s": 2752.5921416282654,
+        "duration_min": 45.9,
+        "epoch_output": 21,
+        "next_trials_output": 9,
+        "accuracy": 0.54
+      },
+      {
+        "iter": 3,
+        "ts_end": 1778428244.5950959,
+        "duration_s": 4737.513385772705,
+        "duration_min": 79.0,
+        "epoch_output": 30,
+        "next_trials_output": 10,
+        "accuracy": 0.5453
+      }
+    ]
+  },
+  "data7": {
+    "full_id": "hpo-73120874",
+    "submit": 1778414188,
+    "deadline": 1778419943,
+    "deadline_min_from_submit": 95.9,
+    "model": "wide_resnet101_2",
+    "n_iters": 4,
+    "iter_data": [
+      {
+        "iter": 0,
+        "ts_end": 1778416640.369741,
+        "duration_s": 2452.369740962982,
+        "duration_min": 40.9,
+        "epoch_output": 27,
+        "next_trials_output": 3,
+        "accuracy": 0.4831
+      },
+      {
+        "iter": 1,
+        "ts_end": 1778419692.588508,
+        "duration_s": 3052.218766927719,
+        "duration_min": 50.9,
+        "epoch_output": 35,
+        "next_trials_output": 4,
+        "accuracy": 0.4896
+      },
+      {
+        "iter": 2,
+        "ts_end": 1778424789.3729503,
+        "duration_s": 5096.784442424774,
+        "duration_min": 84.9,
+        "epoch_output": 50,
+        "next_trials_output": 6,
+        "accuracy": 0.5343
+      }
+    ]
+  },
+  "data3": {
+    "full_id": "hpo-a87b8123",
+    "submit": 1778414203,
+    "deadline": 1778419398,
+    "deadline_min_from_submit": 86.6,
+    "model": "vgg19",
+    "n_iters": 3,
+    "iter_data": [
+      {
+        "iter": 0,
+        "ts_end": 1778415010.6006055,
+        "duration_s": 807.6006054878235,
+        "duration_min": 13.5,
+        "epoch_output": 18,
+        "next_trials_output": 6,
+        "accuracy": 0.6085
+      },
+      {
+        "iter": 1,
+        "ts_end": 1778416652.008843,
+        "duration_s": 1641.4082374572754,
+        "duration_min": 27.4,
+        "epoch_output": 9,
+        "next_trials_output": 9,
+        "accuracy": 0.61
+      },
+      {
+        "iter": 2,
+        "ts_end": 1778418043.6635504,
+        "duration_s": 1391.6547074317932,
+        "duration_min": 23.2,
+        "epoch_output": 12,
+        "next_trials_output": 10,
+        "accuracy": 0.6139
+      }
+    ]
+  },
+  "data12": {
+    "full_id": "hpo-ccb43739",
+    "submit": 1778414218,
+    "deadline": 1778419947,
+    "deadline_min_from_submit": 95.5,
+    "model": "vgg19",
+    "n_iters": 4,
+    "iter_data": [
+      {
+        "iter": 0,
+        "ts_end": 1778416429.4515884,
+        "duration_s": 2211.4515883922577,
+        "duration_min": 36.9,
+        "epoch_output": 17,
+        "next_trials_output": 6,
+        "accuracy": 0.6976604679064187
+      },
+      {
+        "iter": 1,
+        "ts_end": 1778417604.8157508,
+        "duration_s": 1175.3641624450684,
+        "duration_min": 19.6,
+        "epoch_output": 18,
+        "next_trials_output": 9,
+        "accuracy": 0.6985
+      },
+      {
+        "iter": 2,
+        "ts_end": 1778419762.6996572,
+        "duration_s": 2157.883906364441,
+        "duration_min": 36.0,
+        "epoch_output": 24,
+        "next_trials_output": 10,
+        "accuracy": 0.7304
+      },
+      {
+        "iter": 3,
+        "ts_end": 1778422636.3103712,
+        "duration_s": 2873.6107139587402,
+        "duration_min": 47.9,
+        "epoch_output": 33,
+        "next_trials_output": 10,
+        "accuracy": 0.7391
+      }
+    ]
+  },
+  "data1": {
+    "full_id": "hpo-417bb2bd",
+    "submit": 1778414224,
+    "deadline": 1778419419,
+    "deadline_min_from_submit": 86.6,
+    "model": "vgg19",
+    "n_iters": 3,
+    "iter_data": [
+      {
+        "iter": 0,
+        "ts_end": 1778415077.5692737,
+        "duration_s": 853.5692737102509,
+        "duration_min": 14.2,
+        "epoch_output": 16,
+        "next_trials_output": 6,
+        "accuracy": 0.6964
+      },
+      {
+        "iter": 1,
+        "ts_end": 1778416436.103606,
+        "duration_s": 1358.5343322753906,
+        "duration_min": 22.6,
+        "epoch_output": 12,
+        "next_trials_output": 9,
+        "accuracy": 0.7223
+      },
+      {
+        "iter": 2,
+        "ts_end": 1778417888.5617182,
+        "duration_s": 1452.4581122398376,
+        "duration_min": 24.2,
+        "epoch_output": 13,
+        "next_trials_output": 10,
+        "accuracy": 0.7352
+      }
+    ]
+  }
+}

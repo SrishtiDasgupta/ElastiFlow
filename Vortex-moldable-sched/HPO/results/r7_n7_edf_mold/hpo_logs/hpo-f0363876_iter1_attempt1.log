@@ -1,0 +1,166 @@
+=== COMMAND ===
+/home/ubuntu/rayenv/bin/python3 /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py {"wf_id": "hpo-f0363876", "cohesion": {"accuracy": 0.5181, "model_name": "wide_resnet101_2", "epoch": 14, "learning_rate": 0.005272612033004936, "momentum": 0.7750833940018543, "batch_size": 64, "hidden": 10, "image_size": 64, "next_trials": 3}, "hosts": {"g5.xlarge": ["172.31.47.206"]}, "chains": 3, "tinyda_iterations": 14, "mesh": "wide_resnet101_2", "port": 4242}
+
+=== STDOUT ===
+hpo-f0363876
+{"config": {"accuracy": 0.5226, "model_name": "wide_resnet101_2", "epoch": 17, "learning_rate": 0.001544091892537855, "momentum": 0.785222422823492, "batch_size": 64, "hidden": 10, "image_size": 64, "next_trials": 4}, "status": "ok", "wf_id": "hpo-f0363876", "mode": "cloud"}
+
+
+=== STDERR ===
+INFO:cloud_runner_HPO_new:Starting HPO Cloud Runner execution...
+INFO:cloud_runner_HPO_new:Setting up HPO Ray cluster...
+INFO:cloud_runner_HPO_new:Extracted 1 worker IPs: ['172.31.47.206']
+INFO:cloud_runner_HPO_new:Ray Head: 172.31.47.206
+INFO:cloud_runner_HPO_new:Ray Workers: []
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray port 6380 on 172.31.47.206 is free after stop
+INFO:cloud_runner_HPO_new:Ray head startup output: 2026-05-05 11:07:25,643	INFO usage_lib.py:474 -- Usage stats collection is enabled by default without user confirmation because this terminal is detected to be non-interactive. To disable this, add `--disable-usage-stats` to the command that starts the cluster, or run the following command: `ray disable-usage-stats` before starting the cluster. See https://docs.ray.io/en/master/cluster/usage-stats.html for more details.
+2026-05-05 11:07:25,643	INFO scripts.py:940 -- [37mLocal node IP[39m: [1m172.31.47.206[22m
+2026-05-05 11:07:31,731	SUCC scripts.py:979 -- [32m--------------------[39m
+2026-05-05 11:07:31,731	SUCC scripts.py:980 -- [32mRay runtime started.[39m
+2026-05-05 11:07:31,731	SUCC scripts.py:981 -- [32m--------------------[39m
+2026-05-05 11:07:31,731	INFO scripts.py:983 -- [36mNext steps[39m
+2026-05-05 11:07:31,731	INFO scripts.py:986 -- To add another node to this Ray cluster, run
+2026-05-05 11:07:31,731	INFO scripts.py:989 -- [1m  ray start --address='172.31.47.206:6380'[22m
+2026-05-05 11:07:31,731	INFO scripts.py:1000 -- To connect to this Ray cluster:
+2026-05-05 11:07:31,731	INFO scripts.py:1002 -- [35mimport[39m[26m ray
+2026-05-05 11:07:31,732	INFO scripts.py:1003 -- ray[35m.[39m[26minit()
+2026-05-05 11:07:31,732	INFO scripts.py:1017 -- To submit a Ray job using the Ray Jobs CLI:
+2026-05-05 11:07:31,732	INFO scripts.py:1018 -- [1m  RAY_API_SERVER_ADDRESS='http://127.0.0.1:8265' ray job submit --working-dir . -- python my_script.py[22m
+2026-05-05 11:07:31,732	INFO scripts.py:1027 -- See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/index.html 
+2026-05-05 11:07:31,732	INFO scripts.py:1031 -- for more information on submitting Ray jobs to the Ray cluster.
+2026-05-05 11:07:31,732	INFO scripts.py:1036 -- To terminate the Ray runtime, run
+2026-05-05 11:07:31,732	INFO scripts.py:1037 -- [1m  ray stop[22m
+2026-05-05 11:07:31,732	INFO scripts.py:1040 -- To view the status of the cluster, use
+2026-05-05 11:07:31,732	INFO scripts.py:1041 --   [1mray status[22m[26m
+2026-05-05 11:07:31,732	INFO scripts.py:1045 -- To monitor and debug Ray, view the dashboard at 
+2026-05-05 11:07:31,732	INFO scripts.py:1046 --   [1m127.0.0.1:8265[22m[26m
+2026-05-05 11:07:31,732	INFO scripts.py:1053 -- [4mIf connection to the dashboard fails, check your firewall settings and network configuration.[24m
+
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray head ports reachable; assuming healthy.
+INFO:cloud_runner_HPO_new:No additional Ray workers to start
+INFO:cloud_runner_HPO_new:Ray cluster setup completed successfully
+INFO:cloud_runner_HPO_new:Starting HPO pipeline execution...
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:⚠️  HPO CONFIG PREPARED:
+INFO:cloud_runner_HPO_new:    model_name: wide_resnet101_2
+INFO:cloud_runner_HPO_new:    epochs: 14
+INFO:cloud_runner_HPO_new:    trials: 3
+INFO:cloud_runner_HPO_new:    Full config: {'model_name': 'wide_resnet101_2', 'epoch': 14, 'next_trials': 3, 'learning_rate': 0.005272612033004936, 'momentum': 0.7750833940018543, 'batch_size': 64, 'hidden': 10, 'image_size': 64, 'amp': True, 'train_backbone': False, 'data_dir': '/home/ubuntu/cifar10'}
+INFO:paramiko.transport.sftp:[chan 0] Opened sftp connection (server version 3)
+INFO:paramiko.transport.sftp:[chan 0] sftp session closed.
+INFO:cloud_runner_HPO_new:Extracted 1 worker IPs: ['172.31.47.206']
+INFO:cloud_runner_HPO_new:Executing HPO pipeline...
+WARNING:cloud_runner_HPO_new:HPO pipeline warnings: 2026-05-05 11:07:36,401	INFO worker.py:1672 -- Using address 172.31.47.206:6380 set in the environment variable RAY_ADDRESS
+2026-05-05 11:07:36,405	INFO worker.py:1814 -- Connecting to existing Ray cluster at address: 172.31.47.206:6380...
+2026-05-05 11:07:36,431	INFO worker.py:2003 -- Connected to Ray cluster. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/worker.py:2051: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+2026-05-05 11:07:37,203	INFO registry.py:112 -- Detected unknown callable for trainable. Converting to class.
+[36m(TrainController pid=9985)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=9985)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=10073)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=9985)[0m Started training worker group of size 1: 
+[36m(TrainController pid=9985)[0m - (ip=172.31.47.206, pid=10073) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=10073)[0m 
+[36m(RayTrainWorker pid=10073)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=10073)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=10073)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=10073)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=10073)[0m current device index = 0
+[36m(RayTrainWorker pid=10073)[0m device name = NVIDIA A10G
+[36m(RayTrainWorker pid=10073)[0m =====================================================
+[36m(RayTrainWorker pid=10073)[0m 
+[36m(RayTrainWorker pid=10073)[0m 🔍 TRAINING WITH MODEL: wide_resnet101_2
+[36m(RayTrainWorker pid=10073)[0m 🔍 FULL CONFIG: epochs=13, lr=0.03065070048063663, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=10073)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.3697, 'best_accuracy': 0.3697, 'avg_epoch_time_s': 26.245479641999964}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.4213, 'best_accuracy': 0.4213, 'avg_epoch_time_s': 25.685327798499998}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.335, 'best_accuracy': 0.4213, 'avg_epoch_time_s': 25.40848512633329}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.4371, 'best_accuracy': 0.4371, 'avg_epoch_time_s': 25.247727175249963}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.4454, 'best_accuracy': 0.4454, 'avg_epoch_time_s': 25.157009300399977}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.4346, 'best_accuracy': 0.4454, 'avg_epoch_time_s': 25.107654514999997}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.423, 'best_accuracy': 0.4454, 'avg_epoch_time_s': 25.090448679142842}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.4398, 'best_accuracy': 0.4454, 'avg_epoch_time_s': 25.05187421949998}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.4573, 'best_accuracy': 0.4573, 'avg_epoch_time_s': 25.02445325666665}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.4471, 'best_accuracy': 0.4573, 'avg_epoch_time_s': 25.00196274739999}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.3838, 'best_accuracy': 0.4573, 'avg_epoch_time_s': 24.9896178740909}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.4464, 'best_accuracy': 0.4573, 'avg_epoch_time_s': 24.975884616083324}, validation=False)
+[36m(RayTrainWorker pid=10073)[0m Reporting training result 13: TrainingReport(checkpoint=None, metrics={'epoch': 13, 'accuracy': 0.4385, 'best_accuracy': 0.4573, 'avg_epoch_time_s': 24.9710057036923}, validation=False)
+[36m(TrainController pid=11354)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=11354)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=11402)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=11354)[0m Started training worker group of size 1: 
+[36m(TrainController pid=11354)[0m - (ip=172.31.47.206, pid=11402) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=11402)[0m 
+[36m(RayTrainWorker pid=11402)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=11402)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=11402)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=11402)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=11402)[0m current device index = 0
+[36m(RayTrainWorker pid=11402)[0m device name = NVIDIA A10G
+[36m(RayTrainWorker pid=11402)[0m =====================================================
+[36m(RayTrainWorker pid=11402)[0m 
+[36m(RayTrainWorker pid=11402)[0m 🔍 TRAINING WITH MODEL: wide_resnet101_2
+[36m(RayTrainWorker pid=11402)[0m 🔍 FULL CONFIG: epochs=12, lr=0.02646354716091343, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=11402)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.3377, 'best_accuracy': 0.3377, 'avg_epoch_time_s': 26.153376238999954}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.3585, 'best_accuracy': 0.3585, 'avg_epoch_time_s': 25.68513044200006}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.4426, 'best_accuracy': 0.4426, 'avg_epoch_time_s': 25.38742679766665}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.4529, 'best_accuracy': 0.4529, 'avg_epoch_time_s': 25.24797323475002}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.4126, 'best_accuracy': 0.4529, 'avg_epoch_time_s': 25.151078889200015}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.4511, 'best_accuracy': 0.4529, 'avg_epoch_time_s': 25.10271679899999}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.4519, 'best_accuracy': 0.4529, 'avg_epoch_time_s': 25.06317494585713}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.4431, 'best_accuracy': 0.4529, 'avg_epoch_time_s': 25.025306848625007}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.441, 'best_accuracy': 0.4529, 'avg_epoch_time_s': 24.98952825299999}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.4438, 'best_accuracy': 0.4529, 'avg_epoch_time_s': 24.973814949100007}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.4655, 'best_accuracy': 0.4655, 'avg_epoch_time_s': 24.957876437363645}, validation=False)
+[36m(RayTrainWorker pid=11402)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.4295, 'best_accuracy': 0.4655, 'avg_epoch_time_s': 24.950940472083328}, validation=False)
+[36m(TrainController pid=12583)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=12583)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=12629)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=12583)[0m Started training worker group of size 1: 
+[36m(TrainController pid=12583)[0m - (ip=172.31.47.206, pid=12629) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=12629)[0m 
+[36m(RayTrainWorker pid=12629)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=12629)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=12629)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=12629)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=12629)[0m current device index = 0
+[36m(RayTrainWorker pid=12629)[0m device name = NVIDIA A10G
+[36m(RayTrainWorker pid=12629)[0m =====================================================
+[36m(RayTrainWorker pid=12629)[0m 
+[36m(RayTrainWorker pid=12629)[0m 🔍 TRAINING WITH MODEL: wide_resnet101_2
+[36m(RayTrainWorker pid=12629)[0m 🔍 FULL CONFIG: epochs=17, lr=0.001544091892537855, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=12629)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.4563, 'best_accuracy': 0.4563, 'avg_epoch_time_s': 26.028788690000056}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.4938, 'best_accuracy': 0.4938, 'avg_epoch_time_s': 25.540755426500027}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.4933, 'best_accuracy': 0.4938, 'avg_epoch_time_s': 25.244719233666654}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5025, 'best_accuracy': 0.5025, 'avg_epoch_time_s': 25.12466455675002}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5013, 'best_accuracy': 0.5025, 'avg_epoch_time_s': 25.0520952374}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.507, 'best_accuracy': 0.507, 'avg_epoch_time_s': 24.99495467066667}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5031, 'best_accuracy': 0.507, 'avg_epoch_time_s': 24.962795503428556}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.5122, 'best_accuracy': 0.5122, 'avg_epoch_time_s': 24.930672848499995}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.5059, 'best_accuracy': 0.5122, 'avg_epoch_time_s': 24.90924965133331}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.5091, 'best_accuracy': 0.5122, 'avg_epoch_time_s': 24.89710627070001}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.5122, 'best_accuracy': 0.5122, 'avg_epoch_time_s': 24.888577189818182}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5163, 'best_accuracy': 0.5163, 'avg_epoch_time_s': 24.86611047291666}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 13: TrainingReport(checkpoint=None, metrics={'epoch': 13, 'accuracy': 0.5187, 'best_accuracy': 0.5187, 'avg_epoch_time_s': 24.864534515615368}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 14: TrainingReport(checkpoint=None, metrics={'epoch': 14, 'accuracy': 0.515, 'best_accuracy': 0.5187, 'avg_epoch_time_s': 24.85736030664285}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 15: TrainingReport(checkpoint=None, metrics={'epoch': 15, 'accuracy': 0.5143, 'best_accuracy': 0.5187, 'avg_epoch_time_s': 24.843826092000004}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 16: TrainingReport(checkpoint=None, metrics={'epoch': 16, 'accuracy': 0.5226, 'best_accuracy': 0.5226, 'avg_epoch_time_s': 24.8339125035625}, validation=False)
+[36m(RayTrainWorker pid=12629)[0m Reporting training result 17: TrainingReport(checkpoint=None, metrics={'epoch': 17, 'accuracy': 0.5193, 'best_accuracy': 0.5226, 'avg_epoch_time_s': 24.827855539705887}, validation=False)
+2026-05-05 11:26:02,978	INFO tune.py:1001 -- Wrote the latest version of all result files and experiment state to '/fsx/ray_results/pytorch_hpo_phase1' in 0.0517s.
+
+INFO:cloud_runner_HPO_new:Parsed HPO result: {'config': {'accuracy': 0.5226, 'model_name': 'wide_resnet101_2', 'epoch': 17, 'learning_rate': 0.001544091892537855, 'momentum': 0.785222422823492, 'batch_size': 64, 'hidden': 10, 'image_size': 64, 'next_trials': 4}}
+INFO:cloud_runner_HPO_new:HPO pipeline completed successfully
+INFO:cloud_runner_HPO_new:Cleaning up Ray cluster...
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray stopped on 172.31.47.206
+INFO:cloud_runner_HPO_new:HPO execution completed successfully
+

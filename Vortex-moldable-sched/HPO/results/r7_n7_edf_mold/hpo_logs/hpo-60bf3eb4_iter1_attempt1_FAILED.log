@@ -1,0 +1,12 @@
+=== COMMAND ===
+/home/ubuntu/rayenv/bin/python3 /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py {"wf_id": "hpo-60bf3eb4", "cohesion": {"accuracy": 0.5925, "learning_rate": 0.013752821465535496, "momentum": 0.7956826668622983, "epochs": 8, "next_trials": 6}, "hosts": {"on-prem": ["172.31.10.173", "172.31.10.173", "172.31.10.173", "172.31.10.173"]}, "chains": 6, "tinyda_iterations": 8, "mesh": "vgg19", "port": 7130}
+
+=== RETURN CODE ===
+-9
+
+=== STDOUT ===
+hpo-60bf3eb4
+
+
+=== STDERR ===
+

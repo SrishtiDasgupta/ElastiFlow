@@ -1,0 +1,20 @@
+=== COMMAND ===
+/home/ubuntu/rayenv/bin/python3 /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py {"wf_id": "hpo-b03a4442", "cohesion": {"accuracy": 0.9011, "model_name": "convnext_large", "epoch": 53, "learning_rate": 0.02570498629394751, "momentum": 0.8050681066383947, "batch_size": 32, "hidden": 10, "image_size": 64, "next_trials": 3}, "hosts": {"g4dn.xlarge": ["172.31.35.38", "172.31.39.103", "172.31.47.203"]}, "chains": 3, "tinyda_iterations": 53, "mesh": "convnext_large", "port": 4242}
+
+=== RETURN CODE ===
+-9
+
+=== STDOUT ===
+hpo-b03a4442
+
+
+=== STDERR ===
+INFO:cloud_runner_HPO_new:Starting HPO Cloud Runner execution...
+INFO:cloud_runner_HPO_new:Setting up HPO Ray cluster...
+INFO:cloud_runner_HPO_new:Extracted 3 worker IPs: ['172.31.35.38', '172.31.39.103', '172.31.47.203']
+INFO:cloud_runner_HPO_new:Ray Head: 172.31.35.38
+INFO:cloud_runner_HPO_new:Ray Workers: ['172.31.39.103', '172.31.47.203']
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray port 6380 on 172.31.35.38 is free after stop
+

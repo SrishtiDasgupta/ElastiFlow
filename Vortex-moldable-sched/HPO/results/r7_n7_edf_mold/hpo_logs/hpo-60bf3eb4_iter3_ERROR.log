@@ -1,0 +1,57 @@
+=== WORKFLOW ERROR ===
+'hpo-60bf3eb4'
+
+=== TRACEBACK ===
+Traceback (most recent call last):
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 242, in execute
+    setWorkflowComplete(self.wf_id, True)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/utils/exec_sched.py", line 100, in setWorkflowComplete
+    workflow_config[id]['complete'] = isComplete
+KeyError: 'hpo-60bf3eb4'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 239, in execute
+    self.output_parameters[0].append((result['config'],  hosts))
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_variables.py", line 21, in append
+    subscriber()
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 57, in prepareOutput
+    self.add_to_input(outputValue)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 53, in add_to_input
+    self.execute(self.hosts)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 66, in execute
+    self.enumerator.append(new_input)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_variables.py", line 21, in append
+    subscriber()
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 93, in check_readiness
+    self.execute()
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 259, in execute
+    setWorkflowComplete(self.wf_id, True)  # Mark complete to prevent executor hanging
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/utils/exec_sched.py", line 100, in setWorkflowComplete
+    workflow_config[id]['complete'] = isComplete
+KeyError: 'hpo-60bf3eb4'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 239, in execute
+    self.output_parameters[0].append((result['config'],  hosts))
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_variables.py", line 21, in append
+    subscriber()
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 57, in prepareOutput
+    self.add_to_input(outputValue)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 53, in add_to_input
+    self.execute(self.hosts)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 66, in execute
+    self.enumerator.append(new_input)
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_variables.py", line 21, in append
+    subscriber()
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 93, in check_readiness
+    self.execute()
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/workflow/steep/steep_actions_HPO.py", line 259, in execute
+    setWorkflowComplete(self.wf_id, True)  # Mark complete to prevent executor hanging
+  File "/fsx/Vortex-mid/Vortex-moldable-sched/src/main/utils/exec_sched.py", line 100, in setWorkflowComplete
+    workflow_config[id]['complete'] = isComplete
+KeyError: 'hpo-60bf3eb4'
+
