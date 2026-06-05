@@ -11,11 +11,15 @@
 - `CROSS_pareto_comparison.{pdf,png}` — side-by-side Plain SeisSol
   N=400 and HPO N=7 Pareto frontiers. Visually anchors the cross-chapter
   synthesis claim ("Elastic dominates at high load in both workloads").
-- `HPO_08_intent_events_n7.{pdf,png}` — intent outcomes from the only
-  run (out of 6 in the Elastic-EDF<sub>c</sub> N = 7 cell) for which per-event
-  negotiation logs were captured. Best-effort substitute for the
-  per-event accounting that is not captured for the other corners
-  or for the other runs of this cell.
+- `HPO_08_intent_satisfaction_n7.{pdf,png}` — **n = 6 averaged**
+  WE-UP intent outcomes for both Elastic corners at N = 7, computed
+  from the WE-intent counters instrumented into the simulator. Stacked
+  bar with APPROVE / MODIFY / DENY segments, per-segment ± std across
+  the six runs.
+- `HPO_08_intent_events_n7.{pdf,png}` — companion figure showing intent
+  outcomes from the only run for which per-event negotiation logs were
+  captured. Different semantics from the satisfaction plot — see the
+  scaling-event-data section below.
 
 This document supplements the existing `THESIS_RESULTS.md` and
 `THESIS_TABLE.md` with two pieces of analysis that were missing from
@@ -40,20 +44,74 @@ brevity, but the cost-sort convention is implicit. Choosing cost-sort
 matches the choice motivated for plain SeisSol in section 9.6 of the
 thesis: at saturation, cost-sort dominates runtime-sort.
 
-### Scaling event data — only one run captured per-event logs
+### Scaling event data — two complementary views
 
-The per-event workflow-engine ↔ scheduler negotiation logger (which
-writes `negotiation_scheduler.csv`, `negotiation_iteration.csv`,
-`negotiation_merged.csv`) was enabled for **only one of the six runs**
-in the Elastic-EDF<sub>c</sub> + N = 7 cell. The other five runs in that same
-cell, and every run in every other cell, emit only the integral
-outcomes (utilisation timeseries, tier costs, makespan, misses) — not
-the per-event intent stream.
+The chapter carries **two intent-outcome figures**, each describing a
+different facet of the scaling mechanism.
 
-As a result, the intent-outcome breakdown in figure
-`HPO_08_intent_events_n7` cannot be averaged across the six runs the
-way the headline numbers can. It is the only run for which the data
-exists.
+**`HPO_08_intent_satisfaction_n7` — n = 6 averaged steady-state outcomes.**
+The simulator's `run_corner` was instrumented (in
+`compute_total_cost.py`) with four WE-intent counters
+(`n_we_up_approve`, `n_we_up_modify`, `n_we_up_deny`,
+`n_we_down_granted`), incremented at every grow / shrink decision
+inside the simulated event loop. These counters are stored per run in
+`total_cost_per_run.json` and aggregated across the six runs per cell
+the same way every other headline metric is. The resulting plot mirrors
+plain SeisSol's figure 08 in structure and supports the same n = 6 ±
+std reporting convention.
+
+At N = 7 the averaged outcomes for Elastic-EDF<sub>c</sub> are 1 % APPROVE,
+12 % MODIFY (partial grant), 87 % DENY; Elastic-FCFS<sub>c</sub> is
+indistinguishable within a percentage point. The scheduler refuses
+almost every UP intent. This is qualitatively the same lesson as plain
+SeisSol's 08 — the scheduler dominantly *withholds* the resources the
+engine asked for — except that the simulator's MODIFY events are
+*partial grants* (the scheduler offered fewer nodes than requested),
+not *overrides to scale-down*.
+
+**Why the satisfaction plot shows zero WE-DOWN intents.** The simulator
+records zero shrink events across all six runs of every Elastic corner.
+This is honest for two reasons:
+
+1. *Empirical (faithful to R7).* The seven workflows in the R7 batch all
+   grow or stay flat in chain count across iterations
+   (data8: 4 → 6 → 9; data9: 3 → 3 → 3 → 3 → 3; data5: 3 → 4 → 6 → 9 →
+   10; etc.). The `CHAIN_GROWTH_BY_MODEL` factors in `compute_total_cost.py`
+   are monotone non-decreasing because the R7 calibration data is
+   monotone non-decreasing — HPO workflows in this experiment never
+   converged early enough to release chains. So no workflow ever has
+   `chains_next < chains_current`, and the simulator's shrink branch
+   (`cn_next < lanes`) cannot fire.
+2. *Modelling simplification.* The simulator evaluates grow / shrink
+   decisions cleanly at iteration boundaries with no timing race that
+   could let the scheduler reply to an UP intent with a DOWN action.
+   The real-system override-to-shrink mechanism (visible in the
+   per-event log as same-iteration grow-observation → shrink-reply
+   pairs) is therefore absent from the n = 6 satisfaction plot.
+
+The companion `HPO_08_intent_events_n7` figure surfaces 3 such override
+events for the one run with per-event logging. If the chapter wants to
+make a quantitative claim about the override-to-shrink mechanism in HPO,
+the per-event figure is the right reference; the satisfaction plot is
+the right reference for steady-state APPROVE / MODIFY-partial / DENY
+ratios.
+
+**`HPO_08_intent_events_n7` — single-run snapshot from per-event logs.**
+The per-event negotiation logger (`negotiation_scheduler.csv` etc.)
+captures the real-system mechanism in finer detail than the simulator
+models. It was enabled for one run in the Elastic-EDF<sub>c</sub> N = 7 cell
+and that run records seventeen WE-UP intents with: 1 APPROVE, 13 DENY,
+and **3 MODIFY (scale down)** — the same "scheduler converts a grow
+request into a shrink" mechanism that drives plain SeisSol's MODIFY
+column. The simulator does not model this timing-race override
+(grow / shrink decisions are evaluated cleanly at iteration boundaries
+with no possibility of replying with a different intent), so the n = 6
+satisfaction plot shows MODIFY-partial but not MODIFY-down.
+
+The two plots together cover both the **steady-state** behaviour
+(satisfaction plot, n = 6) and the **mechanism** that is too fine-grained
+for the simulator (events plot, one run). Each is honestly labelled with
+its scope.
 
 Consequently the HPO chapter cannot produce the full N-evolution / 4-corner
 equivalents of Plain SeisSol's figures 07 (scaling frequency vs N), 07b

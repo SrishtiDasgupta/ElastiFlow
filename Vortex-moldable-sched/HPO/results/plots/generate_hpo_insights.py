@@ -273,12 +273,78 @@ def plot_cross_chapter_pareto():
     _save(fig, "CROSS_pareto_comparison")
 
 # ============================================================================
-# Plot 4 — HPO scaling events for a single representative run
-# Reads negotiation_merged.csv + negotiation_scheduler.csv from the one
-# actual run that the calibrated sweep was anchored to.
-# Shows count of Workflow-Engine UP and DOWN intents and the scheduler's
-# response. Single-run snapshot — disclaimed in the figure title.
+# Plot 4 — HPO intent satisfaction averaged across n=6 runs at N=7
+# Reads the WE-intent counters added to total_cost_per_run.json by the
+# instrumented run_corner. Mirrors plain SeisSol's plot 08 in structure:
+# stacked bar per Elastic corner showing APPROVE / MODIFY / DENY split
+# of WE-UP intents.
 # ============================================================================
+def plot_hpo_intent_satisfaction_n7():
+    d = json.loads(HPO_JSON.read_text())
+    moldable = [("MAL EDF", "N7_moldable_edf"), ("MAL FCFS", "N7_moldable_fcfs")]
+    fig, ax = plt.subplots(figsize=(10, 6.5))
+    x = np.arange(len(moldable))
+
+    # Compute per-run share, then mean across 6 runs (consistent with how
+    # plain SeisSol's plot 08 reports averaged percentages).
+    apr_m, apr_s = [], []
+    mod_m, mod_s = [], []
+    den_m, den_s = [], []
+    for key, json_key in moldable:
+        runs = d[json_key]["per_run"]
+        a_pct, m_pct, d_pct = [], [], []
+        for r in runs:
+            a = r["n_we_up_approve"]
+            m = r["n_we_up_modify"]
+            de = r["n_we_up_deny"]
+            tot = a + m + de
+            if tot > 0:
+                a_pct.append(100 * a  / tot)
+                m_pct.append(100 * m  / tot)
+                d_pct.append(100 * de / tot)
+        from statistics import stdev as _stdev
+        apr_m.append(mean(a_pct) if a_pct else 0)
+        apr_s.append(_stdev(a_pct) if len(a_pct) > 1 else 0)
+        mod_m.append(mean(m_pct) if m_pct else 0)
+        mod_s.append(_stdev(m_pct) if len(m_pct) > 1 else 0)
+        den_m.append(mean(d_pct) if d_pct else 0)
+        den_s.append(_stdev(d_pct) if len(d_pct) > 1 else 0)
+
+    bottoms = np.zeros(len(moldable))
+    segments = [
+        (apr_m, apr_s, "APPROVE", "#10B981"),
+        (mod_m, mod_s, "MODIFY",  "#3B82F6"),
+        (den_m, den_s, "DENY",    "#EF4444"),
+    ]
+    for vals, stds, label, col in segments:
+        vals = np.array(vals); stds = np.array(stds)
+        ax.bar(x, vals, bottom=bottoms, label=label, color=col,
+               edgecolor="white", linewidth=1.0)
+        for i, v in enumerate(vals):
+            if v >= 4:
+                ax.text(i, bottoms[i] + v / 2,
+                        f"{v:.0f}±{stds[i]:.0f}%",
+                        ha="center", va="center", color="white",
+                        fontsize=ANNOT_FS, fontweight="bold")
+        bottoms += vals
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([HPO_LABEL[k] for k, _ in moldable], fontsize=TICK_FS)
+    ax.set_ylabel("Share of WE-UP intents (%)", fontsize=LABEL_FS)
+    ax.set_title("Outcome of every Workflow-Engine UP intent at N = 7\n"
+                 "(n = 6 averaged)", fontsize=TITLE_FS)
+    ax.tick_params(labelsize=TICK_FS)
+    ax.grid(True, axis="y", alpha=0.3)
+    ax.set_ylim(0, 112)
+    ax.legend(fontsize=LEG_FS, loc="upper center",
+              bbox_to_anchor=(0.5, -0.18), ncol=3, framealpha=0.92)
+    fig.tight_layout()
+    _save(fig, "HPO_08_intent_satisfaction_n7")
+
+# ----------------------------------------------------------------------------
+# (Retained) per-event snapshot from the single actual run — different
+# semantics (mechanism vs steady-state). Kept for completeness.
+# ----------------------------------------------------------------------------
 def plot_hpo_scaling_events_n7():
     import csv as _csv
     rep = HERE.parent / "r7_n7_edf_mold"
@@ -381,6 +447,7 @@ def main():
     for fn in (plot_hpo_pareto_trajectory,
                plot_hpo_util_4corners_n7,
                plot_cross_chapter_pareto,
+               plot_hpo_intent_satisfaction_n7,
                plot_hpo_scaling_events_n7):
         print(f"[{fn.__name__}]")
         fn()
