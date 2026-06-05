@@ -7,7 +7,7 @@ import seaborn as sns
 import requests
 import yaml
 
-from config.constants import TOTAL_WORKFLOWS
+from config.constants import SEED, TOTAL_WORKFLOWS
 from utils.validate_workflow import validate_workflow
 
 # DEPRECATED
@@ -55,7 +55,8 @@ def plotSubmitTimes(submitTimes):
     plt.savefig('submitTimes.png')
 
 def delayGenerationFromSubmitTimes(workflows):
-    np.random.seed(0)  # Fixed seed for reproducibility across experiments
+    np.random.seed(SEED)  # Seed lifted to config.constants.SEED so
+                          # simulate_sweep.py can override per cell.
     data = pd.read_csv('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv', sep="\t")
     data['submit times'] = pd.to_datetime(data['submit times'])
     data['submit_time_only'] = data['submit times'].dt.time

@@ -35,11 +35,13 @@ class EarliestDeadlineEDF(Scheduler):
             resource_request = self.resource_manager.peekWorkflow(self.resource_manager.resource_request_heap)
             
             if resource_request:
-                # Allocate new resources
-                if resource_request['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
-                    self.allocateNewResources(resource_request, sim)
-                else:
-                    self.freeResources(resource_request, sim)
+                # Moldable scale-up / scale-down via the rich base-class
+                # negotiation (per-iteration budget/time factors, speedup
+                # gating, OD bursting). processFreeRequest internally
+                # decides whether to scale up or down based on the
+                # workflow's current iteration, so we route both
+                # REQUEST_RESOURCE and FREE_RESOURCE events here.
+                self.processFreeRequest(resource_request, sim)
                 self.resource_manager.popWorkflow(self.resource_manager.resource_request_heap)
                 sim and sim.sleep(0.2) # NOTE: scheduler overhead
                 continue

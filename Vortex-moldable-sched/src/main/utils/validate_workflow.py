@@ -13,7 +13,7 @@ Canonical sources:
 
 from typing import Any
 
-VALID_TYPES = ('PLAIN', 'LA', 'HPO')
+VALID_TYPES = ('PLAIN', 'LA', 'HPO', 'PLAIN_ADAPTIVE')
 
 SEISSOL_MESH_VALUES = {500, 750, 1000}
 HPO_MODEL_NAMES = {'vgg19', 'wide_resnet101_2', 'convnext_large'}
@@ -25,14 +25,16 @@ EXPECTED_API = '4.7.0'
 
 ALLOWED_TOP_KEYS = {'id', 'api', 'actions', 'vars', 'config', 'constraints'}
 ALLOWED_CONFIG_KEYS = {
-    'PLAIN': {'mesh', 'workflowConfig', 'workflowIterations'},
-    'LA':    {'mesh', 'workflowConfig', 'workflowIterations', 'software_id'},
-    'HPO':   {'mesh', 'workflowIterations'},
+    'PLAIN':          {'mesh', 'workflowConfig', 'workflowIterations'},
+    'LA':             {'mesh', 'workflowConfig', 'workflowIterations', 'software_id'},
+    'HPO':            {'mesh', 'workflowIterations'},
+    'PLAIN_ADAPTIVE': {'mesh', 'workflowIterations', 'adaptive'},
 }
 ALLOWED_CONSTRAINT_KEYS = {
-    'PLAIN': {'budget', 'deadline', 'chains', 'tinydaIterations'},
-    'LA':    {'budget', 'deadline', 'chains', 'tinydaIterations', 'license_pool'},
-    'HPO':   {'budget', 'deadline', 'chains', 'tinydaIterations'},
+    'PLAIN':          {'budget', 'deadline', 'chains', 'tinydaIterations'},
+    'LA':             {'budget', 'deadline', 'chains', 'tinydaIterations', 'license_pool'},
+    'HPO':            {'budget', 'deadline', 'chains', 'tinydaIterations'},
+    'PLAIN_ADAPTIVE': {'budget', 'deadline', 'chains', 'tinydaIterations'},
 }
 
 
@@ -255,6 +257,58 @@ def _validate_hpo(wf: dict, violations: list) -> None:
             )
 
 
+def _validate_plain_adaptive(wf: dict, violations: list) -> None:
+    cfg = wf.get('config')
+    if not isinstance(cfg, dict):
+        return
+    _check_unexpected_keys(cfg, ALLOWED_CONFIG_KEYS['PLAIN_ADAPTIVE'], 'config', violations)
+    _check_unexpected_keys(wf.get('constraints', {}),
+                           ALLOWED_CONSTRAINT_KEYS['PLAIN_ADAPTIVE'], 'constraints', violations)
+    if cfg.get('adaptive') is not True:
+        violations.append("config.adaptive: must be True for PLAIN_ADAPTIVE workflow")
+    if _check_field(cfg, 'mesh', (int,), 'config', violations):
+        if isinstance(cfg['mesh'], bool) or cfg['mesh'] not in SEISSOL_MESH_VALUES:
+            violations.append(
+                f"config.mesh: expected one of {sorted(SEISSOL_MESH_VALUES)}, got {cfg['mesh']!r}"
+            )
+    _check_field(cfg, 'workflowIterations', (int,), 'config', violations, required=True)
+    if cfg.get('workflowIterations', 1) <= 0:
+        violations.append(
+            f"config.workflowIterations: must be > 0 (got {cfg.get('workflowIterations')})"
+        )
+    if 'workflowConfig' in cfg:
+        violations.append("config.workflowConfig: must NOT be present in PLAIN_ADAPTIVE workflow")
+    if 'software_id' in cfg:
+        violations.append("config.software_id: must NOT be present in PLAIN_ADAPTIVE workflow")
+
+    constraints = wf.get('constraints', {})
+    if isinstance(constraints, dict):
+        _validate_constraints_common(constraints, violations)
+        if 'license_pool' in constraints:
+            violations.append("constraints.license_pool: must NOT be present in PLAIN_ADAPTIVE workflow")
+
+    # vars[0].value carries the initial adaptive payload (cohesion seed,
+    # plus optional next_links/next_chains overrides for iteration 0).
+    vars_list = wf.get('vars')
+    if isinstance(vars_list, list) and vars_list:
+        v0 = vars_list[0]
+        if not isinstance(v0, dict):
+            violations.append("vars[0]: must be a dict")
+            return
+        val = v0.get('value')
+        if not isinstance(val, dict):
+            violations.append(
+                "vars[0].value: must be a dict for PLAIN_ADAPTIVE "
+                f"(got {type(val).__name__})"
+            )
+            return
+        _check_field(val, 'cohesion', (int, float), 'vars[0].value', violations)
+        if 'next_links' in val:
+            _check_field(val, 'next_links', (int,), 'vars[0].value', violations)
+        if 'next_chains' in val:
+            _check_field(val, 'next_chains', (int,), 'vars[0].value', violations)
+
+
 def validate_workflow(wf: Any, expected_type: str) -> list:
     """Validate a workflow dict against the schema for the expected type.
 
@@ -280,5 +334,7 @@ def validate_workflow(wf: Any, expected_type: str) -> list:
         _validate_la(wf, violations)
     elif expected_type == 'HPO':
         _validate_hpo(wf, violations)
+    elif expected_type == 'PLAIN_ADAPTIVE':
+        _validate_plain_adaptive(wf, violations)
 
     return violations

@@ -1,7 +1,7 @@
 SIMULATE = True
 MOLDABLE = True
 FREE_RESOURCES = True
-TOTAL_WORKFLOWS = 400
+TOTAL_WORKFLOWS = 300
 TOTAL_RESOURCES = 256 # onprem and cloud reserved resources - for resurce utilization calculation
 AVG_WORKFLOW_ITERATIONS = 4
 AVG_TINYDA_ITERATIONS = 7
@@ -45,4 +45,16 @@ DEADLINE_FACTOR = 7.5
 OPTIM_FCFS_BFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
 OPTIM_FCFS_DFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
 SPEEDUP_THRESHOLD = 1.4
+# Closeness tolerance for the moldable cloud path (fraction). A cloud
+# instance whose 1-node runtime is within ±CLOSENESS_TOLERANCE of any
+# runtime in the workflow's current fleet is eligible for scale-up.
+# Tighter values (e.g. 0.05) force fleet homogeneity; looser values (e.g.
+# 1.0) let any candidate pass. Used by Scheduler.checkCloseness and
+# FCFS_Optimized.checkCloseness. Ablation candidate.
+CLOSENESS_TOLERANCE = 0.15
 DEADLINE_BUFFER = 180
+# Seed for np.random in the dispatcher's inter-arrival generation. Set
+# via CLI (simulate_sweep.py --seed) for reproducible-but-varied draws
+# in the main sweep. Default keeps the historical behaviour of
+# delayGenerationFromSubmitTimes (which used to hardcode seed = 0).
+SEED = 0
