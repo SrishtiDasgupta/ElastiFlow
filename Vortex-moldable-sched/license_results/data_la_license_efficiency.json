@@ -1,0 +1,26 @@
+{
+  "N100": {
+    "seeds": 3,
+    "static_effutil": 94.7,
+    "moldable_effutil": 96.2,
+    "gap_pp": 1.5
+  },
+  "N150": {
+    "seeds": 6,
+    "static_effutil": 69.0,
+    "moldable_effutil": 80.0,
+    "gap_pp": 11.0
+  },
+  "N200": {
+    "seeds": 6,
+    "static_effutil": 70.9,
+    "moldable_effutil": 76.5,
+    "gap_pp": 5.7
+  },
+  "N250": {
+    "seeds": 3,
+    "static_effutil": 74.5,
+    "moldable_effutil": 75.5,
+    "gap_pp": 1.0
+  }
+}

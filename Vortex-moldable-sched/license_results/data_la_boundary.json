@@ -1,0 +1,74 @@
+{
+  "N300_abq4.0": {
+    "delta_cost_pct": -1.46,
+    "static_cost": 99.7,
+    "moldable_cost": 98.2,
+    "abaqus_peak_util": 37.2
+  },
+  "N300_abq2.0": {
+    "delta_cost_pct": -0.47,
+    "static_cost": 99.7,
+    "moldable_cost": 99.2,
+    "abaqus_peak_util": 76.7
+  },
+  "N300_abq1.3": {
+    "delta_cost_pct": 15.96,
+    "static_cost": 85.4,
+    "moldable_cost": 99.0,
+    "abaqus_peak_util": 100.0
+  },
+  "N300_abq1.0": {
+    "delta_cost_pct": 13.5,
+    "static_cost": 80.8,
+    "moldable_cost": 91.7,
+    "abaqus_peak_util": 100.0
+  },
+  "N400_abq4.0": {
+    "delta_cost_pct": 4.75,
+    "static_cost": 90.4,
+    "moldable_cost": 94.7,
+    "abaqus_peak_util": 37.0
+  },
+  "N400_abq2.0": {
+    "delta_cost_pct": 8.89,
+    "static_cost": 90.4,
+    "moldable_cost": 98.5,
+    "abaqus_peak_util": 74.2
+  },
+  "N400_abq1.3": {
+    "delta_cost_pct": 11.27,
+    "static_cost": 84.2,
+    "moldable_cost": 93.7,
+    "abaqus_peak_util": 100.0
+  },
+  "N400_abq1.0": {
+    "delta_cost_pct": 22.36,
+    "static_cost": 71.4,
+    "moldable_cost": 87.4,
+    "abaqus_peak_util": 100.0
+  },
+  "N500_abq4.0": {
+    "delta_cost_pct": 5.66,
+    "static_cost": 88.2,
+    "moldable_cost": 93.2,
+    "abaqus_peak_util": 36.1
+  },
+  "N500_abq2.0": {
+    "delta_cost_pct": 4.5,
+    "static_cost": 88.2,
+    "moldable_cost": 92.2,
+    "abaqus_peak_util": 73.1
+  },
+  "N500_abq1.3": {
+    "delta_cost_pct": 20.65,
+    "static_cost": 80.4,
+    "moldable_cost": 97.0,
+    "abaqus_peak_util": 100.0
+  },
+  "N500_abq1.0": {
+    "delta_cost_pct": 16.37,
+    "static_cost": 72.1,
+    "moldable_cost": 83.9,
+    "abaqus_peak_util": 100.0
+  }
+}
