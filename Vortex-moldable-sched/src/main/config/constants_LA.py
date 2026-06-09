@@ -73,14 +73,14 @@ LICENSE_SOFTWARE_ID = {
 }
 
 # License pool capacities (must match /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml)
-# UPDATED: Reduced from 16,800 to create meaningful license scarcity
-# Based on 400-workflow test: measured peaks were ANSYS=5,843, ABAQUS=1,894, LSDYNA=6,592
-# Using 1.15× factor for 15% headroom → ~87% peak utilization (high scarcity)
-# Old values caused only 3-13% utilization - licenses were not a constraint
+# Sized to 1.15x the BASELINE STATIC (EDF-ST-LA) peak token demand at N=400, measured
+# buffer-free across 6 seeds (max-seed peak: ANSYS=5071, ABAQUS=1376, LSDYNA=5408).
+# => static at ~87% peak occupancy. Policy-independent reference (static never buffers),
+# replacing the earlier elastic-inflated peak (which oversized the pools by 13-28%).
 LICENSE_POOL_CAPACITY = {
-    'ANSYS': 6700,    # Was 16,800 (60% reduction) - measured peak: 5,843 tokens
-    'ABAQUS': 2200,   # Was 16,800 (87% reduction) - measured peak: 1,894 tokens
-    'LSDYNA': 7600    # Was 16,800 (55% reduction) - measured peak: 6,592 tokens
+    'ANSYS': 5832,    # 1.15 x 5071 static peak (was 6700)
+    'ABAQUS': 1582,   # 1.15 x 1376 static peak (was 2200)
+    'LSDYNA': 6219    # 1.15 x 5408 static peak (was 7600)
 }
 
 # License calculation strategies
@@ -90,13 +90,33 @@ LICENSE_STRATEGIES = {
     'LSDYNA': 'linear'            # 1 token per core
 }
 
+# === Solver-aware scale-down economics (Henkel & Treiber 2015) ===
+# Under the breadth lever (chains-per-instance), shrinking a workflow's footprint
+# changes its license cost by sign(d cost / d cores):
+#   - linear scaling (LS-Dyna): token-seconds conserved -> license-FLAT -> safe to shrink
+#   - concave powerlaw (Abaqus) & workgroup+flat-MEBA (Ansys): shrinking RAISES license cost
+#     (measured: shrink 8->1 inst => Abaqus +233%, Ansys +15%) -> NOT safe to shrink
+# Since license >> hardware (~10x, paper §6.1), the hardware saved by shrinking the
+# non-flat solvers is dwarfed by the license increase, so the license-aware policy
+# holds their footprint instead of trimming it.
+LICENSE_SHRINK_SAFE = {
+    LICENSE_SOFTWARE_ID['LSDYNA']: True,   # linear            -> license-flat
+    LICENSE_SOFTWARE_ID['ABAQUS']: False,  # powerlaw (concave) -> shrinking costs more
+    LICENSE_SOFTWARE_ID['ANSYS']:  False,  # workgroup + flat MEBA -> shrinking costs more
+}
+
 # ============================================================================
 # DIRECTORY PATHS
 # ============================================================================
 
 # Workflow directories for LA simulation
 WORKFLOWS_DIR_LA = 'sample_workflows_LA'
-WORKFLOW_OUTPUT_DIR_LA = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA'
+# LA_WORKFLOW_DIR lets an experiment point a run at an alternate workflow set
+# (e.g. a solver-skewed deck) without touching the canonical 800-file baseline.
+import os as _os
+WORKFLOW_OUTPUT_DIR_LA = _os.environ.get(
+    'LA_WORKFLOW_DIR',
+    '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA')
 
 # ============================================================================
 # MOLDABLE SCHEDULING PARAMETERS (inherited from base)

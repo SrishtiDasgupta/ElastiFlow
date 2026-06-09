@@ -106,6 +106,11 @@ class EDF_HSM_LA(Scheduler_LA):
         while True:
             loop_counter += 1
 
+            # Advance the license ledger clock so every token hold/release this cycle
+            # is billed at the correct sim timestamp (honest Token-Hours billing).
+            if sim is not None:
+                self.license_manager.set_sim_time(getTime(sim))
+
             # Progress indicator every 1000 iterations (reduced frequency)
             if loop_counter % 1000 == 0:
                 current_time = getTime(sim)
@@ -129,7 +134,10 @@ class EDF_HSM_LA(Scheduler_LA):
                     print(f"  Final simulated time: {getTime(sim):.1f}s")
                     print(f"{'='*70}\n")
                     from config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_')
+                    self.metrics.computeMetrics(
+                        file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_',
+                        license_cost_by_owner=self.license_manager.license_cost_by_owner(
+                            getTime(sim) if sim is not None else self.license_manager.sim_now))
                     break
                 elif idle_loop_count == 1:
                     print(f"\n[INFO] No active workflows detected. Waiting for termination (idle_count={idle_loop_count}/10)...")
@@ -185,7 +193,10 @@ class EDF_HSM_LA(Scheduler_LA):
                     self.popWorkflow(self.workflow_heap)
                     removeElement(wf_mb, self.queue)
                     from config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_')
+                    self.metrics.computeMetrics(
+                        file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_',
+                        license_cost_by_owner=self.license_manager.license_cost_by_owner(
+                            getTime(sim) if sim is not None else self.license_manager.sim_now))
                     break
 
                 # Skip rejected workflows
@@ -254,13 +265,16 @@ class EDF_HSM_LA(Scheduler_LA):
                             removeElement(wf_mb, self.queue)
                             print(f"⊘ Rejecting impossible workflow {wf_plan['id']}")
                         else:
-                            # Temporarily unavailable - wait for resources
-                            self.resource_manager.setResourcesAvailable(False)
+                            # Temporarily unavailable - retry on next polling cycle.
+                            # NOTE: previously set setResourcesAvailable(False) globally,
+                            # which created a bootstrap deadlock — once False, the entire
+                            # Phase 3 block was skipped and no allocation could ever fire
+                            # again because no completion could fire without an allocation.
+                            # Just skip this iteration; the natural polling loop retries.
                             if loop_counter % 10000 == 0:
                                 print(f'⏳ {wf_plan["id"]} waiting for resources/licenses (heap_size={len(self.workflow_heap)})...')
                     else:
-                        # Wait for resources
-                        self.resource_manager.setResourcesAvailable(False)
+                        # Wait for resources — see note above; no global flag set.
                         if loop_counter % 10000 == 0:
                             print(f'[DEBUG] No resources to allocate, waiting... (heap_size={len(self.workflow_heap)})')
                 else:
@@ -411,9 +425,12 @@ class EDF_HSM_LA(Scheduler_LA):
             (alloc_instances, license_holds)
         """
         # First, get compute allocation (from checkNewResources)
-        # GLOBAL VIEW: Pass available_runtime for deadline feasibility check
+        # GLOBAL VIEW: Pass available_runtime for deadline feasibility check.
+        # Pass software_id so the depth (nodes-per-chain) search is license-cost-aware.
+        sid = {'ANSYS': 1, 'ABAQUS': 2, 'LSDYNA': 3}.get(license_pool)
         alloc_instances = self.checkNewResources(
-            resources, current_resources, budget, available_runtime, request, mesh
+            resources, current_resources, budget, available_runtime, request, mesh,
+            software_id=sid
         )
 
         if not alloc_instances:
@@ -570,7 +587,8 @@ class EDF_HSM_LA(Scheduler_LA):
                         chains=1
                     )
 
-                    PARTIAL_RELEASE_FRACTION = 0.50  # Release 50%, keep 50% as buffer
+                    import os
+                    PARTIAL_RELEASE_FRACTION = float(os.environ.get('LA_PARTIAL_RELEASE', '0.90'))  # release frac; 0.50 keeps 50% buffer. Configurable for sensitivity.
 
                     wf_id = request['wf-id']
                     if wf_id in self.license_holds and self.license_holds[wf_id]:
@@ -754,15 +772,36 @@ class EDF_HSM_LA(Scheduler_LA):
                     should_scale_down = True
                     blocked_reason = None
 
-                    # GUARD 1: License pool utilization (unchanged)
+                    # GUARD 0+1 (unified, contention-conditional, license-aware — Henkel &
+                    # Treiber 2015). Compute pool pressure once.
+                    #  - Under SATURATION (util >= LA_GUARD_SAT): block ONLY cost-adverse
+                    #    shrinks (those that raise this workflow's projected license cost under
+                    #    its solver's token law). Cost-neutral shrinks (e.g. LS-Dyna, linear)
+                    #    are allowed so they release tokens to waiting peers.
+                    #  - Under SLACK (util < SAT): allow all shrinks — the freed resources are a
+                    #    genuine saving (this is where unconditional blocking wasted hardware).
+                    # No solver is hardcoded; the cost sign is computed per decision. SAT is the
+                    # single saturation knob (was GUARD 1's 70%), configurable for sensitivity.
                     if license_pool:
+                        LA_GUARD_SAT = 0.70
                         pool_status = self.license_manager.get_pool_status(license_pool)
-                        pool_utilization = pool_status['allocated'] / pool_status['total']
-
-                        if pool_utilization > 0.70:  # Pool >70% utilized
-                            print(f"  ⏸ Scale-down BLOCKED: {license_pool} pool at {pool_utilization*100:.1f}% utilization (threshold: 70%)")
-                            should_scale_down = False
-                            blocked_reason = 'license_pool_saturated'
+                        pool_utilization = (pool_status['allocated'] / pool_status['total']
+                                            if pool_status['total'] else 0.0)
+                        if pool_utilization >= LA_GUARD_SAT and software_id:
+                            cpi = cur_instance.cores
+                            iters = request['tinyda-iterations']
+                            cpn_keep   = -(-request['chains'] // cur_count)
+                            cpn_shrink = -(-request['chains'] // min_needed_count)
+                            lic_keep   = self.metrics.calculate_license_cost(
+                                software_id, cur_count * cpi,        cpn_keep   * runtime_per_model * iters)
+                            lic_shrink = self.metrics.calculate_license_cost(
+                                software_id, min_needed_count * cpi, cpn_shrink * runtime_per_model * iters)
+                            if lic_shrink > lic_keep * 1.001:  # cost-adverse shrink under saturation
+                                print(f"  ⏸ Scale-down BLOCKED: cost-adverse under saturation "
+                                      f"(pool {pool_utilization*100:.0f}%>={LA_GUARD_SAT*100:.0f}%, "
+                                      f"shrink €{lic_shrink:.1f}>hold €{lic_keep:.1f}, sw={software_id})")
+                                should_scale_down = False
+                                blocked_reason = 'license_cost_adverse_saturated'
 
                     # GUARD 2: Earlier iteration cutoff (iteration 2 vs 3)
                     if should_scale_down and ind > 2:

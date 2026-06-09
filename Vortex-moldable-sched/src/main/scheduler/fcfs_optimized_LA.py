@@ -77,6 +77,11 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
         while True:
 
+            # Advance the license ledger clock to current sim time so every token
+            # hold/release this cycle is billed at the correct sim timestamp.
+            if sim is not None:
+                self.license_manager.set_sim_time(getTime(sim))
+
             # Check queue for resource requests (moldable requests from executors)
             resource_request = peekElement(resource_request_mb, self.resource_request_queue)
 
@@ -106,7 +111,15 @@ class FCFS_Optimized_LA(Scheduler_LA):
                 if wf_plan['id'] == 'END':
                     removeElement(wf_mb, self.queue)
                     from config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(file_prefix=f'LAMF_{TOTAL_WORKFLOWS}_')
+                    # Honest billing verification: ledger (Token-Hours) per pool.
+                    _fs = getTime(sim) if sim is not None else self.license_manager.sim_now
+                    _bp = self.license_manager.license_cost_by_pool(_fs)
+                    print(f"[HONEST-BILL] ledger license cost by pool @sim={_fs:.0f}: "
+                          f"LSDYNA €{_bp.get('LSDYNA',0):.0f}  ABAQUS €{_bp.get('ABAQUS',0):.0f}  "
+                          f"ANSYS €{_bp.get('ANSYS',0):.0f}  TOTAL €{sum(_bp.values()):.0f}")
+                    self.metrics.computeMetrics(
+                        file_prefix=f'LAMF_{TOTAL_WORKFLOWS}_',
+                        license_cost_by_owner=self.license_manager.license_cost_by_owner(_fs))
                     break
 
                 # Skip workflows that have been rejected as impossible
@@ -306,17 +319,38 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     # === SMART SCALE-DOWN GUARDS (Solution 2) ===
                     # Check if safe to scale down given license constraints
                     should_scale_down = True
-
-                    # GUARD 1: Check license pool utilization
                     blocked_reason = None
-                    if license_pool:
-                        pool_status = self.license_manager.get_pool_status(license_pool)
-                        pool_utilization = pool_status['allocated'] / pool_status['total']
 
-                        if pool_utilization > 0.70:  # Pool >70% utilized
-                            print(f"  ⏸ Scale-down BLOCKED: {license_pool} pool at {pool_utilization*100:.1f}% utilization (threshold: 70%)")
-                            should_scale_down = False
-                            blocked_reason = 'license_pool_saturated'
+                    # GUARD 0+1 (unified, contention-conditional, license-aware — Henkel &
+                    # Treiber 2015). Compute pool pressure once.
+                    #  - Under SATURATION (util >= LA_GUARD_SAT): block ONLY cost-adverse
+                    #    shrinks (those that raise this workflow's projected license cost under
+                    #    its solver's token law). Cost-neutral shrinks (e.g. LS-Dyna, linear)
+                    #    are allowed so they release tokens to waiting peers.
+                    #  - Under SLACK (util < SAT): allow all shrinks — the freed resources are a
+                    #    genuine saving (this is where unconditional blocking wasted hardware).
+                    # No solver is hardcoded; the cost sign is computed per decision. SAT is the
+                    # single saturation knob (was GUARD 1's 70%), configurable for sensitivity.
+                    if license_pool:
+                        LA_GUARD_SAT = 0.70
+                        pool_status = self.license_manager.get_pool_status(license_pool)
+                        pool_utilization = (pool_status['allocated'] / pool_status['total']
+                                            if pool_status['total'] else 0.0)
+                        if pool_utilization >= LA_GUARD_SAT and software_id:
+                            cpi = cur_instance.cores
+                            iters = request['tinyda-iterations']
+                            cpn_keep   = -(-request['chains'] // cur_count)
+                            cpn_shrink = -(-request['chains'] // min_needed_count)
+                            lic_keep   = self.metrics.calculate_license_cost(
+                                software_id, cur_count * cpi,        cpn_keep   * runtime_per_model * iters)
+                            lic_shrink = self.metrics.calculate_license_cost(
+                                software_id, min_needed_count * cpi, cpn_shrink * runtime_per_model * iters)
+                            if lic_shrink > lic_keep * 1.001:  # cost-adverse shrink under saturation
+                                print(f"  ⏸ Scale-down BLOCKED: cost-adverse under saturation "
+                                      f"(pool {pool_utilization*100:.0f}%>={LA_GUARD_SAT*100:.0f}%, "
+                                      f"shrink €{lic_shrink:.1f}>hold €{lic_keep:.1f}, sw={software_id})")
+                                should_scale_down = False
+                                blocked_reason = 'license_cost_adverse_saturated'
 
                     # GUARD 2: Check iteration number (don't scale down too late)
                     if should_scale_down and ind > 3:  # After iteration 3
@@ -525,9 +559,12 @@ class FCFS_Optimized_LA(Scheduler_LA):
         #     resources, current_resources, budget, request, mesh
         # )
 
-        # NEW (FIXED): Now passing available_runtime for global view deadline checking
+        # NEW (FIXED): Now passing available_runtime for global view deadline checking.
+        # Pass software_id so the depth (nodes-per-chain) search is license-cost-aware.
+        sid = {'ANSYS': 1, 'ABAQUS': 2, 'LSDYNA': 3}.get(license_pool)
         alloc_instances = self.checkNewResources(
-            resources, current_resources, budget, available_runtime, request, mesh
+            resources, current_resources, budget, available_runtime, request, mesh,
+            software_id=sid
         )
 
         if not alloc_instances:
@@ -691,7 +728,8 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     #     print(f"  ✓ Released ~{licenses_to_free} licenses (hold: {hold_id})")
 
                     # === NEW CODE (partial release with buffer retention): ===
-                    PARTIAL_RELEASE_FRACTION = 0.50  # Release 50%, keep 50% as buffer
+                    import os
+                    PARTIAL_RELEASE_FRACTION = float(os.environ.get('LA_PARTIAL_RELEASE', '0.90'))  # release frac; 0.50 keeps 50% buffer. Configurable for sensitivity.
 
                     wf_id = request['wf-id']
                     if wf_id in self.license_holds and self.license_holds[wf_id]:
