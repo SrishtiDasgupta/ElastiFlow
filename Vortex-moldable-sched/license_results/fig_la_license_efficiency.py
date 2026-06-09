@@ -11,11 +11,12 @@ Two panels:
       3-seed probe (annotated).
   (B) the per-N moldable−static gap (pp), with the seed count noted.
 
-Reads /tmp/lown_lic_runs (3 seeds, N100-250) and /tmp/confirm_efflic_runs
-(6 seeds, N150/200). Snapshots to license_results/data_la_license_efficiency.json,
-emits plots/LA_license_efficiency.{pdf,png}.
+Reads the canonical 6-seed dataset (license_results/canonical_results.json),
+N{150..700}, so the figure shows the FULL crossover (win at N150-200, wash/loss
+beyond) rather than only the winning band. Snapshots to
+license_results/data_la_license_efficiency.json, emits
+plots/LA_license_efficiency.{pdf,png}.
 """
-import glob
 import json
 import sys
 from pathlib import Path
@@ -28,32 +29,19 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import license_analysis as LA  # noqa: E402
 
 STATIC, MOLD = 'EDF-ST-LA', 'EDF-HSM'
-# N -> (run_root, seeds)
-SOURCES = {
-    100: ('/tmp/lown_lic_runs', [7, 107, 207]),
-    150: ('/tmp/confirm_efflic_runs', [7, 107, 207, 1007, 1107, 1207]),
-    200: ('/tmp/confirm_efflic_runs', [7, 107, 207, 1007, 1107, 1207]),
-    250: ('/tmp/lown_lic_runs', [7, 107, 207]),
-}
+CANON = json.loads((HERE / 'canonical_results.json').read_text())
+NS = [150, 200, 300, 400, 500, 600, 700]
 
 
 def eff_utils(policy, N):
-    root, seeds = SOURCES[N]
-    vals = []
-    for s in seeds:
-        d = Path(root) / f'{policy}__N{N}__seed{s}'
-        rg = glob.glob(str(d / '*_results.csv'))
-        if not rg:
-            continue
-        vals.append(100 - LA.analyze_results(rg[0])['waste_frac'])
-    return vals
+    return [v['eff_lic_util'] for v in CANON.values()
+            if v.get('_policy') == policy and v.get('_N') == N
+            and not v.get('_parse_failed') and v.get('eff_lic_util') is not None]
 
 
 def main():
-    NS = sorted(SOURCES)
     snap = {}
     s_mean, s_sd, m_mean, m_sd, gaps, nseed = [], [], [], [], [], []
     for N in NS:

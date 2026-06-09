@@ -1,10 +1,4 @@
 {
-  "N100": {
-    "seeds": 3,
-    "static_effutil": 94.7,
-    "moldable_effutil": 96.2,
-    "gap_pp": 1.5
-  },
   "N150": {
     "seeds": 6,
     "static_effutil": 69.0,
@@ -17,10 +11,34 @@
     "moldable_effutil": 76.5,
     "gap_pp": 5.7
   },
-  "N250": {
-    "seeds": 3,
-    "static_effutil": 74.5,
-    "moldable_effutil": 75.5,
+  "N300": {
+    "seeds": 6,
+    "static_effutil": 75.8,
+    "moldable_effutil": 72.2,
+    "gap_pp": -3.6
+  },
+  "N400": {
+    "seeds": 6,
+    "static_effutil": 76.3,
+    "moldable_effutil": 76.0,
+    "gap_pp": -0.3
+  },
+  "N500": {
+    "seeds": 6,
+    "static_effutil": 76.7,
+    "moldable_effutil": 77.8,
     "gap_pp": 1.0
+  },
+  "N600": {
+    "seeds": 6,
+    "static_effutil": 78.6,
+    "moldable_effutil": 74.8,
+    "gap_pp": -3.7
+  },
+  "N700": {
+    "seeds": 6,
+    "static_effutil": 73.6,
+    "moldable_effutil": 67.2,
+    "gap_pp": -6.5
   }
 }
