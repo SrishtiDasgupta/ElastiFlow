@@ -24,6 +24,7 @@ MODULES = [
     'fig_la_solver_pool',      # LA_07, LA_08, LA_08b
     'fig_la_boundary',         # LA_boundary
     'fig_la_scarcity',         # LA_scarcity
+    'fig_xworkload_elastic_vs_static',  # cross-workload % improvement heatmap
 ]
 
 
