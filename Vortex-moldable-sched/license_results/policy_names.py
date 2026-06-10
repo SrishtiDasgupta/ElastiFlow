@@ -2,17 +2,18 @@
 
 Maps the internal scheduler identifiers (as used in --scheduler and in the
 *_results.csv / canonical_results.json keys) to the thesis-facing names.
-Terminology: Static vs Elastic (never "moldable"); ordering FCFS vs EDF.
-All LA figure scripts should import DISPLAY/ORDER from here so naming stays
-consistent across the chapter.
+Naming: the two static baselines keep their ST-LA tags; the elastic policies are
+named by ordering class (FCFS-LAMF, EDF-LAMF) plus HSM. Hatching still marks the
+static (ST-LA) class. All LA figure scripts import DISPLAY/ORDER from here so
+naming stays consistent across the chapter.
 """
 
 DISPLAY = {
-    'FCFS-ST-LA': 'STATIC-FCFS',
-    'EDF-ST-LA':  'STATIC-EDF',
-    'LAMF':       'ELASTIC-FCFS',
-    'EDF-LAMF':   'ELASTIC-EDF',
-    'EDF-HSM':    'ELASTIC-HSM',
+    'FCFS-ST-LA': 'FCFS-ST-LA',
+    'EDF-ST-LA':  'EDF-ST-LA',
+    'LAMF':       'FCFS-LAMF',
+    'EDF-LAMF':   'EDF-LAMF',
+    'EDF-HSM':    'HSM',
 }
 
 # Canonical plotting order: statics first, then elastics; FCFS-class before EDF-class.
