@@ -12,9 +12,9 @@ import torchvision.transforms as T
 from torch.utils.data import DataLoader
 
 from ray import tune
-from ray.air import session
+import ray.train
 from ray.train import ScalingConfig
-from ray.air.config import RunConfig as AirRunConfig
+from ray.train import RunConfig as AirRunConfig
 from ray.train.torch import TorchTrainer, prepare_model, prepare_data_loader, TorchConfig
 
 # ---- Recommended for fragmentation reduction (optional but helps) ----
@@ -361,7 +361,7 @@ def train_cifar10_torch(config):
             best = max(best, acc)
             
             # Report enhanced metrics
-            session.report({
+            ray.train.report({
                 "epoch": ep,
                 "accuracy": acc,
                 "best_accuracy": best,
@@ -400,12 +400,14 @@ def train_cifar10_torch(config):
         }
         
         # Write comprehensive overhead data
-        overhead_log_file = f'/tmp/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
+        overhead_log_dir = config.get('overhead_log_dir', '/tmp')
+        os.makedirs(overhead_log_dir, exist_ok=True)
+        overhead_log_file = f'{overhead_log_dir}/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
         with open(overhead_log_file, 'a') as f:
             f.write(json.dumps(overhead_data) + '\n')
         
         # Final summary report
-        session.report({
+        ray.train.report({
             "trial_summary": True,
             "total_coordination_overhead_s": total_coordination_overhead,
             "avg_coordination_overhead_per_epoch_s": avg_overhead_per_epoch,
@@ -426,10 +428,12 @@ def train_cifar10_torch(config):
             "partial_measurement": True
         }
         
-        overhead_log_file = f'/tmp/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
+        overhead_log_dir = config.get('overhead_log_dir', '/tmp')
+        os.makedirs(overhead_log_dir, exist_ok=True)
+        overhead_log_file = f'{overhead_log_dir}/overhead_measurements_{datetime.now().strftime("%Y%m%d")}.jsonl'
         with open(overhead_log_file, 'a') as f:
             f.write(json.dumps(overhead_data) + '\n')
-        
+
         raise
 
 # ----------------------------- Ray Train driver -----------------------------
@@ -451,7 +455,8 @@ def train_driver_fn(config):
         ),
     )
     result = trainer.fit()
-    final_acc = result.metrics.get("accuracy") or result.metrics.get("best_accuracy")
+    metrics = result.metrics or {}
+    final_acc = metrics.get("accuracy") or metrics.get("best_accuracy") or 0.0
     tune.report({"accuracy": final_acc})
 
 # ----------------------------- __main__ -----------------------------
@@ -474,6 +479,7 @@ if __name__ == "__main__":
 
     if MEASURE:
         num_samples = 1  # 1 trial only
+        measure_log_dir = os.environ.get('OVERHEAD_LOG_DIR', '/fsx/hyperparameter_test/measurements')
         param_space = {
             "epoch": fixed_epochs,
             "learning_rate": 5e-3,
@@ -486,6 +492,7 @@ if __name__ == "__main__":
             "model_name": model_name,
             "data_dir": os.path.expanduser("~/cifar10"),
             "num_workers": total_hosts,
+            "overhead_log_dir": measure_log_dir,
         }
         stop_cond = None
     else:

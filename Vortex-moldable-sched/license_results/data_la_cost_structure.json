@@ -1,0 +1,41 @@
+{
+  "headline_N": 300,
+  "currency": "USD",
+  "by_policy": {
+    "FCFS-ST-LA": {
+      "hardware_usd": 48.1,
+      "license_usd": 104.25,
+      "total_usd": 152.35,
+      "total_std_usd": 8.1,
+      "license_pct": 68.4
+    },
+    "EDF-ST-LA": {
+      "hardware_usd": 39.38,
+      "license_usd": 91.83,
+      "total_usd": 131.21,
+      "total_std_usd": 4.3,
+      "license_pct": 70.0
+    },
+    "FCFS-LAMF": {
+      "hardware_usd": 44.98,
+      "license_usd": 100.46,
+      "total_usd": 145.44,
+      "total_std_usd": 8.19,
+      "license_pct": 69.1
+    },
+    "EDF-LAMF": {
+      "hardware_usd": 39.31,
+      "license_usd": 91.99,
+      "total_usd": 131.3,
+      "total_std_usd": 8.28,
+      "license_pct": 70.1
+    },
+    "HSM": {
+      "hardware_usd": 41.93,
+      "license_usd": 94.13,
+      "total_usd": 136.06,
+      "total_std_usd": 5.97,
+      "license_pct": 69.2
+    }
+  }
+}

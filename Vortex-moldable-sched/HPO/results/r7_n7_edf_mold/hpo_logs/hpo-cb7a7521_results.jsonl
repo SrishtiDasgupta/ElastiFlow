@@ -1,0 +1,3 @@
+{"iteration": 0, "result": {"config": {"accuracy": 0.4984, "learning_rate": 0.06656123114522283, "momentum": 0.9112204774509535, "epochs": 11, "next_trials": 3}, "status": "ok", "wf_id": "hpo-cb7a7521", "mode": "on-prem"}, "ts": 1777980248.987857}
+{"iteration": 1, "result": {"config": {"accuracy": 0.5876, "learning_rate": 0.023588860683637945, "momentum": 0.8477016012768919, "epochs": 7, "next_trials": 4}, "status": "ok", "wf_id": "hpo-cb7a7521", "mode": "on-prem"}, "ts": 1777980796.837221}
+{"iteration": 2, "result": {"config": {"accuracy": 0.5689, "learning_rate": 0.018417711995656477, "momentum": 0.804415256682956, "epochs": 8, "next_trials": 6}, "status": "ok", "wf_id": "hpo-cb7a7521", "mode": "on-prem"}, "ts": 1777981492.9888313}

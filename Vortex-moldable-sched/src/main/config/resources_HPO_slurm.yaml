@@ -1,0 +1,36 @@
+scheduler: 172.31.8.202
+
+user-request-port: 8080
+workflow-complete-port: 8082
+resource-request-port: 8084
+executor-incoming-port: 8089
+
+fsx-cost: 8.38e-05
+
+# Slurm-only environment: 4x g4dn.xlarge compute nodes
+on-prem:
+  - name: on-prem
+    ip: [172.31.10.149] # Slurm head node IP (executor)
+    slots: 4 # 4 compute nodes
+    cores: 4 # g4dn.xlarge vCPUs
+    runtime: 343 # avg 12-epoch runtime at img64
+    reserved-cost: 0.84 # $/hour based on 3-year TCO (see gpu-cluster-cost.md)
+
+cloud:
+  - name: g4dn.xlarge
+    ip: []
+    cores: 4
+    runtime: 343 # avg 12-epoch runtime at img64
+    reserved-slots: 0
+    on-demand-slots: 0
+    on-demand-cost: 0.526
+    reserved-cost: 0.227
+
+  - name: g5.xlarge
+    ip: []
+    cores: 4
+    runtime: 247 # avg 12-epoch runtime at img64
+    reserved-slots: 0
+    on-demand-slots: 0
+    on-demand-cost: 1.006
+    reserved-cost: 0.435

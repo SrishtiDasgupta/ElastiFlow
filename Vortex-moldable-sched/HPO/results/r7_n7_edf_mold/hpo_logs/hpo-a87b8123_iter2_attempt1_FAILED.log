@@ -1,0 +1,134 @@
+=== COMMAND ===
+/home/ubuntu/rayenv/bin/python3 /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py {"wf_id": "hpo-a87b8123", "cohesion": {"accuracy": 0.725, "model_name": "vgg19", "epoch": 18, "learning_rate": 0.0007104865354732192, "momentum": 0.9166026453243415, "batch_size": 32, "hidden": 10, "image_size": 64, "next_trials": 9}, "hosts": {"g4dn.xlarge": ["172.31.0.209", "172.31.9.217", "172.31.35.62", "172.31.37.45"]}, "chains": 9, "tinyda_iterations": 18, "mesh": "vgg19", "port": 4242}
+
+=== RETURN CODE ===
+-15
+
+=== STDOUT ===
+hpo-a87b8123
+
+
+=== STDERR ===
+INFO:cloud_runner_HPO_new:Starting HPO Cloud Runner execution...
+INFO:cloud_runner_HPO_new:Setting up HPO Ray cluster...
+INFO:cloud_runner_HPO_new:Extracted 4 worker IPs: ['172.31.0.209', '172.31.9.217', '172.31.35.62', '172.31.37.45']
+INFO:cloud_runner_HPO_new:Ray Head: 172.31.0.209
+INFO:cloud_runner_HPO_new:Ray Workers: ['172.31.9.217', '172.31.35.62', '172.31.37.45']
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray port 6380 on 172.31.0.209 is free after stop
+INFO:cloud_runner_HPO_new:Ray head startup output: 2026-05-03 22:16:46,805	INFO usage_lib.py:473 -- Usage stats collection is enabled by default without user confirmation because this terminal is detected to be non-interactive. To disable this, add `--disable-usage-stats` to the command that starts the cluster, or run the following command: `ray disable-usage-stats` before starting the cluster. See https://docs.ray.io/en/master/cluster/usage-stats.html for more details.
+2026-05-03 22:16:46,805	INFO scripts.py:936 -- [37mLocal node IP[39m: [1m172.31.0.209[22m
+2026-05-03 22:16:53,345	SUCC scripts.py:975 -- [32m--------------------[39m
+2026-05-03 22:16:53,345	SUCC scripts.py:976 -- [32mRay runtime started.[39m
+2026-05-03 22:16:53,345	SUCC scripts.py:977 -- [32m--------------------[39m
+2026-05-03 22:16:53,345	INFO scripts.py:979 -- [36mNext steps[39m
+2026-05-03 22:16:53,345	INFO scripts.py:982 -- To add another node to this Ray cluster, run
+2026-05-03 22:16:53,345	INFO scripts.py:985 -- [1m  ray start --address='172.31.0.209:6380'[22m
+2026-05-03 22:16:53,345	INFO scripts.py:996 -- To connect to this Ray cluster:
+2026-05-03 22:16:53,345	INFO scripts.py:998 -- [35mimport[39m[26m ray
+2026-05-03 22:16:53,345	INFO scripts.py:999 -- ray[35m.[39m[26minit()
+2026-05-03 22:16:53,346	INFO scripts.py:1013 -- To submit a Ray job using the Ray Jobs CLI:
+2026-05-03 22:16:53,346	INFO scripts.py:1014 -- [1m  RAY_API_SERVER_ADDRESS='http://127.0.0.1:8265' ray job submit --working-dir . -- python my_script.py[22m
+2026-05-03 22:16:53,346	INFO scripts.py:1023 -- See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/index.html 
+2026-05-03 22:16:53,346	INFO scripts.py:1027 -- for more information on submitting Ray jobs to the Ray cluster.
+2026-05-03 22:16:53,346	INFO scripts.py:1032 -- To terminate the Ray runtime, run
+2026-05-03 22:16:53,346	INFO scripts.py:1033 -- [1m  ray stop[22m
+2026-05-03 22:16:53,346	INFO scripts.py:1036 -- To view the status of the cluster, use
+2026-05-03 22:16:53,346	INFO scripts.py:1037 --   [1mray status[22m[26m
+2026-05-03 22:16:53,346	INFO scripts.py:1041 -- To monitor and debug Ray, view the dashboard at 
+2026-05-03 22:16:53,346	INFO scripts.py:1042 --   [1m127.0.0.1:8265[22m[26m
+2026-05-03 22:16:53,346	INFO scripts.py:1049 -- [4mIf connection to the dashboard fails, check your firewall settings and network configuration.[24m
+
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray head ports reachable; assuming healthy.
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray worker 172.31.37.45 startup output: 2026-05-03 22:17:09,023	INFO scripts.py:1128 -- [37mLocal node IP[39m: [1m172.31.37.45[22m
+
+WARNING:cloud_runner_HPO_new:Ray worker 172.31.37.45 warnings: Traceback (most recent call last):
+  File "/home/ubuntu/rayenv/bin/ray", line 6, in <module>
+    sys.exit(main())
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/scripts/scripts.py", line 2892, in main
+    return cli()
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1514, in __call__
+    return self.main(*args, **kwargs)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1435, in main
+    rv = self.invoke(ctx)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1902, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1298, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 853, in invoke
+    return callback(*args, **kwargs)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/autoscaler/_private/cli_logger.py", line 823, in wrapper
+    return f(*args, **kwargs)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/scripts/scripts.py", line 1133, in start
+    node = ray._private.node.Node(
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/node.py", line 295, in __init__
+    self._init_temp(node_to_connect_info)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/node.py", line 561, in _init_temp
+    try_to_create_directory(self.temp_dir)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_common/utils.py", line 446, in try_to_create_directory
+    os.makedirs(directory_path, exist_ok=True)
+  File "/usr/lib/python3.10/os.py", line 225, in makedirs
+    mkdir(name, mode)
+FileNotFoundError: [Errno 2] No such file or directory: ''
+
+INFO:cloud_runner_HPO_new:Ray worker 172.31.35.62 startup output: 2026-05-03 22:17:09,399	INFO scripts.py:1128 -- [37mLocal node IP[39m: [1m172.31.35.62[22m
+
+WARNING:cloud_runner_HPO_new:Ray worker 172.31.35.62 warnings: Traceback (most recent call last):
+  File "/home/ubuntu/rayenv/bin/ray", line 6, in <module>
+    sys.exit(main())
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/scripts/scripts.py", line 2892, in main
+    return cli()
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1514, in __call__
+    return self.main(*args, **kwargs)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1435, in main
+    rv = self.invoke(ctx)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1902, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 1298, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/click/core.py", line 853, in invoke
+    return callback(*args, **kwargs)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/autoscaler/_private/cli_logger.py", line 823, in wrapper
+    return f(*args, **kwargs)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/scripts/scripts.py", line 1133, in start
+    node = ray._private.node.Node(
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/node.py", line 295, in __init__
+    self._init_temp(node_to_connect_info)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/node.py", line 561, in _init_temp
+    try_to_create_directory(self.temp_dir)
+  File "/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_common/utils.py", line 446, in try_to_create_directory
+    os.makedirs(directory_path, exist_ok=True)
+  File "/usr/lib/python3.10/os.py", line 225, in makedirs
+    mkdir(name, mode)
+FileNotFoundError: [Errno 2] No such file or directory: ''
+
+INFO:cloud_runner_HPO_new:Ray worker 172.31.9.217 startup output: 2026-05-03 22:17:09,052	INFO scripts.py:1124 -- [37mLocal node IP[39m: [1m172.31.9.217[22m
+2026-05-03 22:17:11,323	SUCC scripts.py:1140 -- [32m--------------------[39m
+2026-05-03 22:17:11,323	SUCC scripts.py:1141 -- [32mRay runtime started.[39m
+2026-05-03 22:17:11,323	SUCC scripts.py:1142 -- [32m--------------------[39m
+2026-05-03 22:17:11,323	INFO scripts.py:1144 -- To terminate the Ray runtime, run
+2026-05-03 22:17:11,323	INFO scripts.py:1145 -- [1m  ray stop[22m
+
+INFO:cloud_runner_HPO_new:Ray cluster setup completed successfully
+INFO:cloud_runner_HPO_new:Starting HPO pipeline execution...
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:⚠️  HPO CONFIG PREPARED:
+INFO:cloud_runner_HPO_new:    model_name: vgg19
+INFO:cloud_runner_HPO_new:    epochs: 18
+INFO:cloud_runner_HPO_new:    trials: 9
+INFO:cloud_runner_HPO_new:    Full config: {'model_name': 'vgg19', 'epoch': 18, 'next_trials': 9, 'learning_rate': 0.0007104865354732192, 'momentum': 0.9166026453243415, 'batch_size': 32, 'hidden': 10, 'image_size': 64, 'amp': True, 'train_backbone': False, 'data_dir': '/home/ubuntu/cifar10'}
+INFO:paramiko.transport.sftp:[chan 0] Opened sftp connection (server version 3)
+INFO:paramiko.transport.sftp:[chan 0] sftp session closed.
+INFO:cloud_runner_HPO_new:Extracted 4 worker IPs: ['172.31.0.209', '172.31.9.217', '172.31.35.62', '172.31.37.45']
+INFO:cloud_runner_HPO_new:Executing HPO pipeline...
+

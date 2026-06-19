@@ -9,7 +9,7 @@ import torchvision.transforms as T
 from torch.utils.data import DataLoader
 
 from ray import tune
-from ray.air import session
+import ray.train
 
 # from ray.train import ScalingConfig
 # from ray.air.config import RunConfig as AirRunConfig
@@ -124,7 +124,7 @@ def train_cifar10_torch(config):
     out_dim = int(config.get("hidden", 10))  # CIFAR-10 classes
     batch_size = int(config.get("batch_size", 64))
     data_dir = config.get("data_dir", os.path.expanduser("~/cifar10"))
-    image_size = int(config.get("image_size", 160))  # smaller than 224 → VRAM win
+    image_size = int(config.get("image_size", 64))  # 64 for CIFAR-10 on xlarge nodes
     amp = bool(config.get("amp", True))  # enable AMP
     train_backbone = bool(
         config.get("train_backbone", False)
@@ -229,7 +229,7 @@ def train_cifar10_torch(config):
         acc = correct / max(1, total)
         best = max(best, acc)
         # per-epoch stats; keep or remove as you like
-        session.report(
+        ray.train.report(
             {
                 "epoch": ep,
                 "accuracy": acc,
@@ -237,6 +237,14 @@ def train_cifar10_torch(config):
                 "avg_epoch_time_s": (time.perf_counter() - wall_start) / ep,
             }
         )
+
+    # Write final metrics to file (workaround: Result.metrics is None in some Ray versions)
+    # Only rank 0 writes to avoid multi-worker race conditions
+    metrics_file = config.get("_metrics_file")
+    if metrics_file and ray.train.get_context().get_world_rank() == 0:
+        import json as _json
+        with open(metrics_file, "w") as _mf:
+            _mf.write(_json.dumps({"accuracy": best, "epochs_run": epochs}))
 
 
 # ----------------------------- Ray Train driver -----------------------------

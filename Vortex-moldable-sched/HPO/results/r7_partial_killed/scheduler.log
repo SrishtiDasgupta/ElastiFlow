@@ -1,0 +1,429 @@
+Starting HPO Scheduling System
+Algorithm: EDF, Mode: MOLDABLE
+Expected workflows: 7
+Infrastructure: hybrid
+==================================================
+Resource config: resources_HPO.yaml
+Output prefix: EDF_Moldable_HPO_7wf_hybrid_
+Using Moldable HPO EDF Scheduler
+Scheduler initialized: EDF_Optimized_HPO
+
+Starting scheduler threads:
+  1. Job Listener (port 8080)
+  2. HPO Scheduler
+  3. Completion Listener (port 8082)
+  4. Completion Processor
+  5. Resource Request Listener (port 8084)
+  ✅ Job Listener started
+Starting HPO Moldable EDF scheduler...  ✅ HPO Scheduler started
+
+  - EDF ordering: Workflows prioritized by earliest deadline
+  - Moldable: Dynamic resource reallocation between iterations
+  - Deadline urgency boost: CRITICAL 2.0x, WARNING 1.5x, Regular 1.2x
+  ✅ Completion Listener started
+HPO Scheduler started listening to completed jobs...
+  ✅ Completion Processor started
+  ✅ Resource Request Listener started
+
+==================================================
+HPO Scheduling System Ready!
+Algorithm: EDF, Mode: MOLDABLE
+Waiting for HPO workflows...
+==================================================
+
+📌 Moldable Features Enabled:
+  • Dynamic instance type switching
+  • Elastic resource scaling
+  • Cross-type optimization (g4dn ↔ g5)
+  • Automatic executor creation per workflow
+
+⚠️  Important: Cloud executors will be created automatically
+No manual executor start needed on reserved instances!
+
+Press Ctrl+C to stop the scheduler
+Starting server on port 8080...
+Starting server on port 8084...Starting server on port 8082...
+
+Workflow received at 1778410547.4924784 (id=hpo-60bf3eb4)
+[OK] Pushed wf hpo-60bf3eb4 to wf_queue (queue len now 1)
+172.31.9.121 - - [10/May/2026 10:55:47] "POST / HTTP/1.1" 200 -
+[SCHED] Drained 1 wf(s) from queue: ['hpo-60bf3eb4']
+EDF Moldable selected: 4 x g4 for 4 trials (cost: $0.10, runtime: 230s)
+EDF Moldable: Allocated 4 on-prem on-prem
+hpo-60bf3eb4 EDF moldable allocation (deadline=1778416708.1s):  {'on-prem': {'on-prem': (4, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-60bf3eb4: Using on-prem executor at 172.31.10.173
+  Workers: {'on-prem': {'on-prem': (4, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+[HEAP] size=0 ids=[]
+Workflow received at 1778410818.5229561 (id=hpo-b03a4442)
+[OK] Pushed wf hpo-b03a4442 to wf_queue (queue len now 1)
+172.31.9.121 - - [10/May/2026 11:00:18] "POST / HTTP/1.1" 200 -
+[SCHED] Drained 1 wf(s) from queue: ['hpo-b03a4442']
+EDF Moldable selected: 3 x g4 for 3 trials (cost: $0.18, runtime: 673s)
+EDF Moldable: 1 on-demand g4 ($0.10)
+Creating 1 on-demand g4dn.xlarge worker instances...
+Creating 1 worker instances of g4dn.xlarge
+Trying g4dn.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-0185a3815312ed0d0 running: 172.31.37.18 (worker)
+SSH ready on 172.31.37.18
+172.31.10.173 - - [10/May/2026 11:01:44] "POST / HTTP/1.1" 200 -
+Workflow received at 1778410937.1429555 (id=hpo-df19b440)
+[OK] Pushed wf hpo-df19b440 to wf_queue (queue len now 1)
+172.31.9.121 - - [10/May/2026 11:02:17] "POST / HTTP/1.1" 200 -
+Workflow received at 1778411019.3667774 (id=hpo-73120874)
+[OK] Pushed wf hpo-73120874 to wf_queue (queue len now 2)
+172.31.9.121 - - [10/May/2026 11:03:39] "POST / HTTP/1.1" 200 -
+Workflow received at 1778411034.661055 (id=hpo-a87b8123)
+[OK] Pushed wf hpo-a87b8123 to wf_queue (queue len now 3)
+172.31.9.121 - - [10/May/2026 11:03:54] "POST / HTTP/1.1" 200 -
+Workflow received at 1778411049.9512684 (id=hpo-ccb43739)
+[OK] Pushed wf hpo-ccb43739 to wf_queue (queue len now 4)
+172.31.9.121 - - [10/May/2026 11:04:09] "POST / HTTP/1.1" 200 -
+Workflow received at 1778411055.3537865 (id=hpo-417bb2bd)
+[OK] Pushed wf hpo-417bb2bd to wf_queue (queue len now 5)
+172.31.9.121 - - [10/May/2026 11:04:15] "POST / HTTP/1.1" 200 -
+Setup output for 172.31.37.18:
+STDOUT: Starting HPO Worker setup on 172.31.37.18...
+Waiting for cloud-init to finish...
+....................................................................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Sun May 10 11:03:01 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla T4                       On  |   00000000:00:1E.0 Off |                    0 |
+| N/A   25C    P8             13W /   70W |       0MiB /  15360MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.37.18...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.37.18 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.37.18_20260510_110635
+
+Verifying executor on 172.31.37.18:8089 ...
+Executor verified on 172.31.37.18:8089
+Created 1 worker instances in eu-north-1b: ['172.31.37.18']
+Created 1 on-demand g4dn.xlarge workers: ['172.31.37.18']
+hpo-b03a4442 EDF moldable allocation (deadline=1778419291.7s):  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (2, ['172.31.35.38', '172.31.39.103'])}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.37.18'])}}
+HPO EDF Moldable Workflow hpo-b03a4442: Using cloud executor at 172.31.35.38
+  Workers: {'on-prem': {}, 'reserved': {'g4dn.xlarge': (2, ['172.31.35.38', '172.31.39.103'])}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.37.18'])}}
+Data sent successfully!
+[SCHED] Drained 4 wf(s) from queue: ['hpo-73120874', 'hpo-a87b8123', 'hpo-ccb43739', 'hpo-417bb2bd']
+EDF Moldable selected: 4 x g5 for 4 trials (cost: $0.20, runtime: 247s)
+EDF Moldable: 2 on-demand g5 ($0.14)
+Creating 2 on-demand g5.xlarge worker instances...
+Creating 2 worker instances of g5.xlarge
+[AZ-FILTER] g5.xlarge not offered in ['eu-north-1a']; trying ['eu-north-1b', 'eu-north-1c']
+Trying g5.xlarge x2 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-01739acb4480738b9 running: 172.31.39.227 (worker)
+Instance i-01a52d89708474683 running: 172.31.34.63 (worker)
+SSH ready on 172.31.34.63
+SSH ready on 172.31.39.227
+Setup output for 172.31.39.227:
+STDOUT: Starting HPO Worker setup on 172.31.39.227...
+Waiting for cloud-init to finish...
+................................................................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Sun May 10 11:08:56 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A10G                    On  |   00000000:00:1E.0 Off |                    0 |
+|  0%   23C    P0             10W /  300W |       0MiB /  23028MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.39.227...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.39.227 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.39.227_20260510_111156
+
+Verifying executor on 172.31.39.227:8089 ...
+Executor verified on 172.31.39.227:8089
+Setup output for 172.31.34.63:
+STDOUT: Starting HPO Worker setup on 172.31.34.63...
+Waiting for cloud-init to finish...
+...................................................................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Sun May 10 11:08:56 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A10G                    On  |   00000000:00:1E.0 Off |                    0 |
+|  0%   23C    P0             10W /  300W |       0MiB /  23028MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.34.63...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.34.63 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.34.63_20260510_111200
+
+Verifying executor on 172.31.34.63:8089 ...
+Executor verified on 172.31.34.63:8089
+Created 2 worker instances in eu-north-1b: ['172.31.39.227', '172.31.34.63']
+Created 2 on-demand g5.xlarge workers: ['172.31.39.227', '172.31.34.63']
+hpo-a87b8123 EDF moldable allocation (deadline=1778416230.5s):  {'on-prem': {}, 'reserved': {'g5.xlarge': (2, ['172.31.43.94', '172.31.32.202'])}, 'on-demand': {'g5.xlarge': (2, ['172.31.39.227', '172.31.34.63'])}}
+HPO EDF Moldable Workflow hpo-a87b8123: Using cloud executor at 172.31.43.94
+  Workers: {'on-prem': {}, 'reserved': {'g5.xlarge': (2, ['172.31.43.94', '172.31.32.202'])}, 'on-demand': {'g5.xlarge': (2, ['172.31.39.227', '172.31.34.63'])}}
+Data sent successfully!
+EDF Moldable selected: 2 x g4 for 4 trials (cost: $0.16, runtime: 553s)
+EDF Moldable: 2 on-demand g4 ($0.16)
+Creating 2 on-demand g4dn.xlarge worker instances...
+Creating 2 worker instances of g4dn.xlarge
+Trying g4dn.xlarge x2 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-041b26793519eaf2a running: 172.31.41.50 (worker)
+Instance i-0ed336b4e2cf36c1c running: 172.31.34.89 (worker)
+Waiting for SSH on 172.31.41.50... (attempt 1)
+Waiting for SSH on 172.31.34.89... (attempt 1)
+SSH ready on 172.31.41.50
+SSH ready on 172.31.34.89
+Setup output for 172.31.34.89:
+STDOUT: Starting HPO Worker setup on 172.31.34.89...
+Waiting for cloud-init to finish...
+.................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Sun May 10 11:13:59 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla T4                       On  |   00000000:00:1E.0 Off |                    0 |
+| N/A   32C    P0             12W /   70W |       0MiB /  15360MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.34.89...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.34.89 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.34.89_20260510_111719
+
+Verifying executor on 172.31.34.89:8089 ...
+Setup output for 172.31.41.50:
+STDOUT: Starting HPO Worker setup on 172.31.41.50...
+Waiting for cloud-init to finish...
+.................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Sun May 10 11:13:59 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla T4                       On  |   00000000:00:1E.0 Off |                    0 |
+| N/A   30C    P8             14W /   70W |       0MiB /  15360MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.41.50...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.41.50 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.41.50_20260510_111719
+
+Verifying executor on 172.31.41.50:8089 ...
+Executor verified on 172.31.34.89:8089
+Executor verified on 172.31.41.50:8089
+Created 2 worker instances in eu-north-1b: ['172.31.34.89', '172.31.41.50']
+Created 2 on-demand g4dn.xlarge workers: ['172.31.34.89', '172.31.41.50']
+hpo-417bb2bd EDF moldable allocation (deadline=1778416251.2s):  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (2, ['172.31.34.89', '172.31.41.50'])}}
+HPO EDF Moldable Workflow hpo-417bb2bd: Using cloud executor at 172.31.34.89
+  Workers: {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (2, ['172.31.34.89', '172.31.41.50'])}}
+Data sent successfully!
+172.31.34.89 - - [10/May/2026 11:17:19] "POST / HTTP/1.1" 200 -
+EDF Moldable: Cloud workflow hpo-417bb2bd cannot scale (no free g4dn.xlarge slots)
+hpo-417bb2bd EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.028770923614501953
+EDF Moldable selected: 1 x g5 for 2 trials (cost: $0.25, runtime: 881s)
+EDF Moldable: 1 on-demand g5 ($0.25)
+Creating 1 on-demand g5.xlarge worker instances...
+Creating 1 worker instances of g5.xlarge
+[AZ-FILTER] g5.xlarge not offered in ['eu-north-1a']; trying ['eu-north-1b', 'eu-north-1c']
+Trying g5.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-0362f699c2bce94fe running: 172.31.42.49 (worker)
+Waiting for SSH on 172.31.42.49... (attempt 1)
+SSH ready on 172.31.42.49
+Setup output for 172.31.42.49:
+STDOUT: Starting HPO Worker setup on 172.31.42.49...
+Waiting for cloud-init to finish...
+................................................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Sun May 10 11:19:25 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A10G                    On  |   00000000:00:1E.0 Off |                    0 |
+|  0%   24C    P0             10W /  300W |       0MiB /  23028MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.42.49...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.42.49 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.42.49_20260510_112232
+
+Verifying executor on 172.31.42.49:8089 ...
+Executor verified on 172.31.42.49:8089
+Created 1 worker instances in eu-north-1b: ['172.31.42.49']
+Created 1 on-demand g5.xlarge workers: ['172.31.42.49']
+hpo-73120874 EDF moldable allocation (deadline=1778416775.2s):  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (1, ['172.31.42.49'])}}
+HPO EDF Moldable Workflow hpo-73120874: Using cloud executor at 172.31.42.49
+  Workers: {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (1, ['172.31.42.49'])}}
+Data sent successfully!
+172.31.42.49 - - [10/May/2026 11:22:32] "POST / HTTP/1.1" 200 -
+172.31.43.94 - - [10/May/2026 11:22:35] "POST / HTTP/1.1" 200 -
+172.31.10.173 - - [10/May/2026 11:22:49] "POST / HTTP/1.1" 200 -
+EDF Scheduler freeing {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (2, ['172.31.39.227', '172.31.34.63'])}} for hpo-a87b8123
+Data sent successfully!
+[SCALE-DOWN] Terminating 2 freed on-demand instances: ['172.31.39.227', '172.31.34.63']
+Terminating HPO instances: ['172.31.39.227', '172.31.34.63']
+Terminating instances: ['i-01a52d89708474683', 'i-01739acb4480738b9']
+Waiting for 2 instances to reach terminated state...

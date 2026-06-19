@@ -11,7 +11,8 @@ def getEstimate(per_iteration, tinyda_iterations, workflow_iterations = 1, chain
 def getConstraintsFromWorkflow(wf_plan):
     constraints = {
         'budget': wf_plan['constraints']['budget'], # Gaussian
-        'deadline': wf_plan['submit_time'] + wf_plan['constraints']['deadline'], # Gaussin
+        'deadline': wf_plan['submit_time'] + wf_plan['constraints']['deadline'], # Absolute timestamp
+        'deadline_duration': wf_plan['constraints']['deadline'], # Raw duration in seconds (for HPO optimizer)
         'min_instances': wf_plan['constraints']['chains'], # random - we assume 1 chain runs on 1 instance
         'tinyda_iterations': 1 + wf_plan['constraints']['tinydaIterations'], # random
         'mesh': wf_plan['config']['mesh'],

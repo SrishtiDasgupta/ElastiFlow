@@ -8,7 +8,10 @@ class ExecutorRequest(Enum):
     REQUEST_RESOURCE = 1
     FREE_RESOURCE = 2
 
-def getConfig(key, config = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/resources.yaml') -> str:
+import os as _os
+_DEFAULT_CONFIG = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'config', 'resources.yaml')
+
+def getConfig(key, config = _DEFAULT_CONFIG) -> str:
     with open(config, 'r') as file:
         config = yaml.safe_load(file)
     return config[key]
@@ -19,11 +22,17 @@ def sendRequest(ip: str, port, data):
     "http": None,
     "https": None
     }
-    response = requests.post(url, json=data, proxies=proxies, timeout=15)
-    if response.status_code == 200:
-        print("Data sent successfully!")
-    else:
-        print(f"Error sending data: {response.status_code} - {response.text}")
+    try:
+        response = requests.post(url, json=data, proxies=proxies, timeout=15)
+        if response.status_code == 200:
+            print("Data sent successfully!")
+            return True
+        else:
+            print(f"Error sending data: {response.status_code} - {response.text}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed to {url}: {e}")
+        return False
 
 # NOTE: Right now, return a random executor node for simulation
 # script to create one executor instance and retrieve its ip. Creation of other instances must be offlloaded to the executor

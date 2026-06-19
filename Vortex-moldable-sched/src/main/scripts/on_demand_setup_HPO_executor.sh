@@ -4,6 +4,8 @@
 
 EXECUTOR_IP=$1
 
+set -e  # Exit immediately on any command failure
+
 export DEBIAN_FRONTEND=noninteractive
 
 echo "Starting HPO Executor setup on ${EXECUTOR_IP}..."
@@ -12,17 +14,31 @@ echo "Starting HPO Executor setup on ${EXECUTOR_IP}..."
 sudo mkdir -p /etc/needrestart/conf.d/
 echo "\$nrconf{restart} = 'a';" | sudo tee /etc/needrestart/conf.d/99-restart.conf > /dev/null
 
-# Setup FSx Lustre client
-wget -o - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
+# Wait for unattended-upgrades / dpkg lock to release before any apt calls
+echo "Waiting for dpkg lock..."
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    echo "  dpkg lock held by unattended-upgrades, waiting 5s..."
+    sleep 5
+done
+echo "dpkg lock free"
 
-yes | sudo bash -c 'echo "deb [signed-by=/usr/share/keyrings/fsx-ubuntu-public-key.gpg] https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu jammy main" > /etc/apt/sources.list.d/fsxlustreclientrepo.list && yes | apt-get update >> ~/setup.out'
+# Fix corrupted /etc/apt/sources.list if present (AMI has bad 'ty' entry on line 51)
+sudo sed -i '/^ty /d' /etc/apt/sources.list 2>/dev/null || true
 
-yes | sudo apt install -y lustre-client-modules-$(uname -r) >> ~/setup.out
+# Mount EFS (replaces FSx Lustre — no Lustre client needed)
+sudo apt-get update -y >> ~/setup.out 2>&1
+sudo apt-get install -y nfs-common >> ~/setup.out 2>&1
 
 sudo mkdir -p /fsx
 
-# Mount FSx file system
-sudo mount -t lustre -o relatime,flock fs-0577278416bdf1172.fsx.eu-north-1.amazonaws.com@tcp:/zyqr7bev /fsx
+sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576 \
+    fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx
+
+# Verify EFS mount succeeded
+if ! mountpoint -q /fsx; then
+    echo "FATAL: EFS mount failed"
+    exit 1
+fi
 
 # Install AWS CLI if not present
 if ! command -v aws &> /dev/null; then
@@ -45,14 +61,26 @@ echo "HPO instance setup completed"
 cd ~
 
 # Copy Vortex codebase
-sudo cp -r /fsx/Vortex/ ~
+sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
 
-cd Vortex/src/main
+# Verify codebase exists
+if [ ! -f ~/Vortex-moldable-sched/src/main/executor_HPO.py ]; then
+    echo "FATAL: Vortex codebase copy failed"
+    exit 1
+fi
+
+cd Vortex-moldable-sched/src/main
 
 # Install and start Redis server (required for executor queue)
 echo "Installing Redis server..."
 sudo apt-get update >> ~/setup.out 2>&1
 sudo apt-get install -y redis-server >> ~/setup.out 2>&1
+
+# Verify Redis is actually installed
+if ! command -v redis-server &>/dev/null; then
+    echo "FATAL: redis-server not installed"
+    exit 1
+fi
 
 # Start Redis service (try both possible service names)
 echo "Starting Redis server..."
@@ -75,9 +103,41 @@ if sudo systemctl is-active --quiet ${REDIS_SERVICE}; then
     echo "Redis server started successfully"
 else
     echo "WARNING: Redis server may not have started properly"
-    # Try starting manually if systemd fails
     echo "Attempting to start Redis manually..."
     sudo redis-server --daemonize yes >> ~/setup.out 2>&1
+fi
+
+# Verify Redis is actually accepting connections
+echo "Verifying Redis is accepting connections..."
+REDIS_OK=false
+for attempt in $(seq 1 10); do
+    if redis-cli ping 2>/dev/null | grep -q PONG; then
+        echo "Redis ready (attempt $attempt)"
+        REDIS_OK=true
+        break
+    fi
+    if [ "$attempt" -eq 10 ]; then
+        echo "ERROR: Redis not responding after 10 attempts, trying manual start..."
+        sudo redis-server --daemonize yes >> ~/setup.out 2>&1
+        sleep 2
+        if redis-cli ping 2>/dev/null | grep -q PONG; then
+            echo "Redis ready after manual start"
+            REDIS_OK=true
+        fi
+    fi
+    sleep 2
+done
+
+if [ "$REDIS_OK" = false ]; then
+    echo "FATAL: Redis is not running — reinstalling..."
+    sudo apt-get install -y redis-server >> ~/setup.out 2>&1
+    sudo systemctl start redis-server >> ~/setup.out 2>&1
+    sleep 3
+    if redis-cli ping 2>/dev/null | grep -q PONG; then
+        echo "Redis recovered after reinstall"
+    else
+        echo "FATAL: Redis still not running, executor will fail"
+    fi
 fi
 
 # Install Python dependencies for executor
@@ -96,8 +156,14 @@ nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
 
 echo "HPO Executor started successfully"
 
-# Create marker file to indicate setup completion
-echo "HPO_EXECUTOR_READY:$(date)" > ~/hpo_executor_ready.marker
+# Only write marker if executor process is running
+sleep 2
+if pgrep -f "executor_HPO.py" > /dev/null; then
+    echo "HPO_EXECUTOR_READY:$(date)" > ~/hpo_executor_ready.marker
+else
+    echo "FATAL: executor_HPO.py process not running"
+    exit 1
+fi
 
 sleep 5
 

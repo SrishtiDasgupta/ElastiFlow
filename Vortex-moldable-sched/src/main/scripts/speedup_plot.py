@@ -3,6 +3,21 @@ import numpy as np
 from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
 
+# Publication-style fonts (PDF-friendly vector text)
+TITLE_FS = 24
+AXIS_LABEL_FS = 20
+TICK_FS = 18
+LEGEND_FS = 18
+plt.rcParams.update(
+    {
+        "font.family": "serif",
+        # Avoid global font.weight: it can skew bbox math for rotated Figure.supylabel
+        "axes.titleweight": "bold",
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    }
+)
+
 nodes = np.array([1, 2, 4])
 meshes = np.array([1000, 750, 500])
 
@@ -54,7 +69,11 @@ hpc_onprem = {
     500: np.array([469.41, 245.7, 157.7]),
 }
 
-fig, axs = plt.subplots(2, 3, figsize=(15, 8), sharey=True)
+# Mesh colours (kept identical between legend, scatter, and fitted curves)
+MESH_COLORS = {1000: 'cornflowerblue', 750: 'darkorange', 500: 'green'}
+
+# Wider/taller figure + room on the left so shared y-tick labels do not overlap supylabel
+fig, axs = plt.subplots(2, 3, figsize=(17, 9), sharey=True)
 
 # x = nodes, y = meshes, z = runtimes
 # a * exp(b * N) + c * M + d
@@ -105,7 +124,7 @@ def fitWithoutMesh(func, initial):
         axs[1].scatter(nodes, y, color='black')
         axs[1].plot(x_smooth, func(x_smooth, *params), label=f'{mesh}: {r2:.4f}')
 
-    axs[1].set_title('Without Mesh')
+    axs[1].set_title('Without Mesh', fontweight='bold')
     axs[1].grid(True)
 
 def fitMesh(func, initial=None, ind=(0,0), normalize = False, title = ""):
@@ -124,21 +143,28 @@ def fitMesh(func, initial=None, ind=(0,0), normalize = False, title = ""):
     for mesh in meshes:
         y = runtimes[mesh]
         x_smooth = np.linspace(1, 8, 100)
-        axs[ind[0]][ind[1]].scatter(nodes, y, color='black')
+        color = MESH_COLORS[mesh]
+        axs[ind[0]][ind[1]].scatter(nodes, y, color=color, s=70,
+                                    edgecolors='black', linewidth=1.0, zorder=3)
         if normalize:
             preds = func((x_smooth/max(nodes), np.full_like(x_smooth, mesh/1000.0)), *params)
         else:
             preds = func((x_smooth, np.full_like(x_smooth, mesh)), *params)
-        axs[ind[0]][ind[1]].plot(x_smooth, preds, label=f'{mesh}: {r2:.4f}')
-    
-    axs[ind[0]][ind[1]].grid(True)
-    axs[ind[0]][ind[1]].set_title(title)
+        axs[ind[0]][ind[1]].plot(x_smooth, preds, color=color, linewidth=2.2,
+                                 label=f'{mesh}: {r2:.4f}')
+
+    # Mark upper bound of profiling range (measured nodes ∈ {1, 2, 4})
+    axs[ind[0]][ind[1]].axvline(x=4, color='black', linestyle='--',
+                                linewidth=1.2, alpha=0.6, zorder=2)
+    axs[ind[0]][ind[1]].grid(True, alpha=0.4)
+    axs[ind[0]][ind[1]].set_title(f'{title}   (R² = {r2:.4f})',
+                                  fontsize=AXIS_LABEL_FS, fontweight='bold')
 
 if __name__ == "__main__":
     runtimes = hpc24x
-    fitMesh(exp_func_mesh, initial=[1000, -1, -1, 100], ind=(0,0), normalize=True, title="hpc.24xlarge")
+    fitMesh(exp_func_mesh, initial=[1000, -1, -1, 100], ind=(0,0), normalize=True, title="hpc7a.24xlarge")
     runtimes = hpc12x
-    fitMesh(exp_func_mesh, initial=[1000, -1, -1, 100], ind=(1,0), normalize=True, title="hpc.12xlarge")
+    fitMesh(exp_func_mesh, initial=[1000, -1, -1, 100], ind=(1,0), normalize=True, title="hpc7a.12xlarge")
     runtimes = c7i24x
     fitMesh(exp_func_mesh, initial=[1000, -1, -1, 100], ind=(0,1), normalize=True, title="c7i.24xlarge")
     runtimes = c7i12x
@@ -156,16 +182,58 @@ if __name__ == "__main__":
     # fitMesh(amdahl_func_mesh, initial=[1, 0.8, 0.1, 0])
     # fitWithoutMesh(amdahl_func, initial=[120, 0.8, 0])
 
-    plt.tight_layout(rect=[0.03, 0.03, 1, 0.95])
-    fig.supxlabel('Number of instances')
-    fig.supylabel('Runtime in seconds')
-    fig.suptitle('Seissol runtimes with cloud instances on an exponential fit')
-    
+    # Bold tick labels first so tight_layout sees final tick widths.
+    for ax in axs.flat:
+        ax.tick_params(axis='both', labelsize=TICK_FS)
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontweight('bold')
+
+    # --- Spacing (tune these) ---
+    # supxlabel: figure y is 0=bottom, 1=top — increase to move "Number of instances" UP (closer to plots).
+    SUPXLABEL_Y = 0.055
+    # supylabel: figure x is 0=left, 1=right — increase to move "Runtime in seconds" RIGHT (closer to plots).
+    SUPYLABEL_X = 0.045
+    # tight_layout rect = [left, bottom, right, top] in figure fraction:
+    #   smaller `left`  -> less gap between supylabel and left column (risk overlap if too small)
+    #   smaller `bottom` -> more vertical room for panels (can bring bottom row closer to supxlabel/legend)
+
+    fig.supxlabel(
+        'Number of instances',
+        fontsize=AXIS_LABEL_FS,
+        fontweight='bold',
+        y=SUPXLABEL_Y,
+    )
+    fig.supylabel(
+        'Runtime in seconds',
+        fontsize=AXIS_LABEL_FS,
+        fontweight='bold',
+        x=SUPYLABEL_X,
+    )
+    fig.suptitle(
+        'SeisSol runtimes with cloud instances — exponential fit',
+        fontsize=TITLE_FS,
+        fontweight='bold',
+    )
+
     from matplotlib.patches import Patch
     custom_legend = [
-        Patch(facecolor='green', label="500 mesh"),
-        Patch(facecolor='darkorange', label="750 mesh"),
-        Patch(facecolor='cornflowerblue', label="1000 mesh")
+        Patch(facecolor='green', label='Mesh Resolution: 500'),
+        Patch(facecolor='darkorange', label='Mesh Resolution: 750'),
+        Patch(facecolor='cornflowerblue', label='Mesh Resolution: 1000'),
     ]
-    fig.legend(handles=custom_legend, loc='upper right')
-    plt.savefig(f'src/main/plots/speedup.png')
+    fig.legend(
+        handles=custom_legend,
+        loc='upper center',
+        bbox_to_anchor=(0.5, 0.02),
+        ncol=3,
+        frameon=False,
+        prop={'size': LEGEND_FS, 'weight': 'bold'},
+    )
+
+    # Run tight_layout *after* all figure text so margins/orientation stay consistent
+    plt.tight_layout(rect=[0.08, 0.14, 0.98, 0.92])
+    plt.savefig(
+        'src/main/plots/speedup.pdf',
+        bbox_inches='tight',
+        pad_inches=0.2,
+    )

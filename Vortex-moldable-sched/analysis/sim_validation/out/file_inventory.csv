@@ -1,0 +1,28 @@
+source_file,bytes,stripped_to,role_in_dataset
+Comparison_Between_Infra_and_Simulation_V2.csv,738,Comparison_Between_Infra_and_Simulation_V2.txt,supplementary
+Infra_vs_Sim_Workflow_Duration_Comparison.csv,743,Infra_vs_Sim_Workflow_Duration_Comparison.txt,supplementary
+c6i16xlarge-1.rtf,3619,c6i16xlarge-1.txt,supplementary
+c6i16xlarge.rtf,3233,c6i16xlarge.txt,supplementary
+gantttime.rtf,3712,gantttime.txt,supplementary
+hpc7a24xlarge.rtf,3936,hpc7a24xlarge.txt,supplementary
+hpc7a24xlogs-1.rtf,3936,hpc7a24xlogs-1.txt,supplementary
+infra_test.rtf,5516,infra_test.txt,supplementary
+infra_test.txt,4965,infra_test.txt,infra:infra_A
+infra_testV2-1.rtf,5238,infra_testV2-1.txt,supplementary
+infra_testV2.rtf,5634,infra_testV2.txt,supplementary
+infra_testV2.txt,5080,infra_testV2.txt,infra:infra_B_r2
+infra_testV3.rtf,5637,infra_testV3.txt,supplementary
+infra_testV3.txt,5085,infra_testV3.txt,infra:infra_B_r3
+load_balanced_tinyda_client.py,11111,load_balanced_tinyda_client.txt,supplementary
+on-prem run.rtf,3124,on-prem run.txt,supplementary
+onPremLogs.rtf,1637,onPremLogs.txt,supplementary
+onpremLogs-1.rtf,1641,onpremLogs-1.txt,supplementary
+out_sim2.txt.rtf,5006,out_sim2.txt.txt,sim:sim_A
+runtimes_onprem.rtf,7034,runtimes_onprem.txt,supplementary
+sim_run.rtf,5020,sim_run.txt,sim:sim_A_intermediate
+sim_run_moldability_logs_latest-1.rtf,3461,sim_run_moldability_logs_latest-1.txt,sim:sim_moldable_r2
+sim_run_moldability_logs_latest.rtf,3404,sim_run_moldability_logs_latest.txt,sim:sim_moldable_r1
+sim_testV2 -1-1.rtf,5285,sim_testV2 -1-1.txt,sim:sim_B
+sim_testV2.rtf,5131,sim_testV2.txt,sim:sim_B_uncalib
+updated_infra_test.rtf,5516,updated_infra_test.txt,supplementary
+updated_infra_test.txt,4962,updated_infra_test.txt,infra:infra_B_r1

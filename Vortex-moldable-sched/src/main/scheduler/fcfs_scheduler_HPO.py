@@ -4,10 +4,13 @@ import math
 
 from config.constants_HPO import WORKFLOW_POLLING, SIMULATE, COLD_START_TIME
 from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
-from scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
+from scripts.create_instance_HPO import createWorkerInstances
 from utils.request import ExecutorRequest, sendRequest, getConfig
+import os
 from resource_manager.resource_manager import ResourceManager
 from resource_manager.instance import CloudOnDemandInstance, OnPremInstance
+
+_HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
 from utils.sim import getTime, peekElement, removeElement
 from utils.resource import getConstraintsFromWorkflow
 from scheduler.scheduler_HPO import Scheduler_HPO
@@ -16,8 +19,10 @@ from scheduler.scheduler_HPO import Scheduler_HPO
 # Static version - no moldable resource allocation
 class FCFS_Scheduler_HPO(Scheduler_HPO):
 
-    def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost'):
-        self.resource_manager = ResourceManager()
+    def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost',
+                 resource_config=None, file_prefix=None):
+        self.resource_manager = ResourceManager(resource_config or _HPO_RESOURCES_DEFAULT)
+        self.file_prefix = file_prefix or 'FCFS_Static_HPO_'
         # Sort by base cost (hourly rate) - cost_per_trial calculated during allocation
         func = lambda x: x.cost if hasattr(x, 'cost') else 0
         self.resource_manager.sortResourcesByFunction(func)
@@ -55,7 +60,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
                 # End the simulation and compute metrics
                 if wf_plan['id'] == 'END':
                     removeElement(wf_mb, self.queue)
-                    self.metrics.computeMetrics()
+                    self.metrics.computeMetrics(file_prefix=self.file_prefix)
                     break
 
                 # Scheduling
@@ -87,39 +92,46 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         """
         model = constraints['mesh']
         budget = constraints['budget']
-        deadline = constraints['deadline']
+        deadline_duration = constraints['deadline_duration']  # Duration in seconds (not absolute timestamp)
         trials = constraints['chains']
         epochs = constraints['tinydaIterations']
 
         # Get optimal instance type AND number of hosts
         optimal_type, num_hosts_requested = self.selectOptimalInstanceType(
-            budget, deadline, model, trials, epochs
+            budget, deadline_duration, model, trials, epochs
         )
 
         instances = self.resource_manager.getResources()
         selected_instances = []
         remaining = num_hosts_requested
 
-        # PRIORITY 1: On-premise (if type matches)
+        # Check if on-prem can satisfy (any free slots of the right type)
+        on_prem_available = False
         for instance in instances:
             if isinstance(instance, OnPremInstance) and \
                self.getInstanceTypeForHPO(instance.name) == optimal_type:
-                slots_available = instance.getFreeSlots()
-                if slots_available >= remaining:
-                    # Can fully satisfy with on-prem
-                    selected_instances = [(instance, remaining)]
-                    remaining = 0
-                    print(f"Allocated {num_hosts_requested} on-prem {instance.name} (workflow locked to on-prem)")
-                    break
-                elif slots_available > 0:
-                    # Partial on-prem allocation (resilient: take what's available)
-                    selected_instances = [(instance, slots_available)]
-                    remaining -= slots_available
-                    print(f"Allocated {slots_available} on-prem {instance.name} (degraded from {num_hosts_requested})")
+                if instance.getFreeSlots() > 0:
+                    on_prem_available = True
                     break
 
-        # PRIORITY 2: Cloud reserved
-        if remaining > 0:
+        if on_prem_available:
+            # ON-PREM PATH: only allocate on-prem (skip cloud entirely)
+            for instance in instances:
+                if isinstance(instance, OnPremInstance) and \
+                   self.getInstanceTypeForHPO(instance.name) == optimal_type:
+                    slots_available = instance.getFreeSlots()
+                    if slots_available >= remaining:
+                        selected_instances = [(instance, remaining)]
+                        remaining = 0
+                        print(f"Allocated {num_hosts_requested} on-prem {instance.name} (workflow locked to on-prem)")
+                        break
+                    elif slots_available > 0:
+                        selected_instances = [(instance, slots_available)]
+                        remaining -= slots_available
+                        print(f"Allocated {slots_available} on-prem {instance.name} (degraded from {num_hosts_requested})")
+                        break
+        else:
+            # CLOUD PATH: reserved then on-demand (skip on-prem entirely)
             for instance in instances:
                 if instance.type == 'reserved' and \
                    self.getInstanceTypeForHPO(instance.name) == optimal_type:
@@ -130,34 +142,31 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
                         if remaining == 0:
                             break
 
-        # PRIORITY 3: Cloud on-demand (with budget check)
-        if remaining > 0:
-            runtime_func = getRuntime_g5 if optimal_type == 'g5' else getRuntime_g4
+            if remaining > 0:
+                runtime_func = getRuntime_g5 if optimal_type == 'g5' else getRuntime_g4
 
-            # Calculate runtime for cost check (based on what we'll actually get)
-            allocated_so_far = num_hosts_requested - remaining
-            total_hosts = allocated_so_far + remaining
+                allocated_so_far = num_hosts_requested - remaining
+                total_hosts = allocated_so_far + remaining
 
-            if total_hosts >= trials:
-                workers_per_trial = total_hosts // trials
-                runtime = runtime_func(workers_per_trial, model, epochs)
-            else:
-                batches = math.ceil(trials / total_hosts)
-                runtime = batches * runtime_func(1, model, epochs)
+                if total_hosts >= trials:
+                    workers_per_trial = total_hosts // trials
+                    runtime = runtime_func(workers_per_trial, model, epochs)
+                else:
+                    batches = math.ceil(trials / total_hosts)
+                    runtime = batches * runtime_func(1, model, epochs)
 
-            for instance in instances:
-                if instance.type == 'on-demand' and \
-                   self.getInstanceTypeForHPO(instance.name) == optimal_type:
-                    slots_available = min(remaining, instance.getFreeSlots())
-                    if slots_available > 0:
-                        # Calculate cost with cold start
-                        cost = (runtime / 3600) * instance.cost_per_second * slots_available
-                        if cost < budget:
-                            selected_instances.append((instance, slots_available))
-                            remaining -= slots_available
-                            print(f"Allocated {slots_available} on-demand {optimal_type} (cost: ${cost:.2f})")
-                            if remaining == 0:
-                                break
+                for instance in instances:
+                    if instance.type == 'on-demand' and \
+                       self.getInstanceTypeForHPO(instance.name) == optimal_type:
+                        slots_available = min(remaining, instance.getFreeSlots())
+                        if slots_available > 0:
+                            cost = (runtime / 3600) * instance.cost_per_second * slots_available
+                            if cost < budget:
+                                selected_instances.append((instance, slots_available))
+                                remaining -= slots_available
+                                print(f"Allocated {slots_available} on-demand {optimal_type} (cost: ${cost:.2f})")
+                                if remaining == 0:
+                                    break
 
         # RESILIENT: Always proceed with what we got (never fail)
         allocated_hosts = num_hosts_requested - remaining
@@ -229,8 +238,8 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
                     batches = math.ceil(trials / num_hosts)
                     runtime = batches * runtime_func(1, model, epochs)
 
-                # Calculate cost for this configuration (use cost_per_second directly)
-                cost = runtime * cost_per_second * num_hosts
+                # Calculate cost for this configuration (cost_per_second is actually $/hour)
+                cost = (runtime / 3600) * cost_per_second * num_hosts
 
                 # Check if meets constraints
                 if runtime <= deadline and cost <= budget:
@@ -259,7 +268,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         elif 'g5' in instance_name:
             return 'g5'
         elif 'on-prem' in instance_name:
-            return 'g5'  # On-prem has g5-equivalent performance
+            return 'g4'  # On-prem uses g4dn.xlarge instances
         else:
             return 'unknown'
 
@@ -267,14 +276,29 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         """
         Create actual on-demand worker instances for allocated virtual slots
         ResourceManager.allocateResources() returns empty IP lists for on-demand,
-        this method creates the actual instances and updates the IP lists
+        this method creates the actual instances and updates the IP lists.
+        Multiple instance types are created in parallel.
         """
-        for instance_type, (count, ip_list) in ips.get('on-demand', {}).items():
-            if count > 0 and len(ip_list) == 0:
-                print(f"Creating {count} on-demand {instance_type} worker instances...")
-                worker_ips = createWorkerInstances(instance_type, count, sim)
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        to_create = {itype: count for itype, (count, ip_list) in ips.get('on-demand', {}).items()
+                     if count > 0 and len(ip_list) == 0}
+
+        if not to_create:
+            return ips
+
+        def _create(instance_type, count):
+            print(f"Creating {count} on-demand {instance_type} worker instances...")
+            worker_ips = createWorkerInstances(instance_type, count, sim)
+            print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
+            return instance_type, count, worker_ips
+
+        with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
+            futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
+            for future in as_completed(futures):
+                instance_type, count, worker_ips = future.result()
                 ips['on-demand'][instance_type] = (count, worker_ips)
-                print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
+
         return ips
 
     def sendWorkflowForExecutionHPO(self, wf_plan, ips, sim, deadline):
@@ -286,19 +310,24 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         # If on-prem workers → use on-prem executor (manually started)
         # If cloud workers → create dedicated cloud executor
 
-        if 'on-prem' in ips and len(ips['on-prem'][1]) > 0:
-            # On-prem workflow: Use on-prem executor (pre-started)
-            executor_ip = ips['on-prem'][1][0]  # Head node IP
+        # ips['on-prem'] is a dict: {'on-prem': (count, [ip_list])}
+        on_prem_hosts = ips.get('on-prem', {})
+        on_prem_ips = []
+        for name, (count, ip_list) in on_prem_hosts.items():
+            on_prem_ips.extend(ip_list)
+
+        if on_prem_ips:
+            executor_ip = on_prem_ips[0]  # Head node IP
             print(f"HPO Workflow {wf_plan['id']}: Using on-prem executor at {executor_ip}")
         else:
-            # Cloud workflow: Create dedicated executor instance
-            executor_ip = createExecutorInstance('g4dn.2xlarge', sim)
-
-            if not executor_ip:
-                print(f"Error: Could not create dedicated executor instance for {wf_plan['id']}")
-                return
-
-            print(f"HPO Workflow {wf_plan['id']}: Created cloud executor at {executor_ip}")
+            # First allocated cloud IP acts as executor (reserved preferred)
+            cloud_ips = []
+            for name, (count, ip_list) in ips.get('reserved', {}).items():
+                cloud_ips.extend(ip_list)
+            for name, (count, ip_list) in ips.get('on-demand', {}).items():
+                cloud_ips.extend(ip_list)
+            executor_ip = cloud_ips[0]
+            print(f"HPO Workflow {wf_plan['id']}: Using cloud executor at {executor_ip}")
 
         # Prepare request with separated executor and worker instances
         request = {

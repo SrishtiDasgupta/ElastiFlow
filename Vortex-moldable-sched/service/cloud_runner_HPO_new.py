@@ -1,5 +1,4 @@
 import os
-import boto3
 import paramiko
 import subprocess
 import re
@@ -33,17 +32,25 @@ class CloudRunnerHPO:
 
     def __init__(self, request):
         self.request = request
-        self.key_file_path = '/fsx/Nisarg-HPC.pem'
+        self.key_file_path = os.path.expanduser('~/.ssh/hpo-exp.pem')
         self.user = 'ubuntu'
         self.region = 'eu-north-1'
-        self.ec2 = boto3.client('ec2', region_name=self.region)
 
         # Setup logging
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
         # Extract components from request
+        # Self-derive local IP if executor-ip not in request (getClientInputs_HPO drops it).
+        # CloudRunnerHPO runs ON the executor machine, so local IP == executor IP.
         self.executor_ip = request.get('executor-ip')
+        if not self.executor_ip:
+            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                _s.connect(('8.8.8.8', 80))
+                self.executor_ip = _s.getsockname()[0]
+            finally:
+                _s.close()
         self.worker_hosts = request.get('hosts', {})
         self.workflow_plan = request.get('wf-plan', {})
         self.cohesion = request.get('cohesion', {})
@@ -120,29 +127,50 @@ class CloudRunnerHPO:
         self.logger.info(f"Extracted {len(worker_ips)} worker IPs: {worker_ips}")
         return worker_ips
 
+    def _stop_ray_and_wait(self, ssh, ip, port=None):
+        """Stop Ray on a node, wait for the process to actually exit, and verify the port is free."""
+        # Use rayenv ray so the correct binary is found
+        stop_cmd = "source ~/rayenv/bin/activate && ray stop --force"
+        stdin, stdout, stderr = ssh.exec_command(stop_cmd)
+        stdout.read()  # Block until command finishes
+        stderr.read()
+
+        if port is None:
+            # Worker — just wait for process exit
+            time.sleep(3)
+            return True
+
+        # Head — poll until the port is free (up to 30s)
+        for attempt in range(6):
+            time.sleep(5)
+            if not _can_connect(ip, port, timeout=1.5):
+                self.logger.info(f"Ray port {port} on {ip} is free after stop")
+                return True
+            self.logger.info(f"Waiting for Ray port {port} on {ip} to close... (attempt {attempt + 1})")
+
+        self.logger.warning(f"Ray port {port} on {ip} still open after stop — proceeding anyway")
+        return False
+
     def start_ray_head(self) -> bool:
         """Start Ray head on the first worker instance"""
         try:
-            # Get instance details
             private_dns = self.get_private_dns(self.ray_head_ip)
             if not private_dns:
                 return False
 
-            # Connect via SSH
             ssh = self.create_ssh_connection(private_dns)
             if not ssh:
                 return False
 
-            # Stop any existing Ray processes
-            stop_command = "ray stop --force"
-            ssh.exec_command(stop_command)
-            time.sleep(3)
+            # Stop existing Ray and wait for port to be free
+            self._stop_ray_and_wait(ssh, self.ray_head_ip, port=self.ray_port)
 
             # Start Ray head
             start_command = f"""
             cd /fsx/hyperparameter_test && \
-            source /home/ubuntu/rayenv/bin/activate &&  \
+            source /home/ubuntu/rayenv/bin/activate && \
             ray start --head \
+                --temp-dir=/tmp/ray \
                 --port={self.ray_port} \
                 --redis-password='{self.ray_password}' \
                 --num-gpus=1 \
@@ -151,7 +179,6 @@ class CloudRunnerHPO:
 
             stdin, stdout, stderr = ssh.exec_command(start_command)
 
-            # Check for successful startup
             output = stdout.read().decode()
             error = stderr.read().decode()
 
@@ -161,46 +188,49 @@ class CloudRunnerHPO:
 
             ssh.close()
 
-            # Wait for Ray head to be ready
-            time.sleep(10)
-
-            # Verify Ray head is running
-            return self.verify_ray_head()
+            # Poll until Ray head is ready (max 60s). Ray head can take >10s on cold start;
+            # the previous one-shot 10s sleep + verify caused false negatives.
+            deadline = time.time() + 60
+            while time.time() < deadline:
+                if self.verify_ray_head():
+                    return True
+                time.sleep(2)
+            self.logger.error("Ray head did not become ready within 60s")
+            return False
 
         except Exception as e:
             self.logger.error(f"Error starting Ray head: {e}")
             return False
 
     def start_ray_workers(self) -> bool:
-        """Start Ray workers on remaining worker instances"""
+        """Start Ray workers on remaining worker instances (in parallel)"""
         if not self.ray_workers:
             self.logger.info("No additional Ray workers to start")
             return True
 
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
         ray_address = f"{self.ray_head_ip}:{self.ray_port}"
 
-        for worker_ip in self.ray_workers:
+        def _start_one(worker_ip):
             try:
-                # Get instance details
                 private_dns = self.get_private_dns(worker_ip)
                 if not private_dns:
-                    continue
+                    return worker_ip, False
 
-                # Connect via SSH
                 ssh = self.create_ssh_connection(private_dns)
                 if not ssh:
-                    continue
+                    return worker_ip, False
 
-                # Stop any existing Ray processes
-                stop_command = "ray stop --force"
-                ssh.exec_command(stop_command)
-                time.sleep(2)
+                # Stop existing Ray and wait for process exit
+                self._stop_ray_and_wait(ssh, worker_ip)
 
                 # Start Ray worker
                 start_command = f"""
                 cd /fsx/hyperparameter_test && \
                 source /home/ubuntu/rayenv/bin/activate && \
                 ray start --address={ray_address} \
+                    --temp-dir=/tmp/ray \
                     --redis-password='{self.ray_password}' \
                     --num-gpus=1 \
                     --verbose
@@ -216,12 +246,21 @@ class CloudRunnerHPO:
                     self.logger.warning(f"Ray worker {worker_ip} warnings: {error}")
 
                 ssh.close()
-                time.sleep(3)
+                return worker_ip, True
 
             except Exception as e:
                 self.logger.error(f"Error starting Ray worker {worker_ip}: {e}")
-                continue
+                return worker_ip, False
 
+        with ThreadPoolExecutor(max_workers=len(self.ray_workers)) as pool:
+            futures = [pool.submit(_start_one, ip) for ip in self.ray_workers]
+            for future in as_completed(futures):
+                ip, ok = future.result()
+                if not ok:
+                    self.logger.warning(f"Ray worker {ip} may not have started")
+
+        # Single settling delay after all workers have joined
+        time.sleep(5)
         return True
 
     def verify_ray_head(self) -> bool:
@@ -364,7 +403,7 @@ class CloudRunnerHPO:
         momentum = self.cohesion.get('momentum', 0.9)
         batch_size = self.cohesion.get('batch_size', 64)
         hidden = self.cohesion.get('hidden', 10)
-        image_size = self.cohesion.get('image_size', 160)
+        image_size = self.cohesion.get('image_size', 64)
         amp = self.cohesion.get('amp', True)
         train_backbone = self.cohesion.get('train_backbone', False)
         data_dir = self.cohesion.get('data_dir', os.path.expanduser("~/cifar10"))
@@ -404,14 +443,13 @@ class CloudRunnerHPO:
                     self.logger.info(f"Parsed HPO result: {result}")
                     return result
 
-            # Fallback: create minimal result
-            self.logger.warning("Could not parse HPO results, using fallback")
+            # No parseable result — fail clearly instead of masking with fake data
+            self.logger.error(f"No parseable HPO result in pipeline output ({len(lines)} lines)")
+            self.logger.error(f"Pipeline output (first 30 lines):\n" + "\n".join(lines[:30]))
             return {
+                'error': 'No parseable result from pipeline',
                 'config': {
-                    'learning_rate': 0.01,
-                    'momentum': 0.9,
-                    'batch_size': 64,
-                    'next_trials': 2  # Reduce trials for next iteration
+                    'next_trials': 0  # Stop workflow immediately
                 }
             }
 
@@ -419,7 +457,7 @@ class CloudRunnerHPO:
             self.logger.error(f"Error parsing HPO results: {e}")
             return {'error': str(e), 'config': {'next_trials': 0}}
 
-   def cleanup_ray_cluster(self):
+    def cleanup_ray_cluster(self):
         """Clean up Ray cluster on all worker nodes"""
         self.logger.info("Cleaning up Ray cluster...")
 
@@ -430,9 +468,10 @@ class CloudRunnerHPO:
                 private_dns = self.get_private_dns(worker_ip)
                 ssh = self.create_ssh_connection(private_dns)
 
-                # Stop Ray
-                stop_command = "ray stop --force"
-                ssh.exec_command(stop_command)
+                # Stop Ray using rayenv binary
+                stop_command = "source ~/rayenv/bin/activate && ray stop --force"
+                stdin, stdout, stderr = ssh.exec_command(stop_command)
+                stdout.read()  # Wait for completion
 
                 ssh.close()
                 self.logger.info(f"Ray stopped on {worker_ip}")
@@ -441,33 +480,11 @@ class CloudRunnerHPO:
                 self.logger.warning(f"Error stopping Ray on {worker_ip}: {e}")
 
     def send_results_to_executor(self, results: Dict) -> bool:
-        """
-        Send HPO results to the dedicated executor instance
-        """
-        self.logger.info(f"Sending results to executor {self.executor_ip}")
-
-        try:
-            # Send results via HTTP to executor's result endpoint
-            import requests
-
-            executor_url = f"http://{self.executor_ip}:8090/hpo_results"
-
-            response = requests.post(
-                executor_url,
-                json=results,
-                timeout=30
-            )
-
-            if response.status_code == 200:
-                self.logger.info("Results sent to executor successfully")
-                return True
-            else:
-                self.logger.error(f"Failed to send results to executor: {response.status_code}")
-                return False
-
-        except Exception as e:
-            self.logger.error(f"Error sending results to executor: {e}")
-            return False
+        """No-op stub. The :8090/hpo_results receiver was planned but never built;
+        results actually flow back via run_hpo.py stdout into Steep's subprocess capture.
+        Kept as method to preserve the call site for any future relay implementation."""
+        self.logger.debug(f"send_results_to_executor: no-op stub (results size={len(str(results))} bytes)")
+        return True
 
 
     def run(self) -> Dict:
@@ -502,24 +519,9 @@ class CloudRunnerHPO:
     # Utility methods
 
     def get_private_dns(self, ip_address: str) -> str:
-        """Get private DNS name for an IP address"""
-        try:
-            response = self.ec2.describe_instances(
-                Filters=[
-                    {'Name': 'private-ip-address', 'Values': [ip_address]},
-                    {'Name': 'instance-state-name', 'Values': ['running']}
-                ]
-            )
-
-            for reservation in response['Reservations']:
-                for instance in reservation['Instances']:
-                    return instance['PrivateDnsName']
-
-            return None
-
-        except Exception as e:
-            self.logger.error(f"Error getting private DNS for {ip_address}: {e}")
-            return None
+        """Return the private IP directly — SSH (paramiko) works with IPs,
+        no DNS derivation or EC2 API call needed."""
+        return ip_address
 
     def create_ssh_connection(self, private_dns: str):
         """Create SSH connection to an instance"""
@@ -527,8 +529,7 @@ class CloudRunnerHPO:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            privkey = paramiko.RSAKey.from_private_key_file(self.key_file_path)
-            ssh.connect(private_dns, username=self.user, pkey=privkey, timeout=30)
+            ssh.connect(private_dns, username=self.user, key_filename=self.key_file_path, timeout=30)
 
             return ssh
 

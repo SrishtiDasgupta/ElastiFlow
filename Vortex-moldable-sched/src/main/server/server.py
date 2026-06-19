@@ -14,11 +14,19 @@ class RequestHandler(BaseHTTPRequestHandler):
         data = yaml.safe_load(post_data.decode('utf-8'))
         if data:
             data['submit_time'] = time.time()
-            print(f"Workflow received at {data['submit_time']}")
+            wf_id = data.get('id', '?')
+            print(f"Workflow received at {data['submit_time']} (id={wf_id})")
             if RequestHandler.queue is not None:
-                RequestHandler.queue.push(str(data))
-
-            sendResponse(self, data)
+                result = RequestHandler.queue.push(str(data))
+                if result is None:
+                    print(f"[ERROR] queue.push returned None for wf {wf_id} — wf LOST!")
+                else:
+                    print(f"[OK] Pushed wf {wf_id} to wf_queue (queue len now {result})")
+            else:
+                print(f"[ERROR] RequestHandler.queue is None — wf {wf_id} LOST!")
+        else:
+            print(f"[WARN] Empty POST body received on wf port")
+        sendResponse(self, data)   # always respond, even on empty data
 
 class FinishJobHandler(BaseHTTPRequestHandler):
 

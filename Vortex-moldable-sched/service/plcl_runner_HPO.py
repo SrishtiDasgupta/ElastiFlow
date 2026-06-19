@@ -68,11 +68,10 @@ class PlclRunnerHPO(RunnerBase):
         """
 
         self.wf_id = self.request['wf_id']
-        self.learning_rate = self.request['cohesion']['learning_rate']
-        self.momentum = self.request['cohesion']['hidden']
-        self.threads = self.request['cohesion']['threads']
-        self.epoch = self.request['cohesion']['epoch']
-        self.next_trials = self.request['cohesion']['next_trials']
+        self.learning_rate = self.request['cohesion'].get('learning_rate', 0.01)
+        self.momentum = self.request['cohesion'].get('momentum', 0.9)
+        self.epochs = self.request['cohesion'].get('epochs', self.request['cohesion'].get('epoch', 4))
+        self.next_trials = self.request['cohesion'].get('next_trials', 4)
         self.nodes = len(self.request['hosts']['on-prem'])
 
         # variables required for further function calls
@@ -89,7 +88,7 @@ class PlclRunnerHPO(RunnerBase):
         self.output_file = os.path.join(log_dir, f"{self.job_name}-%j.out")
         self.error_file = os.path.join(log_dir, f"{self.job_name}-%j.err")
         self.slurm_script = os.path.join(log_dir, f"{self.job_name}_dispatcher.slurm")
-        self.port = 6379 ##' HARDCODED FOR NOW: RAY HEAD NODE ... might clash with redis port .. have to check 
+        self.port = int(self.request.get('port', 6380))  # From port pool; default 6380 to avoid Redis (6379)
 
         slurm_script = f"""#!/bin/bash
 #SBATCH -J {self.job_name}
@@ -121,30 +120,49 @@ echo "[INFO] Using RAY_ADDRESS=$head_ip:$port"
 cleanup() {{
   echo "[INFO] Cleaning up Ray on all nodes..."
   for node in $nodes; do
-    (srun --overlap -N1 -n1 -w "$node" ray stop || true)
+    (srun --overlap -N1 -n1 -w "$node" bash -c "source ~/rayenv/bin/activate && ray stop" || true)
   done
 }}
 trap cleanup EXIT
 
 # Stop any old Ray (best-effort)
 for node in $nodes; do
-  (srun --overlap -N1 -n1 -w "$node" ray stop || true)
+  (srun --overlap -N1 -n1 -w "$node" bash -c "source ~/rayenv/bin/activate && ray stop" || true)
 done
 
-# Start Ray head (block in background)
-srun --overlap -N1 -n1 -w "$head_node" ray start --head --node-ip-address="$head_ip" --port="$port" --block &
+# Start Ray head (block in background) — explicit venv activation
+srun --overlap -N1 -n1 -w "$head_node" bash -c "source ~/rayenv/bin/activate && ray start --head --node-ip-address=$head_ip --port=$port --block" &
 
-# Start Ray workers (block in background)
+# Wait for Ray head GCS port to be ready (up to 60s)
+echo "[INFO] Waiting for Ray head GCS on $head_ip:$port ..."
+for attempt in $(seq 1 12); do
+  if python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect(('$head_ip',$port)); s.close(); print('READY')" 2>/dev/null | grep -q READY; then
+    echo "[INFO] Ray head GCS ready after $((attempt*5))s"
+    break
+  fi
+  if [ "$attempt" -eq 12 ]; then
+    echo "[ERROR] Ray head GCS not ready after 60s — aborting"
+    exit 1
+  fi
+  echo "[INFO] GCS not ready yet (attempt $attempt/12), waiting 5s..."
+  sleep 5
+done
+
+# Start Ray workers (block in background) — explicit venv activation
 for node in $(echo "$nodes" | tail -n +2); do
-  srun --overlap -N1 -n1 -w "$node" ray start --address="$head_ip:$port" --block &
+  srun --overlap -N1 -n1 -w "$node" bash -c "source ~/rayenv/bin/activate && ray start --address=$head_ip:$port --block" &
 done
+
+# Wait for workers to register
+echo "[INFO] Waiting 15s for Ray workers to join ..."
+sleep 15
 
 # ---- Start HPO job on the Ray Head Node
 echo "[INFO] Running HPO pipeline on head ...."
 srun --overlap -N1 -n1 -w "$head_node" bash -lc "
 export RAY_ADDRESS='$head_ip:$port'
-echo '{{\\"learning_rate\\": {self.learning_rate}, \\"momentum\\": {self.momentum}, \\"next_trials\\": {self.next_trials}}}' \\
-      | python3 /home/ubuntu/Vortex/pytorch-test-scripts/hpo_pipeline_verbose.py --hosts {self.nodes} "
+echo '{{\\"learning_rate\\": {self.learning_rate}, \\"momentum\\": {self.momentum}, \\"next_trials\\": {self.next_trials}, \\"epochs\\": {self.epochs}}}' \\
+      | python3 /fsx/Vortex-mid/Vortex-moldable-sched/fsx/hyperparameter_test/hpo_pipeline_verbose.py --hosts {self.nodes} "
 
 echo '[INFO] Shutting down Ray Cluster ..........'
 srun --label bash -c 'ray stop' || true
@@ -228,12 +246,12 @@ echo '[INFO] HPO Completed!'
         with open(client_output_filepath, 'r') as client_output:
             for line in client_output:
                 if re.search('{"config":', line):
-                    line = line.replace("array", "np.array")
-                    line = eval(line)
-                    output['config'] = line['config']
+                    parsed = json.loads(line)
+                    output['config'] = parsed['config']
                     print(output)
                     break
 
+        return output
 
     def run(self) -> dict:
         # Arguments from the workflow
@@ -242,7 +260,7 @@ echo '[INFO] HPO Completed!'
         self._generate_slurm_script()
         self._submit_slurm()
         self._wait_for_completion()
-        self._parse_results()
+        return self._parse_results()
 
 
 """

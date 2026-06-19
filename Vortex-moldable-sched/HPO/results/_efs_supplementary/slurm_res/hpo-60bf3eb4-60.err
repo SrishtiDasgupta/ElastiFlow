@@ -1,0 +1,149 @@
++ source /home/ubuntu/rayenv/bin/activate
+++ deactivate nondestructive
+++ '[' -n '' ']'
+++ '[' -n '' ']'
+++ '[' -n /bin/bash -o -n '' ']'
+++ hash -r
+++ '[' -n '' ']'
+++ unset VIRTUAL_ENV
+++ unset VIRTUAL_ENV_PROMPT
+++ '[' '!' nondestructive = nondestructive ']'
+++ VIRTUAL_ENV=/home/ubuntu/rayenv
+++ export VIRTUAL_ENV
+++ _OLD_VIRTUAL_PATH=/home/ubuntu/rayenv/bin:/opt/slurm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+++ PATH=/home/ubuntu/rayenv/bin:/home/ubuntu/rayenv/bin:/opt/slurm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+++ export PATH
+++ '[' -n '' ']'
+++ '[' -z '' ']'
+++ _OLD_VIRTUAL_PS1=
+++ PS1='(rayenv) '
+++ export PS1
+++ VIRTUAL_ENV_PROMPT='(rayenv) '
+++ export VIRTUAL_ENV_PROMPT
+++ '[' -n /bin/bash -o -n '' ']'
+++ hash -r
++ module load libfabric-aws/1.22.0amzn5.0
+/var/spool/slurmd/job00060/slurm_script: line 16: module: command not found
++ true
+++ scontrol show hostnames 'gpu-compute-st-g4dn-nodes-[3-4]'
++ nodes='gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
+++ echo 'gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
+++ head -n1
++ head_node=gpu-compute-st-g4dn-nodes-3
+++ srun -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 hostname -I
+++ awk '{print $1}'
++ head_ip=172.31.9.148
++ port=7156
++ echo '[INFO] Cluster nodes: gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
++ echo '[INFO] Head Node: gpu-compute-st-g4dn-nodes-3 (172.31.9.148)'
++ echo '[INFO] Using RAY_ADDRESS=172.31.9.148:7156'
++ trap cleanup EXIT
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-4 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ echo '[INFO] Waiting for Ray head GCS on 172.31.9.148:7156 ...'
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 bash -c 'source ~/rayenv/bin/activate && ray start --head --node-ip-address=172.31.9.148 --port=7156 --block'
+++ seq 1 12
++ for attempt in $(seq 1 12)
++ python3 -c 'import socket; s=socket.socket(); s.settimeout(2); s.connect(('\''172.31.9.148'\'',7156)); s.close(); print('\''READY'\'')'
++ grep -q READY
++ '[' 1 -eq 12 ']'
++ echo '[INFO] GCS not ready yet (attempt 1/12), waiting 5s...'
++ sleep 5
++ for attempt in $(seq 1 12)
++ python3 -c 'import socket; s=socket.socket(); s.settimeout(2); s.connect(('\''172.31.9.148'\'',7156)); s.close(); print('\''READY'\'')'
++ grep -q READY
++ echo '[INFO] Ray head GCS ready after 10s'
++ break
+++ echo 'gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
+++ tail -n +2
++ for node in $(echo "$nodes" | tail -n +2)
++ echo '[INFO] Waiting 15s for Ray workers to join ...'
++ sleep 15
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-4 bash -c 'source ~/rayenv/bin/activate && ray start --address=172.31.9.148:7156 --block'
++ echo '[INFO] Running HPO pipeline on head ....'
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 bash -lc '
+export RAY_ADDRESS='\''172.31.9.148:7156'\''
+echo '\''{"learning_rate": 0.006071814313392392, "momentum": 0.8753457650781311, "next_trials": 9, "epochs": 14}'\''       | python3 /fsx/Vortex-mid/Vortex-moldable-sched/fsx/hyperparameter_test/hpo_pipeline_verbose.py --hosts 2 '
+2026-05-05 10:17:52,716	INFO worker.py:1672 -- Using address 172.31.9.148:7156 set in the environment variable RAY_ADDRESS
+2026-05-05 10:17:52,722	INFO worker.py:1814 -- Connecting to existing Ray cluster at address: 172.31.9.148:7156...
+2026-05-05 10:17:52,746	INFO worker.py:2003 -- Connected to Ray cluster. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/worker.py:2051: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+2026-05-05 10:17:53,522	INFO registry.py:112 -- Detected unknown callable for trainable. Converting to class.
+[36m(TrainController pid=11671)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=9870, ip=172.31.12.143)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=9870, ip=172.31.12.143)[0m Requesting resources: {'GPU': 1} * 1
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m 
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m current device index = 0
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m =====================================================
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m 
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m 🔍 FULL CONFIG: epochs=12, lr=0.05517452992339475, batch_size=64, image_size=64
+[36m(TrainController pid=11671)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(TrainController pid=11671)[0m Started training worker group of size 1: 
+[36m(TrainController pid=11671)[0m - (ip=172.31.12.143, pid=9911) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=11772)[0m 
+[36m(RayTrainWorker pid=11772)[0m 
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.4771, 'best_accuracy': 0.4771, 'avg_epoch_time_s': 21.672070160000658}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(RayTrainWorker pid=11772)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=11772)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=11772)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=11772)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=11772)[0m current device index = 0
+[36m(RayTrainWorker pid=11772)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=11772)[0m =====================================================
+[36m(RayTrainWorker pid=11772)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=11772)[0m 🔍 FULL CONFIG: epochs=12, lr=0.02323905624516965, batch_size=64, image_size=64
+[36m(TrainController pid=9870, ip=172.31.12.143)[0m Started training worker group of size 1: 
+[36m(TrainController pid=9870, ip=172.31.12.143)[0m - (ip=172.31.9.148, pid=11772) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=11772)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.467, 'best_accuracy': 0.4771, 'avg_epoch_time_s': 21.20305900050016}, validation=False)[32m [repeated 2x across cluster] (Ray deduplicates logs by default. Set RAY_DEDUP_LOGS=0 to disable log deduplication, or see https://docs.ray.io/en/master/ray-observability/user-guides/configure-logging.html#log-deduplication for more options.)[0m
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.48, 'best_accuracy': 0.4969, 'avg_epoch_time_s': 24.13507377950009}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.4735, 'best_accuracy': 0.4771, 'avg_epoch_time_s': 21.290273962000054}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.4932, 'best_accuracy': 0.4969, 'avg_epoch_time_s': 24.045046683666744}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.4705, 'best_accuracy': 0.4771, 'avg_epoch_time_s': 21.34929595675021}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5004, 'best_accuracy': 0.5004, 'avg_epoch_time_s': 23.906878857749916}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.4607, 'best_accuracy': 0.4771, 'avg_epoch_time_s': 21.40522649880004}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5088, 'best_accuracy': 0.5088, 'avg_epoch_time_s': 23.829629919999935}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.4703, 'best_accuracy': 0.4771, 'avg_epoch_time_s': 21.436610622000142}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.5039, 'best_accuracy': 0.5088, 'avg_epoch_time_s': 23.718385982499967}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.4947, 'best_accuracy': 0.4947, 'avg_epoch_time_s': 21.42791717657149}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5126, 'best_accuracy': 0.5126, 'avg_epoch_time_s': 23.62811390085712}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.4889, 'best_accuracy': 0.4947, 'avg_epoch_time_s': 21.40230880825004}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.4974, 'best_accuracy': 0.5126, 'avg_epoch_time_s': 23.599794970874996}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.4751, 'best_accuracy': 0.4947, 'avg_epoch_time_s': 21.42503290266672}, validation=False)
+[36m(RayTrainWorker pid=11772)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.4753, 'best_accuracy': 0.5126, 'avg_epoch_time_s': 23.63581517999996}, validation=False)
+[36m(RayTrainWorker pid=9911, ip=172.31.12.143)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.4856, 'best_accuracy': 0.4947, 'avg_epoch_time_s': 21.441581105300067}, validation=False)
+slurmstepd: error: *** STEP 60.4 ON gpu-compute-st-g4dn-nodes-4 CANCELLED AT 2026-05-05T10:21:53 ***
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 60.3 ON gpu-compute-st-g4dn-nodes-3 CANCELLED AT 2026-05-05T10:21:53 ***
+slurmstepd: error: *** STEP 60.5 ON gpu-compute-st-g4dn-nodes-3 CANCELLED AT 2026-05-05T10:21:53 ***
+slurmstepd: error: *** JOB 60 ON gpu-compute-st-g4dn-nodes-3 CANCELLED AT 2026-05-05T10:21:53 ***
+++ cleanup
+++ echo '[INFO] Cleaning up Ray on all nodes...'
+++ for node in $nodes
+++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 bash -c 'source ~/rayenv/bin/activate && ray stop'
+srun: error: Slurm job 60 has expired
+srun: Check SLURM_JOB_ID environment variable. Expired or invalid job 60
+++ true
+++ for node in $nodes
+++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-4 bash -c 'source ~/rayenv/bin/activate && ray stop'
+srun: error: Slurm job 60 has expired
+srun: Check SLURM_JOB_ID environment variable. Expired or invalid job 60
+++ true

@@ -51,11 +51,10 @@ class HEFT_FCFS_REQ(Scheduler):
             resource_request =  peekElement(resource_request_mb, self.resource_request_queue)
 
             if resource_request:
+                # Moldable scale-up / scale-down via rich base-class
+                # negotiation (processFreeRequest decides internally).
                 resource_request = eval(resource_request)
-                if resource_request['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
-                    self.allocateNewResources(resource_request, sim)
-                else:
-                    self.freeResources(resource_request, sim)
+                self.processFreeRequest(resource_request, sim)
                 removeElement(resource_request_mb, self.resource_request_queue)
                 sim and sim.sleep(0.2) # NOTE: scheduler overhead
                 continue

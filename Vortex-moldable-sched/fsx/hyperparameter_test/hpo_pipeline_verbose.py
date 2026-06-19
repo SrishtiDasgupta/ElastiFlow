@@ -512,8 +512,12 @@ class TunePipeline:
         logger.info("-" * 70)
 
         try:
+            # Pass a shared file path so the training function can write metrics
+            # (workaround: Result.metrics is None in some Ray versions)
+            metrics_file = f'/fsx/_train_metrics_{trial_id}.json'
+            config['_metrics_file'] = metrics_file
+
             # Create TorchTrainer for distributed PyTorch training
-            # Note: Do NOT specify resources_per_worker here - let Ray auto-detect
             logger.info(f"[{trial_id}] Creating TorchTrainer with {num_workers} workers...")
             trainer = TorchTrainer(
                 train_loop_per_worker=self.train_fn,
@@ -539,18 +543,48 @@ class TunePipeline:
             
             logger.info(f"[{trial_id}] Training completed in {training_duration:.2f}s")
 
+            # DEBUG: Write to /fsx/ file (logger goes to separate process, unreachable)
+            debug_path = f'/fsx/trial_debug_{trial_id}.txt'
+            try:
+                with open(debug_path, 'w') as _dbg:
+                    _dbg.write(f"trial_id: {trial_id}\n")
+                    _dbg.write(f"training_duration: {training_duration:.2f}s\n")
+                    _dbg.write(f"result type: {type(result)}\n")
+                    _dbg.write(f"result.metrics: {result.metrics}\n")
+                    _dbg.write(f"result.metrics type: {type(result.metrics)}\n")
+                    if hasattr(result, 'metrics_dataframe') and result.metrics_dataframe is not None:
+                        _dbg.write(f"metrics_dataframe columns: {list(result.metrics_dataframe.columns)}\n")
+                        _dbg.write(f"metrics_dataframe tail:\n{result.metrics_dataframe.tail(3)}\n")
+                    if hasattr(result, 'error'):
+                        _dbg.write(f"result.error: {result.error}\n")
+            except Exception:
+                pass
+
             # Extract accuracy from training result
             final_accuracy = 0.0
             if result.metrics:
                 final_accuracy = result.metrics.get('accuracy', 0.0)
                 if 'best_accuracy' in result.metrics:
                     final_accuracy = max(final_accuracy, result.metrics['best_accuracy'])
-            
+
             # Also check metrics_dataframe for the last reported accuracy
             if hasattr(result, 'metrics_dataframe') and result.metrics_dataframe is not None:
                 df = result.metrics_dataframe
                 if 'accuracy' in df.columns and len(df) > 0:
                     final_accuracy = max(final_accuracy, df['accuracy'].iloc[-1])
+
+            # Fallback: read from shared file written by training function
+            # (workaround for Result.metrics being None in some Ray versions)
+            if final_accuracy == 0.0 and os.path.exists(metrics_file):
+                try:
+                    with open(metrics_file, 'r') as _mf:
+                        file_metrics = json.loads(_mf.read())
+                    final_accuracy = float(file_metrics.get('accuracy', 0.0))
+                    logger.info(f"[{trial_id}] Got accuracy from file: {final_accuracy}")
+                except Exception:
+                    pass
+
+            logger.info(f"[{trial_id}] FINAL extracted accuracy: {final_accuracy}")
 
             # Record end time
             end_time = time.time()
@@ -752,7 +786,7 @@ class TunePipeline:
                     if self.metric in df.columns:
                         phase_best_idx = df[self.metric].idxmax() if self.mode == 'max' else df[self.metric].idxmin()
                         phase_best_score = df.loc[phase_best_idx, self.metric]
-                        if phase_best_score > best_score:
+                        if phase_best_score >= best_score:
                             best_score = phase_best_score
                             best_config = df.loc[phase_best_idx].to_dict()
                 
@@ -884,7 +918,7 @@ def refine_space(best_config):
             logger.info(f"  Image size: fixed at {v}")
         elif k == "epoch":
             low = max(1, int(v * 0.8))
-            high = min(10, int(v * 1.5))
+            high = max(low + 1, int(v * 1.5))  # was min(10, ...) — broke for v > 6
             new_space[k] = tune.randint(low, high)
             logger.info(f"  Epoch range: {low} to {high}")
         elif isinstance(v, float):
@@ -936,7 +970,7 @@ def get_default_config():
         "momentum": 0.9,
         "hidden": 10,
         "batch_size": 64,
-        "image_size": 160,
+        "image_size": 64,
         "amp": True,
         "train_backbone": False,
         "data_dir": os.path.expanduser("~/cifar10"),
@@ -1057,13 +1091,18 @@ if __name__ == "__main__":
         # Execute
         best_result = pipeline.run(cohesion=0.85)
 
-        # Output for next iteration
+        # Output for next iteration — strip config/ prefix, filter to HPO keys
         output_config = best_result.get("config", {})
-        if "amp" in output_config:
-            output_config.pop("amp")
-        if "train_backbone" in output_config:
-            output_config.pop("train_backbone")
-            
+        # Tune dataframe uses "config/learning_rate" etc — strip the prefix
+        cleaned = {}
+        for k, v in output_config.items():
+            clean_key = k.replace("config/", "") if k.startswith("config/") else k
+            cleaned[clean_key] = v
+        hpo_keys = {"learning_rate", "momentum", "batch_size", "image_size",
+                     "epoch", "epochs", "hidden", "accuracy", "next_trials", "model_name"}
+        output_config = {k: v for k, v in cleaned.items()
+                         if k in hpo_keys and v is not None and not (isinstance(v, float) and np.isnan(v))}
+
         print(json.dumps({"config": output_config}))
 
     except Exception as e:

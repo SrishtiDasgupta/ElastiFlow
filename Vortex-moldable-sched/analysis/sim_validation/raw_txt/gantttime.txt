@@ -1,0 +1,51 @@
+Helvetica;
+;;;;
+;;;;
+
+Workflow Action
+Sim Infra
+test-8ace708b-1e2f-487b-90de-38ece69740c6 allocation {'on-prem': {'on-prem': (3, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+{'on-prem': {'on-prem': (3, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+test-8ace708b-1e2f-487b-90de-38ece69740c6 exec-start 20 1750890753.664097
+test-8ace708b-1e2f-487b-90de-38ece69740c6 wfiter0 comp in 2204.35996014562
+1510.3590474128723
+test-8ace708b-1e2f-487b-90de-38ece69740c6 extra alloc {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+{'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+test-8ace708b-1e2f-487b-90de-38ece69740c6 wfiter1 comp in 2204.35996014562
+2464.7663803100586
+test-8ace708b-1e2f-487b-90de-38ece69740c6 wf comp 4822.5569710579
+1750894217.2094817
+test-8ace708b-1e2f-487b-90de-38ece69740c6 wf free 4840 1750894246.3456194
+
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d allocation {'on-prem': {}, 'reserved': {'hpc7a.24xlarge': (1, ['10.19.246.116']),{'on-prem': {}, 'reserved': {'hpc7a.24xlarge': (1, ['10.19.246.116']),
+'c6i.32xlarge': (1, ['10.19.238.8'])}, 'on-demand': {'hpc7a.24xlarge': (1, [])}}
+'c6i.32xlarge': (1, ['10.19.238.8'])}, 'on-demand': {'hpc7a.24xlarge': (1, [])}}
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d exec-start 80 1750890773.6947074
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d wfiter0 comp in 408.75996314558
+445.9849259853363
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d extra alloc {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+{'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d wfiter1 comp in 423.24586678522356
+442.27316904067993
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d extra alloc {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+{'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d wfiter2 comp in 462.56823325485230
+448.3986852169037
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d wf comp 1770.44
+1750892572.730408
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d wf free 1830 1750892575.483195
+
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d allocation {'on-prem': {}, 'reserved': {'c6i.16xlarge': (1, ['10.19.224.55'])},
+{'on-prem': {}, 'reserved': {'c6i.16xlarge': (1, ['10.19.224.55'])},
+'on-demand': {'c6i.32xlarge': (1, [])}}
+'on-demand': {'c6i.32xlarge': (1, [])}}
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d exec-start 140
+1750890813.7458255
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d wfiter0 comp in609.6384253501892
+620.77563324189201
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d wfiter1 comp in 634.285822107535
+628.8750977516174
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d wf comp 1880.20336586333
+1750892467.7952123
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d wf free 1890 1750892515.42212
+

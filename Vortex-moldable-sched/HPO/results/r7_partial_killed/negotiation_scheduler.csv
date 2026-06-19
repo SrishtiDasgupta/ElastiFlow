@@ -1,0 +1,8 @@
+wf_id,iter_idx,request_type,granted_count,t_scheduler_request_observed,t_scheduler_reply_sent
+hpo-60bf3eb4,1,grow,,1778411225.5617244,
+hpo-417bb2bd,0,grow,,1778411869.564175,
+hpo-417bb2bd,0,grow,0,,1778411869.5966458
+hpo-73120874,0,grow,,1778412182.4731562,
+hpo-a87b8123,1,grow,,1778412182.4731562,
+hpo-60bf3eb4,2,grow,,1778412182.4731562,
+hpo-a87b8123,1,shrink,2,,1778412182.5371919

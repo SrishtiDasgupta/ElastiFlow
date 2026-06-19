@@ -1,23 +1,41 @@
+import argparse
 import simulus
 from scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
 from scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
+from scheduler.edf_scheduler_HPO import EDF_Scheduler_HPO
+from scheduler.edf_optimized_HPO import EDF_Optimized_HPO
 from wf_queue.redis_queue import Redis_Queue
 from scripts.dispatcher_HPO import dispatcher
+
+# Parse arguments
+parser = argparse.ArgumentParser(description='HPO Scheduler Simulation')
+parser.add_argument('--mode', choices=['static', 'moldable'], default='static',
+                    help='Scheduler mode: static or moldable (default: static)')
+parser.add_argument('--algo', choices=['fcfs', 'edf'], default='fcfs',
+                    help='Scheduling algorithm: fcfs or edf (default: fcfs)')
+args = parser.parse_args()
+
+SCHEDULER_MODE = args.mode
+SCHEDULER_ALGO = args.algo
 
 # Create a queue for communication
 queue = Redis_Queue(queue_name='hpo-wf-queue')
 finish_queue = Redis_Queue(queue_name='hpo-completed-jobs-queue')
 resource_request_queue = Redis_Queue(queue_name='hpo-resource-request-queue')
 
-# Choose scheduler: Static or Moldable
-SCHEDULER_MODE = 'static'  # Change to 'moldable' for second run
-
-if SCHEDULER_MODE == 'static':
+# Select scheduler based on algo + mode
+if SCHEDULER_ALGO == 'fcfs' and SCHEDULER_MODE == 'static':
     sched = FCFS_Scheduler_HPO(queue, finish_queue, resource_request_queue)
-    print("Running HPO Static Scheduler Simulation")
-else:
+    print("Running HPO FCFS Static Scheduler Simulation")
+elif SCHEDULER_ALGO == 'fcfs' and SCHEDULER_MODE == 'moldable':
     sched = FCFS_Optimized_HPO(queue, finish_queue, resource_request_queue)
-    print("Running HPO Moldable Scheduler Simulation")
+    print("Running HPO FCFS Moldable Scheduler Simulation")
+elif SCHEDULER_ALGO == 'edf' and SCHEDULER_MODE == 'static':
+    sched = EDF_Scheduler_HPO(queue, finish_queue, resource_request_queue)
+    print("Running HPO EDF Static Scheduler Simulation")
+elif SCHEDULER_ALGO == 'edf' and SCHEDULER_MODE == 'moldable':
+    sched = EDF_Optimized_HPO(queue, finish_queue, resource_request_queue)
+    print("Running HPO EDF Moldable Scheduler Simulation")
 
 # NOTE: Assume network latency is negligible
 sim_dispatcher = simulus.simulator('dispatcher')
@@ -31,7 +49,7 @@ resource_request_mb = sim_sched.mailbox('resource_request_mb', 1)
 # P1: Dispatcher sleeps for specified time and writes to wf mailbox
 sim_dispatcher.process(dispatcher, sim_dispatcher, 'wf_mb')
 # P2: Scheduler reads wf-mb at regular intervals, allocates resources, creates a mb and an exec process
-sim_sched.process(sched.run, sim_sched, wf_mb, resource_request_mb, name='hpo_fcfs_sched')
+sim_sched.process(sched.run, sim_sched, wf_mb, resource_request_mb, name='hpo_sched')
 # P3: Scheduler reads MB2 and frees resources
 sim_sched.process(sched.processJobCompletion, sim_sched, completed_jobs_mb, name='hpo_job_completion_sched')
 

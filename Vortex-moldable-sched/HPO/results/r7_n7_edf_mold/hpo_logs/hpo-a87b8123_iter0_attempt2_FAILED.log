@@ -1,0 +1,68 @@
+=== COMMAND ===
+/home/ubuntu/rayenv/bin/python3 /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py {"wf_id": "hpo-a87b8123", "cohesion": {"batch_size": 32, "epochs": 15, "learning_rate": 0.0595, "model": "vgg19", "momentum": 0.81, "next_trials": 4}, "hosts": {"g4dn.xlarge": ["172.31.35.38", "172.31.39.103"]}, "chains": 4, "tinyda_iterations": 15, "mesh": "vgg19", "port": 4242}
+
+=== RETURN CODE ===
+-9
+
+=== STDOUT ===
+hpo-a87b8123
+
+
+=== STDERR ===
+INFO:cloud_runner_HPO_new:Starting HPO Cloud Runner execution...
+INFO:cloud_runner_HPO_new:Setting up HPO Ray cluster...
+INFO:cloud_runner_HPO_new:Extracted 2 worker IPs: ['172.31.35.38', '172.31.39.103']
+INFO:cloud_runner_HPO_new:Ray Head: 172.31.35.38
+INFO:cloud_runner_HPO_new:Ray Workers: ['172.31.39.103']
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray port 6380 on 172.31.35.38 is free after stop
+INFO:cloud_runner_HPO_new:Ray head startup output: 2026-05-04 14:31:34,753	INFO usage_lib.py:474 -- Usage stats collection is enabled by default without user confirmation because this terminal is detected to be non-interactive. To disable this, add `--disable-usage-stats` to the command that starts the cluster, or run the following command: `ray disable-usage-stats` before starting the cluster. See https://docs.ray.io/en/master/cluster/usage-stats.html for more details.
+2026-05-04 14:31:34,753	INFO scripts.py:940 -- [37mLocal node IP[39m: [1m172.31.35.38[22m
+2026-05-04 14:31:48,362	SUCC scripts.py:979 -- [32m--------------------[39m
+2026-05-04 14:31:48,362	SUCC scripts.py:980 -- [32mRay runtime started.[39m
+2026-05-04 14:31:48,362	SUCC scripts.py:981 -- [32m--------------------[39m
+2026-05-04 14:31:48,362	INFO scripts.py:983 -- [36mNext steps[39m
+2026-05-04 14:31:48,362	INFO scripts.py:986 -- To add another node to this Ray cluster, run
+2026-05-04 14:31:48,363	INFO scripts.py:989 -- [1m  ray start --address='172.31.35.38:6380'[22m
+2026-05-04 14:31:48,363	INFO scripts.py:1000 -- To connect to this Ray cluster:
+2026-05-04 14:31:48,363	INFO scripts.py:1002 -- [35mimport[39m[26m ray
+2026-05-04 14:31:48,363	INFO scripts.py:1003 -- ray[35m.[39m[26minit()
+2026-05-04 14:31:48,363	INFO scripts.py:1017 -- To submit a Ray job using the Ray Jobs CLI:
+2026-05-04 14:31:48,363	INFO scripts.py:1018 -- [1m  RAY_API_SERVER_ADDRESS='http://127.0.0.1:8265' ray job submit --working-dir . -- python my_script.py[22m
+2026-05-04 14:31:48,363	INFO scripts.py:1027 -- See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/index.html 
+2026-05-04 14:31:48,363	INFO scripts.py:1031 -- for more information on submitting Ray jobs to the Ray cluster.
+2026-05-04 14:31:48,363	INFO scripts.py:1036 -- To terminate the Ray runtime, run
+2026-05-04 14:31:48,363	INFO scripts.py:1037 -- [1m  ray stop[22m
+2026-05-04 14:31:48,363	INFO scripts.py:1040 -- To view the status of the cluster, use
+2026-05-04 14:31:48,363	INFO scripts.py:1041 --   [1mray status[22m[26m
+2026-05-04 14:31:48,363	INFO scripts.py:1045 -- To monitor and debug Ray, view the dashboard at 
+2026-05-04 14:31:48,363	INFO scripts.py:1046 --   [1m127.0.0.1:8265[22m[26m
+2026-05-04 14:31:48,363	INFO scripts.py:1053 -- [4mIf connection to the dashboard fails, check your firewall settings and network configuration.[24m
+
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray head ports reachable; assuming healthy.
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:Ray worker 172.31.39.103 startup output: 2026-05-04 14:31:53,637	INFO scripts.py:1128 -- [37mLocal node IP[39m: [1m172.31.39.103[22m
+2026-05-04 14:32:02,757	SUCC scripts.py:1144 -- [32m--------------------[39m
+2026-05-04 14:32:02,757	SUCC scripts.py:1145 -- [32mRay runtime started.[39m
+2026-05-04 14:32:02,757	SUCC scripts.py:1146 -- [32m--------------------[39m
+2026-05-04 14:32:02,757	INFO scripts.py:1148 -- To terminate the Ray runtime, run
+2026-05-04 14:32:02,757	INFO scripts.py:1149 -- [1m  ray stop[22m
+
+INFO:cloud_runner_HPO_new:Ray cluster setup completed successfully
+INFO:cloud_runner_HPO_new:Starting HPO pipeline execution...
+INFO:paramiko.transport:Connected (version 2.0, client OpenSSH_8.9p1)
+INFO:paramiko.transport:Authentication (publickey) successful!
+INFO:cloud_runner_HPO_new:⚠️  HPO CONFIG PREPARED:
+INFO:cloud_runner_HPO_new:    model_name: vgg19
+INFO:cloud_runner_HPO_new:    epochs: 15
+INFO:cloud_runner_HPO_new:    trials: 4
+INFO:cloud_runner_HPO_new:    Full config: {'model_name': 'vgg19', 'epoch': 15, 'next_trials': 4, 'learning_rate': 0.0595, 'momentum': 0.81, 'batch_size': 32, 'hidden': 10, 'image_size': 64, 'amp': True, 'train_backbone': False, 'data_dir': '/home/ubuntu/cifar10'}
+INFO:paramiko.transport.sftp:[chan 0] Opened sftp connection (server version 3)
+INFO:paramiko.transport.sftp:[chan 0] sftp session closed.
+INFO:cloud_runner_HPO_new:Extracted 2 worker IPs: ['172.31.35.38', '172.31.39.103']
+INFO:cloud_runner_HPO_new:Executing HPO pipeline...
+

@@ -1,0 +1,356 @@
+Starting HPO Scheduling System
+Algorithm: EDF, Mode: MOLDABLE
+Expected workflows: 5
+Infrastructure: hybrid
+==================================================
+Resource config: resources_HPO.yaml
+Output prefix: EDF_Moldable_HPO_5wf_hybrid_
+Using Moldable HPO EDF Scheduler
+Scheduler initialized: EDF_Optimized_HPO
+
+Starting scheduler threads:
+  1. Job Listener (port 8080)
+  2. HPO Scheduler
+  3. Completion Listener (port 8082)
+  4. Completion Processor
+  5. Resource Request Listener (port 8084)
+  ✅ Job Listener started
+Starting HPO Moldable EDF scheduler...
+  - EDF ordering: Workflows prioritized by earliest deadline
+  - Moldable: Dynamic resource reallocation between iterations
+  - Deadline urgency boost: CRITICAL 2.0x, WARNING 1.5x, Regular 1.2x
+  ✅ HPO Scheduler started
+  ✅ Completion Listener started
+HPO Scheduler started listening to completed jobs...  ✅ Completion Processor started
+
+  ✅ Resource Request Listener started
+
+==================================================
+HPO Scheduling System Ready!
+Algorithm: EDF, Mode: MOLDABLE
+Waiting for HPO workflows...
+==================================================
+
+📌 Moldable Features Enabled:
+  • Dynamic instance type switching
+  • Elastic resource scaling
+  • Cross-type optimization (g4dn ↔ g5)
+  • Automatic executor creation per workflow
+
+⚠️  Important: Cloud executors will be created automatically
+No manual executor start needed on reserved instances!
+
+Press Ctrl+C to stop the scheduler
+Starting server on port 8080...
+Starting server on port 8082...Starting server on port 8084...
+
+Workflow received at 1778097647.8166556
+172.31.9.121 - - [06/May/2026 20:00:47] "POST / HTTP/1.1" 200 -
+EDF Moldable selected: 1 x g4 for 3 trials (cost: $0.13, runtime: 2018s)
+EDF Moldable: Allocated 1 on-prem on-prem
+hpo-b03a4442 EDF moldable allocation (deadline=1778103296.6s):  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-b03a4442: Using on-prem executor at 172.31.10.173
+  Workers: {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+172.31.10.173 - - [06/May/2026 20:01:07] "POST / HTTP/1.1" 200 -
+EDF Moldable: Scaling on-prem workflow, adding 1 on-prem instances
+hpo-b03a4442 EDF allocated additional resources:  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.009656667709350586
+Workflow received at 1778097918.7769253
+172.31.9.121 - - [06/May/2026 20:05:18] "POST / HTTP/1.1" 200 -
+EDF Moldable selected: 1 x g4 for 2 trials (cost: $0.08, runtime: 1235s)
+EDF Moldable: Allocated 1 on-prem on-prem
+hpo-73120874 EDF moldable allocation (deadline=1778101756.0s):  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-73120874: Using on-prem executor at 172.31.10.173
+  Workers: {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+172.31.10.173 - - [06/May/2026 20:05:37] "POST / HTTP/1.1" 200 -
+EDF Moldable: Scaling on-prem workflow, adding 1 on-prem instances
+hpo-73120874 EDF allocated additional resources:  {'on-prem': {'on-prem': (1, ['172.31.10.173'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.008590221405029297
+Workflow received at 1778098037.313456
+172.31.9.121 - - [06/May/2026 20:07:17] "POST / HTTP/1.1" 200 -
+EDF Moldable selected: 1 x g4 for 3 trials (cost: $0.11, runtime: 1667s)
+hpo-df19b440 EDF moldable allocation (deadline=1778102897.2s):  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.35.38'])}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-df19b440: Using cloud executor at 172.31.35.38
+  Workers: {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.35.38'])}, 'on-demand': {}}
+Data sent successfully!
+172.31.35.38 - - [06/May/2026 20:07:37] "POST / HTTP/1.1" 200 -
+hpo-df19b440 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.39.103'])}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.011270523071289062
+Workflow received at 1778098119.573221
+172.31.9.121 - - [06/May/2026 20:08:39] "POST / HTTP/1.1" 200 -
+Workflow received at 1778098134.8653593
+172.31.9.121 - - [06/May/2026 20:08:54] "POST / HTTP/1.1" 200 -
+EDF Moldable selected: 2 x g5 for 4 trials (cost: $0.12, runtime: 493s)
+hpo-a87b8123 EDF moldable allocation (deadline=1778101583.5s):  {'on-prem': {}, 'reserved': {'g5.xlarge': (2, ['172.31.43.94', '172.31.32.202'])}, 'on-demand': {}}
+HPO EDF Moldable Workflow hpo-a87b8123: Using cloud executor at 172.31.43.94
+  Workers: {'on-prem': {}, 'reserved': {'g5.xlarge': (2, ['172.31.43.94', '172.31.32.202'])}, 'on-demand': {}}
+Data sent successfully!
+172.31.43.94 - - [06/May/2026 20:09:07] "POST / HTTP/1.1" 200 -
+EDF Moldable: Cloud workflow hpo-a87b8123 cannot scale (speedup not justified, budget=$0.1083, time=3226s)
+hpo-a87b8123 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.01064610481262207
+EDF Moldable selected: 2 x g4 for 4 trials (cost: $0.13, runtime: 461s)
+EDF Moldable: 2 on-demand g4 ($0.13)
+Creating 2 on-demand g4dn.xlarge worker instances...
+Creating 2 worker instances of g4dn.xlarge
+Trying g4dn.xlarge x2 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-0b639401206ec7986 running: 172.31.35.18 (worker)
+Instance i-061882b7803842104 running: 172.31.40.100 (worker)
+172.31.10.173 - - [06/May/2026 20:10:27] "POST / HTTP/1.1" 200 -
+SSH ready on 172.31.35.18
+SSH ready on 172.31.40.100
+172.31.10.173 - - [06/May/2026 20:12:01] "POST / HTTP/1.1" 200 -
+Setup output for 172.31.35.18:
+STDOUT: Starting HPO Worker setup on 172.31.35.18...
+Waiting for cloud-init to finish...
+.....................................................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Wed May  6 20:12:01 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla T4                       On  |   00000000:00:1E.0 Off |                    0 |
+| N/A   27C    P0             19W /   70W |       0MiB /  15360MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.35.18...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.35.18 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.35.18_20260506_201518
+
+Verifying executor on 172.31.35.18:8089 ...
+Executor verified on 172.31.35.18:8089
+Setup output for 172.31.40.100:
+STDOUT: Starting HPO Worker setup on 172.31.40.100...
+Waiting for cloud-init to finish...
+.....................................................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Wed May  6 20:12:02 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla T4                       On  |   00000000:00:1E.0 Off |                    0 |
+| N/A   28C    P8             11W /   70W |       0MiB /  15360MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.40.100...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.40.100 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.40.100_20260506_201523
+
+Verifying executor on 172.31.40.100:8089 ...
+Executor verified on 172.31.40.100:8089
+Created 2 worker instances in eu-north-1b: ['172.31.35.18', '172.31.40.100']
+Created 2 on-demand g4dn.xlarge workers: ['172.31.35.18', '172.31.40.100']
+hpo-60bf3eb4 EDF moldable allocation (deadline=1778102241.9s):  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (2, ['172.31.35.18', '172.31.40.100'])}}
+HPO EDF Moldable Workflow hpo-60bf3eb4: Using cloud executor at 172.31.35.18
+  Workers: {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (2, ['172.31.35.18', '172.31.40.100'])}}
+Data sent successfully!
+172.31.35.18 - - [06/May/2026 20:15:24] "POST / HTTP/1.1" 200 -
+EDF Moldable: On-prem workflow cannot scale (no free slots or budget)
+hpo-73120874 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.008797168731689453
+Creating 1 on-demand g4dn.xlarge worker instances...
+Creating 1 worker instances of g4dn.xlarge
+Trying g4dn.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-0477bb9c3c6e3c903 running: 172.31.32.25 (worker)
+SSH ready on 172.31.32.25
+Setup output for 172.31.32.25:
+STDOUT: Starting HPO Worker setup on 172.31.32.25...
+Waiting for cloud-init to finish...
+.........................................status: done
+cloud-init done
+Waiting for dpkg lock...
+dpkg lock free
+Wed May  6 20:17:39 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.126.09             Driver Version: 580.126.09     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla T4                       On  |   00000000:00:1E.0 Off |                    0 |
+| N/A   29C    P0             13W /   70W |       0MiB /  15360MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+GPU verified
+AWS CLI is already installed
+Creating ~/rayenv Python venv...
+torchvision: patched
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+CIFAR-10 symlinked from /fsx/cifar10
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.32.25...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.32.25 completed
+Logs persisted to: /fsx/ondemand_logs/172.31.32.25_20260506_202100
+
+Verifying executor on 172.31.32.25:8089 ...
+Executor verified on 172.31.32.25:8089
+Created 1 worker instances in eu-north-1b: ['172.31.32.25']
+Created 1 on-demand g4dn.xlarge workers: ['172.31.32.25']
+hpo-60bf3eb4 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.32.25'])}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 306.2844178676605
+172.31.43.94 - - [06/May/2026 20:23:23] "POST / HTTP/1.1" 200 -
+  EARLY SCALE-UP for hpo-a87b8123: time 25.1% > budget 19.1%
+  SCALE-UP BOOST: 1.2x budget allocation for hpo-a87b8123
+  Requesting +1 instances (current: 2)
+EDF Moldable: Cloud workflow hpo-a87b8123 cannot scale (speedup not justified, budget=$0.3173, time=2393s)
+hpo-a87b8123 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.015578508377075195
+172.31.10.173 - - [06/May/2026 20:24:46] "POST / HTTP/1.1" 200 -
+EDF Moldable: On-prem workflow cannot scale (no free slots or budget)
+hpo-73120874 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.011053085327148438
+172.31.35.38 - - [06/May/2026 20:28:39] "POST / HTTP/1.1" 200 -
+  EARLY SCALE-UP for hpo-df19b440: time 26.5% > budget 11.2%
+  SCALE-UP BOOST: 1.2x budget allocation for hpo-df19b440
+  Requesting +1 instances (current: 2)
+EDF Moldable: Cloud workflow hpo-df19b440 cannot scale (no free g4dn.xlarge slots)
+hpo-df19b440 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.013087034225463867
+172.31.35.18 - - [06/May/2026 20:31:22] "POST / HTTP/1.1" 200 -
+EDF Scheduler freeing {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.32.25'])}} for hpo-60bf3eb4
+Data sent successfully!
+[SCALE-DOWN] Terminating 1 freed on-demand instances: ['172.31.32.25']
+Terminating HPO instances: ['172.31.32.25']
+Terminating instances: ['i-0477bb9c3c6e3c903']
+Waiting for 1 instances to reach terminated state...
+172.31.10.173 - - [06/May/2026 20:33:56] "POST / HTTP/1.1" 200 -
+172.31.10.173 - - [06/May/2026 20:35:51] "POST / HTTP/1.1" 200 -
+  i-0477bb9c3c6e3c903 terminated
+Terminated 1 instances (vCPUs released)
+  HPO EDF Moldable resource processing overhead: 287.6488106250763
+EDF Moldable: On-prem workflow cannot scale (no free slots or budget)
+hpo-73120874 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.011737585067749023
+172.31.43.94 - - [06/May/2026 20:48:06] "POST / HTTP/1.1" 200 -
+  DEADLINE WARNING for hpo-a87b8123: 31.6% time left
+  WARNING BOOST: 1.5x budget allocation for hpo-a87b8123
+  Requesting +1 instances (current: 2)
+EDF Moldable: Cloud workflow hpo-a87b8123 cannot scale (speedup not justified, budget=$0.3130, time=904s)
+hpo-a87b8123 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.014084100723266602
+172.31.35.18 - - [06/May/2026 20:49:30] "POST / HTTP/1.1" 200 -
+EDF Moldable: Cloud workflow hpo-60bf3eb4 cannot scale (speedup not justified, budget=$0.1937, time=1473s)
+hpo-60bf3eb4 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.016586780548095703
+172.31.10.173 - - [06/May/2026 20:52:24] "POST / HTTP/1.1" 200 -
+hpo-73120874 workflow freed at 1778100789.3125467
+172.31.35.38 - - [06/May/2026 20:54:22] "POST / HTTP/1.1" 200 -
+  DEADLINE WARNING for hpo-df19b440: 41.5% time left
+  WARNING BOOST: 1.5x budget allocation for hpo-df19b440
+  Requesting +1 instances (current: 2)
+EDF Moldable: Cloud workflow hpo-df19b440 cannot scale (speedup not justified, budget=$0.6448, time=1828s)
+hpo-df19b440 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.01349639892578125
+172.31.10.173 - - [06/May/2026 21:02:29] "POST / HTTP/1.1" 200 -
+EDF Moldable: On-prem workflow cannot scale (no free slots or budget)
+hpo-b03a4442 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.008296012878417969
+172.31.35.18 - - [06/May/2026 21:11:38] "POST / HTTP/1.1" 200 -
+[SAFETY-NET] Terminating on-demand instances for hpo-60bf3eb4: ['172.31.35.18', '172.31.40.100']
+Terminating HPO instances: ['172.31.35.18', '172.31.40.100']
+No running instances found for IPs: ['172.31.35.18', '172.31.40.100']
+hpo-60bf3eb4 workflow freed at 1778101930.1988988
+172.31.43.94 - - [06/May/2026 21:15:46] "POST / HTTP/1.1" 200 -
+hpo-a87b8123 workflow freed at 1778102170.4051185
+172.31.10.173 - - [06/May/2026 21:26:53] "POST / HTTP/1.1" 200 -
+  DEADLINE CRITICAL for hpo-b03a4442: only 455.8s (8.1%) remaining
+  CRITICAL BOOST: 2.0x budget allocation for hpo-b03a4442
+  Requesting +1 instances (current: 2)
+hpo-b03a4442 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.0108642578125
+172.31.35.38 - - [06/May/2026 21:37:30] "POST / HTTP/1.1" 200 -
+  DEADLINE CRITICAL for hpo-df19b440: only -574.2s (-11.9%) remaining
+  CRITICAL BOOST: 2.0x budget allocation for hpo-df19b440
+  Requesting +1 instances (current: 2)
+EDF Moldable: Cloud workflow hpo-df19b440 cannot scale (deadline exhausted)
+hpo-df19b440 EDF allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+  HPO EDF Moldable resource processing overhead: 0.014028787612915039
+172.31.10.173 - - [06/May/2026 21:53:35] "POST / HTTP/1.1" 200 -
+hpo-b03a4442 workflow freed at 1778104451.835534

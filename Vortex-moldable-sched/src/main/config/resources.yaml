@@ -8,11 +8,11 @@ executor-incoming-port: 8089
 
 fsx-cost: 8.38e-05
 
-# 148 instances of 48 cores (DISABLED for cloud-only experiments)
+# 148 instances of 48 cores
 on-prem:
   - name: on-prem
     ip: [10.19.212.212] # Slurm head node IP
-    slots: 0 # 148 instances - set to 0 to disable on-prem
+    slots: 148 # 148 instances
     cores: 48 # Only for readability
     runtime: 817.0609 # 689.9875 # runtime in seconds for 1 run of the 500 mesh model 
     reserved-cost: 0.0004056 # per second cost for 48 cores # 1.46

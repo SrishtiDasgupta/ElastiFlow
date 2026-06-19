@@ -68,6 +68,16 @@ def sequentialSimulation(hosts, chains, tinydaIterations, mesh):
         for i in range(n):
             heapq.heappush(heap, (runtimes[host], host)) # initial runtimes
     # print(runtimes)
+    # A fully starved iteration (0 hosts) cannot run. Previously this fell through
+    # to heappop() on an empty heap and raised IndexError, which the executor caught
+    # but left the workflow stalled (no sim.sleep, iterator not advanced) — a fragile,
+    # clock-skewing path to what is really a deadline miss. Return an effectively
+    # infinite (but finite, so it survives the str()->eval() runtime round-trip;
+    # float('inf') would eval to a NameError) runtime so the caller's existing
+    # min(runtime, deadline-now) logic sleeps to the deadline and cleanly kills
+    # (misses) the workflow instead of crashing.
+    if hostLength == 0:
+        return 1e12  # ~31000 yr; dwarfs any deadline -> guaranteed clean miss
     extraChains = chains - hostLength
     while extraChains:
         runtime, name = heapq.heappop(heap)

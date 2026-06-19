@@ -4,7 +4,7 @@ import threading
 import time
 from typing import List
 
-from config.constants import COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST, OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
+from config.constants import CHAINS_PER_NODE, CLOSENESS_TOLERANCE, COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST, OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
 from scripts.speedup import getRuntime
 from resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from resource_manager.resource_manager import ResourceManager
@@ -137,9 +137,12 @@ class FCFS_Optimized(Scheduler):
         ondemandFlag = False
         for inst in instances:
             free_nodes = inst.getFreeSlots()
-            if free_nodes and (inst.name in cur_instances or self.checkCloseness(instance, cur_instance_runtimes, mesh)):
+            # BUGFIX: closeness check must use `inst` (the candidate) not
+            # `instance` (the workflow's first existing instance, fixed
+            # outside the loop). See scheduler.py for full rationale.
+            if free_nodes and (inst.name in cur_instances or self.checkCloseness(inst, cur_instance_runtimes, mesh)):
                 free_slots += free_nodes
-                instances_to_be_used.append((instance, free_nodes))
+                instances_to_be_used.append((inst, free_nodes))
                 if isinstance(inst, CloudOnDemandInstance): ondemandFlag = True
         
         to_be_used, nodes_per_chain = 0, 0
@@ -220,7 +223,9 @@ class FCFS_Optimized(Scheduler):
         runtime = getRuntime(1, mesh, instance.name)
         if isinstance(instance, CloudOnDemandInstance):
             runtime += COLD_START_TIME
-        closeness = lambda x: math.isclose(runtime, x, rel_tol=0.15)
+        # Tolerance loaded from config.constants so CLI ablation can patch
+        # it before this module is imported.
+        closeness = lambda x: math.isclose(runtime, x, rel_tol=CLOSENESS_TOLERANCE)
         return any(map(closeness, runtimes_list))
         
     def processFreeRequest(self, request, sim):
@@ -239,8 +244,8 @@ class FCFS_Optimized(Scheduler):
                 cur_count += inst_tuple[1]
 
         # Check safeness without moldability
-        # Can the workflow be completed with 3, 2, 1 chains per node?
-        chains_per_node = 3
+        # Can the workflow be completed with CHAINS_PER_NODE, ..., 2, 1 chains per node?
+        chains_per_node = CHAINS_PER_NODE
         request['count'] = None
         min_needed_count = request['chains']
         runtime_per_model = getRuntime(1, mesh, cur_instance.name)
@@ -252,12 +257,13 @@ class FCFS_Optimized(Scheduler):
                 if cur_count >= min_needed_count:
                     request['count'] = cur_count - min_needed_count
                     self.freeResources(instances, request, sim)
+                    self.metrics.recordScaleDownAttempt(request, request['count'])
                     return
                 else: # allocate resources
                     break
             else:
                 chains_per_node -= 1
-        
+
         # Allocate resources
         used_budget = self.metrics.computeCost(request['wf-id'], getTime(sim))
         available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]
@@ -265,6 +271,10 @@ class FCFS_Optimized(Scheduler):
         if request['count'] == None:
             request['count'] = min_needed_count - cur_count
         alloc_instances = self.checkNewResources(free_resources, instances, available_budget, available_time, request, mesh) # {obj: count}
+        # Path = 'on_prem' if workflow's first held instance is slurm,
+        # 'cloud' otherwise. Locked in at initial allocation.
+        path = 'on_prem' if isinstance(instances[0][0], OnPremInstance) else 'cloud'
+        self.metrics.recordScaleUpAttempt(request, alloc_instances, path=path)
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances) # alloc_resource = {obj: (count, [ips])}
         self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
 

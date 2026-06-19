@@ -38,11 +38,9 @@ class HEFT_HEFT_REQ(Scheduler):
             resource_request = self.resource_manager.peekWorkflow(self.resource_manager.resource_request_heap)
 
             if resource_request:
-                # Allocate new resources
-                if resource_request['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
-                    self.allocateNewResources(resource_request, sim)
-                else:
-                    self.freeResources(resource_request, sim)
+                # Moldable scale-up / scale-down via rich base-class
+                # negotiation (processFreeRequest decides internally).
+                self.processFreeRequest(resource_request, sim)
                 self.resource_manager.popWorkflow(self.resource_manager.resource_request_heap)
                 sim and sim.sleep(0.2) # NOTE: scheduler overhead
                 continue

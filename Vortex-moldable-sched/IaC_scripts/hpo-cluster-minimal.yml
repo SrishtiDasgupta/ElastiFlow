@@ -1,0 +1,36 @@
+Region: eu-north-1
+
+Image:
+  Os: ubuntu2204
+
+HeadNode:
+  InstanceType: t3.medium
+  Networking:
+    SubnetId: subnet-016c0e4a31d8955d7
+    SecurityGroups:
+      - sg-0d61f6325a433891b
+  Ssh:
+    KeyName: hpo-exp
+
+Scheduling:
+  Scheduler: slurm
+  SlurmQueues:
+    - Name: gpu-compute
+      CapacityType: ONDEMAND
+      ComputeResources:
+        - Name: g4dn-nodes
+          InstanceType: g4dn.xlarge
+          MinCount: 4
+          MaxCount: 4
+      Networking:
+        SubnetIds:
+          - subnet-016c0e4a31d8955d7
+        SecurityGroups:
+          - sg-0d61f6325a433891b
+
+SharedStorage:
+  - MountDir: /fsx
+    Name: vortex-hpo-shared
+    StorageType: Efs
+    EfsSettings:
+      FileSystemId: fs-0c7ed8d283368b734

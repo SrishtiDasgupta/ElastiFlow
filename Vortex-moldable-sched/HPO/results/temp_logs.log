@@ -1,0 +1,638 @@
+(venv) ubuntu@ip-172-31-8-202:~/Vortex-mid/Vortex-moldable-sched/src/main$ PYTHONPATH=. python3 main_HPO.py --mode moldable --algo fcfs
+Starting HPO Scheduling System
+Algorithm: FCFS, Mode: MOLDABLE
+Infrastructure: hybrid
+==================================================
+Resource config: resources_HPO.yaml
+Output prefix: FCFS_Moldable_HPO_hybrid_
+Using Moldable HPO FCFS Scheduler
+Scheduler initialized: FCFS_Optimized_HPO
+
+Starting scheduler threads:
+  1. Job Listener (port 8080)
+  2. HPO Scheduler
+  3. Completion Listener (port 8082)
+  4. Completion Processor
+  5. Resource Request Listener (port 8084)
+  ✅ Job Listener started
+Starting HPO Moldable FCFS scheduler...
+  ✅ HPO Scheduler started
+Starting server on port 8080...
+  ✅ Completion Listener started
+HPO Scheduler started listening to completed jobs...
+  ✅ Completion Processor started
+Starting server on port 8082...
+  ✅ Resource Request Listener started
+
+==================================================
+HPO Scheduling System Ready!
+Algorithm: FCFS, Mode: MOLDABLE
+Waiting for HPO workflows...
+==================================================
+
+📌 Moldable Features Enabled:
+  • Dynamic instance type switching
+  • Elastic resource scaling
+  • Cross-type optimization (g4dn ↔ g5)
+  • Automatic executor creation per workflow
+
+⚠️  Important: Cloud executors will be created automatically
+No manual executor start needed on reserved instances!
+
+Press Ctrl+C to stop the scheduler
+Starting server on port 8084...
+Workflow received at 1772919968.1003833
+172.31.8.202 - - [07/Mar/2026 21:46:08] "POST / HTTP/1.1" 200 -
+Moldable selected: 2 × g4 for 4 trials (cost: $0.03, runtime: 230s)
+Moldable: Allocated 2 on-prem on-prem
+hpo-5cf32563 moldable allocation:  {'on-prem': {'on-prem': (2, ['172.31.10.149'])}, 'reserved': {}, 'on-demand': {}}
+HPO Moldable Workflow hpo-5cf32563: Using on-prem executor at 172.31.10.149
+  Workers: {'on-prem': {'on-prem': (2, ['172.31.10.149'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+172.31.10.149 - - [07/Mar/2026 21:46:30] "POST / HTTP/1.1" 200 -
+Moldable: On-prem workflow cannot scale (no free on-prem slots or budget)
+hpo-5cf32563 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.00742030143737793
+Workflow received at 1772920329.3569877
+172.31.8.202 - - [07/Mar/2026 21:52:09] "POST / HTTP/1.1" 200 -
+Moldable selected: 2 × g4 for 4 trials (cost: $0.02, runtime: 184s)
+Moldable: Allocated 2 on-prem on-prem
+hpo-23bd6b42 moldable allocation:  {'on-prem': {'on-prem': (2, ['172.31.10.149'])}, 'reserved': {}, 'on-demand': {}}
+HPO Moldable Workflow hpo-23bd6b42: Using on-prem executor at 172.31.10.149
+  Workers: {'on-prem': {'on-prem': (2, ['172.31.10.149'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+172.31.10.149 - - [07/Mar/2026 21:52:31] "POST / HTTP/1.1" 200 -
+Moldable: On-prem workflow cannot scale (no free on-prem slots or budget)
+hpo-23bd6b42 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.008149385452270508
+Workflow received at 1772920487.4372094
+172.31.8.202 - - [07/Mar/2026 21:54:47] "POST / HTTP/1.1" 200 -
+Moldable selected: 1 × g4 for 2 trials (cost: $0.03, runtime: 538s)
+hpo-a82342ac moldable allocation:  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.0.209'])}, 'on-demand': {}}
+HPO Moldable Workflow hpo-a82342ac: Using cloud executor at 172.31.0.209
+  Workers: {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.0.209'])}, 'on-demand': {}}
+Data sent successfully!
+172.31.0.209 - - [07/Mar/2026 21:55:01] "POST / HTTP/1.1" 200 -
+hpo-a82342ac allocated additional resources:  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.9.217'])}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.007828235626220703
+Workflow received at 1772920597.081084
+172.31.8.202 - - [07/Mar/2026 21:56:37] "POST / HTTP/1.1" 200 -
+Workflow received at 1772920617.453297
+172.31.8.202 - - [07/Mar/2026 21:56:57] "POST / HTTP/1.1" 200 -
+Moldable selected: 1 × g4 for 2 trials (cost: $0.03, runtime: 538s)
+Moldable: 1 on-demand g4 ($0.08)
+Creating 1 on-demand g4dn.xlarge worker instances...
+Creating 1 worker instances of g4dn.xlarge
+Trying g4dn.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Workflow received at 1772920637.836545
+172.31.8.202 - - [07/Mar/2026 21:57:17] "POST / HTTP/1.1" 200 -
+Instance i-01a1d33b88732bc75 running: 172.31.39.124 (worker)
+Workflow received at 1772920645.0360885
+172.31.8.202 - - [07/Mar/2026 21:57:25] "POST / HTTP/1.1" 200 -
+Waiting for SSH on 172.31.39.124... (attempt 1)
+SSH ready on 172.31.39.124
+172.31.10.149 - - [07/Mar/2026 21:58:07] "POST / HTTP/1.1" 200 -
+Workflow received at 1772920886.4949594
+172.31.8.202 - - [07/Mar/2026 22:01:26] "POST / HTTP/1.1" 200 -
+172.31.0.209 - - [07/Mar/2026 22:01:38] "POST / HTTP/1.1" 200 -
+Setup output for 172.31.39.124:
+STDOUT: Starting HPO Worker setup on 172.31.39.124...
+Waiting for dpkg lock...
+dpkg lock free
+AWS CLI is already installed
+No /fsx/.aws found — using IAM role for AWS credentials
+Creating ~/rayenv Python venv...
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+Setting up CIFAR-10 dataset...
+CIFAR-10 dataset downloaded successfully
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.39.124...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.39.124 completed
+
+STDERR: --2026-03-07 21:57:50--  https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc
+Resolving fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)... 16.15.193.197, 54.231.195.97, 52.217.121.217, ...
+Connecting to fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)|16.15.193.197|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3819 (3.7K) [text/plain]
+Saving to: ‘STDOUT’
+
+     0K ...                                                   100%  162M=0s
+
+2026-03-07 21:57:50 (162 MB/s) - written to stdout [3819/3819]
+
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+100.0%
+
+Verifying executor on 172.31.39.124:8089 ...
+Executor verified on 172.31.39.124:8089
+Created 1 worker instances in eu-north-1b: ['172.31.39.124']
+Created 1 on-demand g4dn.xlarge workers: ['172.31.39.124']
+hpo-375a9a34 moldable allocation:  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.39.124'])}}
+HPO Moldable Workflow hpo-375a9a34: Using cloud executor at 172.31.39.124
+  Workers: {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.39.124'])}}
+Data sent successfully!
+172.31.39.124 - - [07/Mar/2026 22:02:41] "POST / HTTP/1.1" 200 -
+Scheduler freeing {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.9.217'])}, 'on-demand': {}} for hpo-a82342ac
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.008805036544799805
+hpo-375a9a34 allocated additional resources:  {'on-prem': {}, 'reserved': {'g4dn.xlarge': (1, ['172.31.9.217'])}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.011017084121704102
+Moldable selected: 1 × g4 for 3 trials (cost: $0.03, runtime: 463s)
+Moldable: 1 on-demand g4 ($0.07)
+Creating 1 on-demand g4dn.xlarge worker instances...
+Creating 1 worker instances of g4dn.xlarge
+Trying g4dn.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Workflow received at 1772920996.8805192
+172.31.8.202 - - [07/Mar/2026 22:03:16] "POST / HTTP/1.1" 200 -
+Instance i-01d5685e800388201 running: 172.31.41.244 (worker)
+SSH ready on 172.31.41.244
+172.31.10.149 - - [07/Mar/2026 22:04:07] "POST / HTTP/1.1" 200 -
+Workflow received at 1772921144.6514435
+172.31.8.202 - - [07/Mar/2026 22:05:44] "POST / HTTP/1.1" 200 -
+Setup output for 172.31.41.244:
+STDOUT: Starting HPO Worker setup on 172.31.41.244...
+Waiting for dpkg lock...
+dpkg lock free
+AWS CLI is already installed
+No /fsx/.aws found — using IAM role for AWS credentials
+Creating ~/rayenv Python venv...
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+Setting up CIFAR-10 dataset...
+CIFAR-10 dataset downloaded successfully
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.41.244...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.41.244 completed
+
+STDERR: --2026-03-07 22:03:48--  https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc
+Resolving fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)... 16.182.72.241, 52.217.237.9, 54.231.197.89, ...
+Connecting to fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)|16.182.72.241|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3819 (3.7K) [text/plain]
+Saving to: ‘STDOUT’
+
+     0K ...                                                   100%  402M=0s
+
+2026-03-07 22:03:48 (402 MB/s) - written to stdout [3819/3819]
+
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+100.0%
+
+Verifying executor on 172.31.41.244:8089 ...
+Executor verified on 172.31.41.244:8089
+Created 1 worker instances in eu-north-1b: ['172.31.41.244']
+Created 1 on-demand g4dn.xlarge workers: ['172.31.41.244']
+hpo-e10d65ba moldable allocation:  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.41.244'])}}
+HPO Moldable Workflow hpo-e10d65ba: Using cloud executor at 172.31.41.244
+  Workers: {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.41.244'])}}
+Data sent successfully!
+172.31.41.244 - - [07/Mar/2026 22:08:24] "POST / HTTP/1.1" 200 -
+Moldable: On-prem workflow cannot scale (no free on-prem slots or budget)
+hpo-23bd6b42 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.008727550506591797
+Creating 1 on-demand g4dn.xlarge worker instances...
+Creating 1 worker instances of g4dn.xlarge
+Trying g4dn.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+172.31.39.124 - - [07/Mar/2026 22:08:59] "POST / HTTP/1.1" 200 -
+Instance i-01c96cdf01f772304 running: 172.31.39.222 (worker)
+Waiting for SSH on 172.31.39.222... (attempt 1)
+SSH ready on 172.31.39.222
+Setup output for 172.31.39.222:
+STDOUT: Starting HPO Worker setup on 172.31.39.222...
+Waiting for dpkg lock...
+dpkg lock free
+AWS CLI is already installed
+No /fsx/.aws found — using IAM role for AWS credentials
+Creating ~/rayenv Python venv...
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+Setting up CIFAR-10 dataset...
+CIFAR-10 dataset downloaded successfully
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.39.222...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.39.222 completed
+
+STDERR: --2026-03-07 22:09:34--  https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc
+Resolving fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)... 3.5.20.102, 54.231.137.249, 16.182.69.33, ...
+Connecting to fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)|3.5.20.102|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3819 (3.7K) [text/plain]
+Saving to: ‘STDOUT’
+
+     0K ...                                                   100%  239M=0s
+
+2026-03-07 22:09:34 (239 MB/s) - written to stdout [3819/3819]
+
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+100.0%
+
+Verifying executor on 172.31.39.222:8089 ...
+Executor verified on 172.31.39.222:8089
+Created 1 worker instances in eu-north-1b: ['172.31.39.222']
+Created 1 on-demand g4dn.xlarge workers: ['172.31.39.222']
+hpo-e10d65ba allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g4dn.xlarge': (1, ['172.31.39.222'])}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 319.5486159324646
+Moldable selected: 2 × g4 for 4 trials (cost: $0.02, runtime: 138s)
+Moldable: g4 partial (0), using g5 (2/2)
+hpo-76abe507 moldable allocation:  {'on-prem': {}, 'reserved': {'g5.xlarge': (2, ['172.31.0.120', '172.31.8.91'])}, 'on-demand': {}}
+HPO Moldable Workflow hpo-76abe507: Using cloud executor at 172.31.0.120
+  Workers: {'on-prem': {}, 'reserved': {'g5.xlarge': (2, ['172.31.0.120', '172.31.8.91'])}, 'on-demand': {}}
+Data sent successfully!
+172.31.0.120 - - [07/Mar/2026 22:14:14] "POST / HTTP/1.1" 200 -
+hpo-76abe507 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.0074083805084228516
+Moldable selected: 1 × g4 for 2 trials (cost: $0.02, runtime: 369s)
+Moldable: 1 on-demand g5 ($0.07)
+Moldable: g4 partial (0), using g5 (1/1)
+Creating 1 on-demand g5.xlarge worker instances...
+Creating 1 worker instances of g5.xlarge
+Trying g5.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-04c8db1148827e785 running: 172.31.36.91 (worker)
+Waiting for SSH on 172.31.36.91... (attempt 1)
+SSH ready on 172.31.36.91
+172.31.0.209 - - [07/Mar/2026 22:16:25] "POST / HTTP/1.1" 200 -
+172.31.10.149 - - [07/Mar/2026 22:17:48] "POST / HTTP/1.1" 200 -
+172.31.0.120 - - [07/Mar/2026 22:17:48] "POST / HTTP/1.1" 200 -
+Setup output for 172.31.36.91:
+STDOUT: Starting HPO Worker setup on 172.31.36.91...
+Waiting for dpkg lock...
+dpkg lock free
+AWS CLI is already installed
+No /fsx/.aws found — using IAM role for AWS credentials
+Creating ~/rayenv Python venv...
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+Setting up CIFAR-10 dataset...
+CIFAR-10 dataset downloaded successfully
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.36.91...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.36.91 completed
+
+STDERR: --2026-03-07 22:15:23--  https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc
+Resolving fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)... 52.217.164.193, 16.15.183.56, 3.5.17.84, ...
+Connecting to fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)|52.217.164.193|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3819 (3.7K) [text/plain]
+Saving to: ‘STDOUT’
+
+     0K ...                                                   100%  388M=0s
+
+2026-03-07 22:15:24 (388 MB/s) - written to stdout [3819/3819]
+
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+100.0%
+
+Verifying executor on 172.31.36.91:8089 ...
+Executor verified on 172.31.36.91:8089
+Created 1 worker instances in eu-north-1b: ['172.31.36.91']
+Created 1 on-demand g5.xlarge workers: ['172.31.36.91']
+hpo-aa7ac329 moldable allocation:  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (1, ['172.31.36.91'])}}
+HPO Moldable Workflow hpo-aa7ac329: Using cloud executor at 172.31.36.91
+  Workers: {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (1, ['172.31.36.91'])}}
+Data sent successfully!
+172.31.36.91 - - [07/Mar/2026 22:19:41] "POST / HTTP/1.1" 200 -
+hpo-a82342ac allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.00916910171508789
+Moldable: On-prem workflow cannot scale (no free on-prem slots or budget)
+hpo-5cf32563 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.008255958557128906
+hpo-76abe507 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.007140636444091797
+Creating 1 on-demand g5.xlarge worker instances...
+Creating 1 worker instances of g5.xlarge
+Trying g5.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-0b19d4f585ab799e2 running: 172.31.40.157 (worker)
+Waiting for SSH on 172.31.40.157... (attempt 1)
+172.31.39.124 - - [07/Mar/2026 22:20:45] "POST / HTTP/1.1" 200 -
+SSH ready on 172.31.40.157
+172.31.41.244 - - [07/Mar/2026 22:23:07] "POST / HTTP/1.1" 200 -
+172.31.10.149 - - [07/Mar/2026 22:23:40] "POST / HTTP/1.1" 200 -
+172.31.0.120 - - [07/Mar/2026 22:23:59] "POST / HTTP/1.1" 200 -
+Setup output for 172.31.40.157:
+STDOUT: Starting HPO Worker setup on 172.31.40.157...
+Waiting for dpkg lock...
+dpkg lock free
+AWS CLI is already installed
+No /fsx/.aws found — using IAM role for AWS credentials
+Creating ~/rayenv Python venv...
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+Setting up CIFAR-10 dataset...
+CIFAR-10 dataset downloaded successfully
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.40.157...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.40.157 completed
+
+STDERR: --2026-03-07 22:20:51--  https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc
+Resolving fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)... 3.5.7.166, 16.15.181.142, 16.182.68.81, ...
+Connecting to fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)|3.5.7.166|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3819 (3.7K) [text/plain]
+Saving to: ‘STDOUT’
+
+     0K ...                                                   100%  306M=0s
+
+2026-03-07 22:20:52 (306 MB/s) - written to stdout [3819/3819]
+
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+100.0%
+
+Verifying executor on 172.31.40.157:8089 ...
+Executor verified on 172.31.40.157:8089
+Created 1 worker instances in eu-north-1b: ['172.31.40.157']
+Created 1 on-demand g5.xlarge workers: ['172.31.40.157']
+hpo-aa7ac329 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (1, ['172.31.40.157'])}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 297.9678473472595
+hpo-375a9a34 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.010118961334228516
+hpo-e10d65ba allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.010351181030273438
+Moldable: On-prem workflow cannot scale (no free on-prem slots or budget)
+hpo-23bd6b42 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.007520198822021484
+hpo-76abe507 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.006801128387451172
+Moldable selected: 1 × g4 for 3 trials (cost: $0.04, runtime: 706s)
+Moldable: 1 on-demand g5 ($0.14)
+Moldable: g4 partial (0), using g5 (1/1)
+Creating 1 on-demand g5.xlarge worker instances...
+Creating 1 worker instances of g5.xlarge
+Trying g5.xlarge x1 in eu-north-1b (subnet-098f73921fcc5fbe1)...
+Instance i-0ace0a7efd64fa7f6 running: 172.31.46.91 (worker)
+Waiting for SSH on 172.31.46.91... (attempt 1)
+SSH ready on 172.31.46.91
+172.31.36.91 - - [07/Mar/2026 22:28:18] "POST / HTTP/1.1" 200 -
+Setup output for 172.31.46.91:
+STDOUT: Starting HPO Worker setup on 172.31.46.91...
+Waiting for dpkg lock...
+dpkg lock free
+AWS CLI is already installed
+No /fsx/.aws found — using IAM role for AWS credentials
+Creating ~/rayenv Python venv...
+PyTorch + Ray venv created at ~/rayenv
+Installing Redis server...
+deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main
+Starting Redis server...
+Redis server started successfully
+Setting up CIFAR-10 dataset...
+CIFAR-10 dataset downloaded successfully
+Verifying Redis is accepting connections...
+Redis ready (attempt 1)
+Starting HPO Executor on 172.31.46.91...
+HPO Executor started successfully
+HPO cloud instance setup on 172.31.46.91 completed
+
+STDERR: --2026-03-07 22:25:44--  https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc
+Resolving fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)... 52.216.217.217, 52.216.217.193, 16.15.183.170, ...
+Connecting to fsx-lustre-client-repo-public-keys.s3.amazonaws.com (fsx-lustre-client-repo-public-keys.s3.amazonaws.com)|52.216.217.217|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3819 (3.7K) [text/plain]
+Saving to: ‘STDOUT’
+
+     0K ...                                                   100%  316M=0s
+
+2026-03-07 22:25:44 (316 MB/s) - written to stdout [3819/3819]
+
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Packages (Packages) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+W: Target Translations (en) is configured multiple times in /etc/apt/sources.list.d/archive_uri-https_developer_download_nvidia_com_compute_cuda_repos_ubuntu2204_x86_64_-jammy.list:1 and /etc/apt/sources.list.d/cuda-ubuntu2204-x86_64.list:1
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+100.0%
+
+Verifying executor on 172.31.46.91:8089 ...
+Executor verified on 172.31.46.91:8089
+Created 1 worker instances in eu-north-1b: ['172.31.46.91']
+Created 1 on-demand g5.xlarge workers: ['172.31.46.91']
+hpo-92c161bd moldable allocation:  {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (1, ['172.31.46.91'])}}
+HPO Moldable Workflow hpo-92c161bd: Using cloud executor at 172.31.46.91
+  Workers: {'on-prem': {}, 'reserved': {}, 'on-demand': {'g5.xlarge': (1, ['172.31.46.91'])}}
+Data sent successfully!
+172.31.46.91 - - [07/Mar/2026 22:30:01] "POST / HTTP/1.1" 200 -
+172.31.0.120 - - [07/Mar/2026 22:30:18] "POST / HTTP/1.1" 200 -
+hpo-aa7ac329 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.01183938980102539
+hpo-92c161bd allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.010381221771240234
+hpo-76abe507 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.0070953369140625
+Moldable selected: 1 × g4 for 2 trials (cost: $0.04, runtime: 556s)
+Moldable degraded: requested 1, got 0
+Moldable: Failed to allocate any hosts (both types exhausted)
+hpo-96fd76b6 moldable allocation:  None
+No HPO moldable resources to allocate, waiting...
+172.31.41.244 - - [07/Mar/2026 22:30:40] "POST / HTTP/1.1" 200 -
+hpo-e10d65ba allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.010807514190673828
+172.31.39.124 - - [07/Mar/2026 22:32:35] "POST / HTTP/1.1" 200 -
+172.31.36.91 - - [07/Mar/2026 22:32:50] "POST / HTTP/1.1" 200 -
+hpo-375a9a34 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.010390996932983398
+hpo-aa7ac329 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.01013803482055664
+172.31.0.209 - - [07/Mar/2026 22:34:51] "POST / HTTP/1.1" 200 -
+hpo-a82342ac allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.011070013046264648
+172.31.0.120 - - [07/Mar/2026 22:35:15] "POST / HTTP/1.1" 200 -
+hpo-76abe507 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.007070302963256836
+172.31.36.91 - - [07/Mar/2026 22:37:03] "POST / HTTP/1.1" 200 -
+[SAFETY-NET] Terminating on-demand instances for hpo-aa7ac329: ['172.31.36.91', '172.31.40.157']
+Terminating HPO instances: ['172.31.36.91', '172.31.40.157']
+Terminating instances: ['i-04c8db1148827e785', 'i-0b19d4f585ab799e2']
+Waiting for 2 instances to reach terminated state...
+172.31.8.91 - - [07/Mar/2026 22:56:29] "POST / HTTP/1.1" 200 -
+hpo-d107c6b5 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.011841058731079102
+172.31.41.244 - - [07/Mar/2026 22:56:45] "POST / HTTP/1.1" 200 -
+hpo-e10d65ba allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.011322975158691406
+172.31.0.120 - - [07/Mar/2026 22:57:26] "POST / HTTP/1.1" 200 -
+hpo-96fd76b6 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.008171558380126953
+  i-04c8db1148827e785 terminated
+  i-0b19d4f585ab799e2 terminated
+Terminated 2 instances (vCPUs released)
+hpo-aa7ac329 workflow freed at 1772924334.3665426
+172.31.0.209 - - [07/Mar/2026 22:59:45] "POST / HTTP/1.1" 200 -
+hpo-a82342ac workflow freed at 1772924394.428611
+172.31.46.91 - - [07/Mar/2026 23:08:42] "POST / HTTP/1.1" 200 -
+hpo-92c161bd allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.014735221862792969
+172.31.8.91 - - [07/Mar/2026 23:09:27] "POST / HTTP/1.1" 200 -
+hpo-d107c6b5 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.00820779800415039
+172.31.0.120 - - [07/Mar/2026 23:09:52] "POST / HTTP/1.1" 200 -
+hpo-96fd76b6 workflow freed at 1772924994.8462868
+172.31.41.244 - - [07/Mar/2026 23:16:03] "POST / HTTP/1.1" 200 -
+[SAFETY-NET] Terminating on-demand instances for hpo-e10d65ba: ['172.31.41.244', '172.31.39.222']
+Terminating HPO instances: ['172.31.41.244', '172.31.39.222']
+Terminating instances: ['i-01d5685e800388201', 'i-01c96cdf01f772304']
+Waiting for 2 instances to reach terminated state...
+172.31.8.91 - - [07/Mar/2026 23:22:41] "POST / HTTP/1.1" 200 -
+hpo-d107c6b5 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.01273798942565918
+  i-01d5685e800388201 terminated
+  i-01c96cdf01f772304 terminated
+Terminated 2 instances (vCPUs released)
+hpo-e10d65ba workflow freed at 1772925793.5601475
+172.31.46.91 - - [07/Mar/2026 23:27:58] "POST / HTTP/1.1" 200 -
+[SAFETY-NET] Terminating on-demand instances for hpo-92c161bd: ['172.31.46.91']
+Terminating HPO instances: ['172.31.46.91']
+Terminating instances: ['i-0ace0a7efd64fa7f6']
+Waiting for 1 instances to reach terminated state...
+  i-0ace0a7efd64fa7f6 terminated
+Terminated 1 instances (vCPUs released)
+hpo-92c161bd workflow freed at 1772926381.3229084
+172.31.8.91 - - [07/Mar/2026 23:33:15] "POST / HTTP/1.1" 200 -
+hpo-d107c6b5 allocated additional resources:  {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+HPO Moldable resource processing overhead: 0.013077259063720703
+172.31.8.91 - - [07/Mar/2026 23:45:13] "POST / HTTP/1.1" 200 -
+hpo-d107c6b5 workflow freed at 1772927161.87476
+Workflow received at 1772927258.9848042
+172.31.8.202 - - [07/Mar/2026 23:47:38] "POST / HTTP/1.1" 200 -
+
+======================================================================
+COMPUTING HPO METRICS (FCFS_Moldable)
+======================================================================
+
+Total workflows: 10
+Executed workflows: 10
+Incomplete workflows: 0
+
+--- Performance Metrics ---
+Average Flowtime: 3929.2543 seconds
+Average Cost: $0.8114
+Average Wait Time: 971.2236 seconds
+Average Resource Utilization: 54.1667%
+
+--- Constraint Violations ---
+Deadline miss rate: 0.8 (8/10 executed)
+Budget miss rate: 0.0 (0/10 executed)
+Overall miss rate: 0.8
+
+--- Per-Model Breakdown ---
+  convnext_large (4 workflows):
+    Avg Flowtime: 4433.51s, Avg Cost: $0.5454
+    Deadline misses: 3, Budget misses: 0
+  vgg19 (4 workflows):
+    Avg Flowtime: 3204.25s, Avg Cost: $1.1489
+    Deadline misses: 3, Budget misses: 0
+  wide_resnet101_2 (2 workflows):
+    Avg Flowtime: 4370.75s, Avg Cost: $0.6685
+    Deadline misses: 2, Budget misses: 0
+
+--- Moldability Effectiveness ---
+Scheduler Type: FCFS_Moldable
+Scale-up attempts: 38
+  Successes: 4 (10.5%)
+  Failures: 34
+    - Insufficient compute: 29
+    - Budget exhausted: 0
+    - Time exhausted: 5
+  Total instances added: 4
+  Total cores added: 16
+
+Scale-down attempts: 1
+  Successes: 1 (100.0%)
+  Blocked: 0
+  Total instances removed: 1
+  Total cores removed: 4
+
+Net moldability impact:
+  Net instances: +3
+  Net cores: +12
+  WARNING: High scale-up failure rate (89.5%)
+
+--- Scale-Up Opportunity Analysis ---
+Workflows with 0 scale-up attempts: 0 (0.0%)
+Average scale-up attempts per workflow: 3.80
+======================================================================

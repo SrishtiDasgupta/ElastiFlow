@@ -1,0 +1,79 @@
+Starting scheduler at 1748419907.2582622...
+Scheduler started listening to completed jobs...
+Starting server on port 8084...
+Starting server on port 8082...
+Starting server on port 8080...
+Workflow received at 1748420283.8035543
+10.3.14.37 - - [28/May/2025 08:18:03] "POST / HTTP/1.1" 200 -
+Workflow received at 1748420284.8534622
+10.3.14.37 - - [28/May/2025 08:18:04] "POST / HTTP/1.1" 200 -
+test-8ace708b-1e2f-487b-90de-38ece69740c6 allocated at 1748420287.6595004: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d allocated at 1748420307.6925795: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+Workflow received at 1748420344.9641852
+10.3.14.37 - - [28/May/2025 08:19:04] "POST / HTTP/1.1" 200 -
+test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 allocated at 1748420347.745247: {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+Workflow received at 1748420405.0733666
+10.3.14.37 - - [28/May/2025 08:20:05] "POST / HTTP/1.1" 200 -
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d allocated at 1748420407.8190277: {'on-prem': {}, 'reserved': {'hpc7a.24xlarge': (1, ['10.19.246.116'])}, 'on-demand': {'hpc7a.24xlarge': (1, [])}}
+Data sent successfully!
+Workflow received at 1748420485.2017622
+10.3.14.37 - - [28/May/2025 08:21:25] "POST / HTTP/1.1" 200 -
+test-127d0707-8125-499c-979a-f55792e1346e allocated at 1748420487.9225292: {'on-prem': {}, 'reserved': {'c6i.32xlarge': (1, ['10.19.238.8'])}, 'on-demand': {'c6i.32xlarge': (1, [])}}
+Data sent successfully!
+Workflow received at 1748420585.351767
+10.3.14.37 - - [28/May/2025 08:23:05] "POST / HTTP/1.1" 200 -
+test-870538f9-6808-412d-bfcc-13b3e70e6f8d allocated at 1748420588.0401547: {'on-prem': {}, 'reserved': {'c6i.16xlarge': (1, ['10.19.224.55'])}, 'on-demand': {'c6i.16xlarge': (1, [])}}
+Data sent successfully!
+Workflow received at 1748420835.5033877
+10.3.14.37 - - [28/May/2025 08:27:15] "POST / HTTP/1.1" 200 -
+test-fd13408f-a595-41f5-b32e-6620e71d7475 allocated at 1748420848.3275788: {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+10.19.212.212 - - [28/May/2025 08:27:59] "POST / HTTP/1.1" 200 -
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d workflow freed at 1748420888.2763207
+10.19.212.212 - - [28/May/2025 08:29:32] "POST / HTTP/1.1" 200 -
+test-8ace708b-1e2f-487b-90de-38ece69740c6 workflow freed at 1748420988.3805592
+Workflow received at 1748421135.5784168
+10.3.14.37 - - [28/May/2025 08:32:15] "POST / HTTP/1.1" 200 -
+test-740fc458-3d19-4822-b609-f93866aae4e5 allocated at 1748421148.6553514: {'on-prem': {'on-prem': (3, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+Workflow received at 1748421175.6605587
+10.3.14.37 - - [28/May/2025 08:32:55] "POST / HTTP/1.1" 200 -
+test-279a0c70-48de-4887-b007-aea5ab2ddde0 allocated at 1748421188.7080038: {}
+No resources to allocate, waiting...
+10.19.212.212 - - [28/May/2025 08:33:25] "POST / HTTP/1.1" 200 -
+test-fd13408f-a595-41f5-b32e-6620e71d7475 workflow freed at 1748421208.6091259
+test-279a0c70-48de-4887-b007-aea5ab2ddde0 allocated at 1748421208.7293909: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+10.19.238.8 - - [28/May/2025 08:33:49] "POST / HTTP/1.1" 200 -
+test-127d0707-8125-499c-979a-f55792e1346e workflow freed at 1748421248.651151
+Workflow received at 1748421295.80982
+10.3.14.37 - - [28/May/2025 08:34:55] "POST / HTTP/1.1" 200 -
+test-4b52291f-cf9e-4874-a1eb-7468f42ae7f3 allocated at 1748421308.8455117: {'on-prem': {}, 'reserved': {'c6i.32xlarge': (1, ['10.19.238.8'])}, 'on-demand': {}}
+Data sent successfully!
+10.19.224.55 - - [28/May/2025 08:37:11] "POST / HTTP/1.1" 200 -
+10.19.246.116 - - [28/May/2025 08:37:19] "POST / HTTP/1.1" 200 -
+test-870538f9-6808-412d-bfcc-13b3e70e6f8d workflow freed at 1748421448.8271863
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d workflow freed at 1748421468.8485584
+10.19.212.212 - - [28/May/2025 08:41:49] "POST / HTTP/1.1" 200 -
+test-279a0c70-48de-4887-b007-aea5ab2ddde0 workflow freed at 1748421729.1184316
+10.19.238.8 - - [28/May/2025 08:45:26] "POST / HTTP/1.1" 200 -
+test-4b52291f-cf9e-4874-a1eb-7468f42ae7f3 workflow freed at 1748421929.3261151
+10.19.212.212 - - [28/May/2025 08:48:15] "POST / HTTP/1.1" 200 -
+test-740fc458-3d19-4822-b609-f93866aae4e5 workflow freed at 1748422109.5129662
+10.19.212.212 - - [28/May/2025 09:09:34] "POST / HTTP/1.1" 200 -
+test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 workflow freed at 1748423390.8391075
+Workflow received at 1748423609.1584587
+10.3.14.37 - - [28/May/2025 09:13:29] "POST / HTTP/1.1" 200 -
+Computing metrics...
+Total workflows = 100
+Executed workflows = 10
+Average Makespan = 943.2065
+Average Cost = 1.0715
+Average Wait Time = 10.9745
+Average resource utilization = 176.5
+Deadline miss rate = 0.9
+Budget miss rate = 0.0
+Overall miss rate = 0.9

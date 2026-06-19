@@ -24,6 +24,7 @@ from config.constants_LA import (
     TEMPORAL_COMPRESSION_FACTOR,
     SUBMISSION_JITTER_MINUTES
 )
+from utils.validate_workflow import validate_workflow
 
 
 def plotSubmitTimes(submitTimes):
@@ -144,23 +145,19 @@ def fetchWorkflow(i, path=None):
     with open(file_name, 'r') as stream:
         try:
             workflow = yaml.safe_load(stream)
-
-            # Validation: Ensure all workflows have licenses (except END)
-            if workflow.get('id') != 'END':
-                if not workflow.get('constraints', {}).get('license_pool'):
-                    raise ValueError(f"Workflow {i} missing license_pool in constraints!")
-                if not workflow.get('config', {}).get('software_id'):
-                    raise ValueError(f"Workflow {i} missing software_id in config!")
-
-                print(f"  [✓] Loaded {workflow['id']} (license: {workflow['constraints']['license_pool']})")
-
-            return workflow
         except yaml.YAMLError as exc:
             print(f"  [✗] YAML error loading workflow {i}: {exc}")
             return None
-        except ValueError as exc:
-            print(f"  [✗] Validation error: {exc}")
-            return None
+
+    if workflow is not None and workflow.get('id') != 'END':
+        violations = validate_workflow(workflow, 'LA')
+        if violations:
+            msg = (f"Workflow {workflow.get('id', '<no id>')} ({file_name}) "
+                   f"failed LA schema validation:\n  - " + "\n  - ".join(violations))
+            raise ValueError(msg)
+        print(f"  [✓] Loaded {workflow['id']} (license: {workflow['constraints']['license_pool']})")
+
+    return workflow
 
 
 def send_workflow(workflow):
@@ -216,10 +213,18 @@ def dispatcher_LA(sim, wf_mb):
         else:
             print(f'  [✗] Failed to load workflow {i}, skipping')
 
-    # Send END signal after all workflows complete
+    # Send END signal after all workflows have had time to finish.
+    # The buffer is set generously large (~58 simulated days) so even the
+    # slowest workflow at the largest workload size finishes before END
+    # fires. Simulus advances through empty simulated time near-instantly,
+    # so an oversized buffer adds negligible wall-clock cost — but a buffer
+    # that is too small causes still-running workflows to be marked
+    # "incomplete" and silently excluded from the cost / miss-rate averages,
+    # which biases every metric. Do NOT shrink this value without verifying
+    # `Incomplete workflows: 0` in the summary at the highest N tested.
     print('')
     print(f'[{sim.now:8.1f}s] All workflows dispatched, waiting for completion...')
-    sim.sleep(150000)  # Wait for workflows to finish
+    sim.sleep(5_000_000)  # generous: ~58 simulated days
     print(f'[{sim.now:8.1f}s] Sending END signal')
     sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main")))
 

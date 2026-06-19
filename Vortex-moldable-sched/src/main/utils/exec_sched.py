@@ -5,9 +5,13 @@ import re
 from config.constants import FREE_RESOURCES, MOLDABLE, RESOURCE_REQUEST_TIMEOUT, SIMULATE
 from .sim import getTime
 from .request import ExecutorRequest, getConfig, sendRequest
+from . import negotiation_log
 from scripts.create_instance import createInstance, deleteInstanceFromIp
 
 import yaml
+import os
+
+_PORTS_YAML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'ports.yaml')
 
 workflow_config = {}
 
@@ -31,6 +35,10 @@ def detectWorkflowType(wf_id):
     constraints = config.get('constraints', {})
     mesh = config.get('mesh')
 
+    # 0. Explicit adaptive opt-in via config.adaptive: true
+    if config.get('adaptive') is True:
+        return 'PLAIN_ADAPTIVE'
+
     # 1. Check for LA-specific fields (most specific)
     if 'license_pool' in constraints or 'software_id' in config:
         return 'LA'
@@ -53,7 +61,7 @@ def detectWorkflowType(wf_id):
 
 
 def getWorkflowOnpremPort():
-    with open("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "r") as f:
+    with open(_PORTS_YAML, "r") as f:
         data = yaml.safe_load(f)
 
     ports = data.get("onprem_ports", [])
@@ -63,7 +71,7 @@ def getWorkflowOnpremPort():
     popped = ports.pop(0)
     data["onprem_ports"] = ports
 
-    with open("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/ports.yaml", "w") as f:
+    with open(_PORTS_YAML, "w") as f:
         yaml.safe_dump(data, f) # default = block style
 
     return popped
@@ -86,6 +94,12 @@ def removeWorkflowConfig(id):
 
 def setNewResources(id, data: Tuple):
     workflow_config[id]['new_resources'] = data
+
+def setResourceRequestPending(id, pending: bool):
+    workflow_config[id]['resource_request_pending'] = pending
+
+def isResourceRequestPending(id):
+    return workflow_config.get(id, {}).get('resource_request_pending', False)
 
 def setWorkflowComplete(id, isComplete: bool):
     workflow_config[id]['complete'] = isComplete
@@ -194,9 +208,14 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
         chains = input[0].get('next_trials', 0)
         tinyda_iterations = input[0].get('epoch', input[0].get('epochs', 1))
 
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+    # HPO uses its own constants from constants_HPO (not the shared constants.py)
+    from config.constants_HPO import MOLDABLE as HPO_MOLDABLE, SIMULATE as HPO_SIMULATE
+    from config.constants_HPO import FREE_RESOURCES as HPO_FREE_RESOURCES
+    from config.constants_HPO import RESOURCE_REQUEST_TIMEOUT as HPO_TIMEOUT
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, HPO_MOLDABLE, chains,
+                                               HPO_FREE_RESOURCES, HPO_TIMEOUT)
 
-    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
+    if not HPO_SIMULATE and len(hosts.get('on-prem', [])) != 0:
         port = getWorkflowOnpremPort()
     else:
         port = 4242
@@ -209,6 +228,55 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
         'tinyda_iterations': tinyda_iterations,
         'mesh': mesh,
         'port': port
+    }, hosts, sim
+
+
+def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
+    """
+    Handler for PLAIN_ADAPTIVE SeisSol workflows (convergence-driven).
+
+    Input format: (config_dict, hosts) where config_dict carries the previous
+    iteration's adaptive driver output: cohesion (scalar), next_links,
+    next_chains, next_cohesion_mean, next_cohesion_var.
+
+    On iteration 0 the dict comes from vars[0].value in the YAML and may only
+    contain {cohesion, next_links, next_chains}.
+    """
+    cfg = getWorkflowConfig(wf_id)
+    mesh = cfg['mesh']
+    sim = cfg['sim']
+    constraints = cfg.get('constraints', {})
+
+    inner = input[0] if isinstance(input[0], dict) else {'cohesion': input[0]}
+
+    if ind == 0:
+        chains = int(inner.get('next_chains', constraints.get('chains', 2)))
+        tinyda_iterations = int(inner.get('next_links',
+                                          constraints.get('tinydaIterations', 2)))
+    else:
+        chains = int(inner.get('next_chains', constraints.get('chains', 2)))
+        tinyda_iterations = int(inner.get('next_links',
+                                          constraints.get('tinydaIterations', 2)))
+
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+
+    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
+        port = getWorkflowOnpremPort()
+    else:
+        port = 4242
+
+    cumulative_cap = constraints.get('tinydaIterations',
+                                     cfg.get('workflowIterations', 10) * tinyda_iterations)
+
+    return {
+        'wf_id': wf_id,
+        'cohesion': inner,             # full dict carries adaptive feedback fields
+        'hosts': alloc_hosts,
+        'chains': chains,
+        'tinyda_iterations': tinyda_iterations,
+        'mesh': mesh,
+        'port': port,
+        'cumulative_links_cap': cumulative_cap,
     }, hosts, sim
 
 
@@ -231,13 +299,21 @@ def getClientInputs(wf_id, input: Tuple, ind):
         return getClientInputs_LA(wf_id, input, ind)
     elif workflow_type == 'HPO':
         return getClientInputs_HPO(wf_id, input, ind)
+    elif workflow_type == 'PLAIN_ADAPTIVE':
+        return getClientInputs_PlainAdaptive(wf_id, input, ind)
     else:
         raise ValueError(f"Unknown workflow type: {workflow_type} for workflow {wf_id}")
 
 
 # hosts = {'on-prem': {}, 'reserved': {name: (n, [ips])}, 'on-demand': {}}
 # cur_hosts = {name: [ips]}
-def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0):
+def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0,
+                         free_resources=None, request_timeout=None):
+    if free_resources is None:
+        free_resources = FREE_RESOURCES
+    if request_timeout is None:
+        request_timeout = RESOURCE_REQUEST_TIMEOUT
+
     count = 0
     cur_hosts = {}
     for cluster in ['on-prem', 'reserved', 'on-demand']:
@@ -261,16 +337,18 @@ def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0):
         if count < chains:
             n = chains - count if chains - count < 4 else 3
             print(f'New resource request: {wf_id} requesting {n} resources for iteration {ind+1}')
-            return sendAndFetchResponse(wf_id, ExecutorRequest.REQUEST_RESOURCE.value, hosts, ind, cur_hosts, n, chains)
+            return sendAndFetchResponse(wf_id, ExecutorRequest.REQUEST_RESOURCE.value, hosts, ind, cur_hosts, n, chains, request_timeout)
         # Free resources
-        elif FREE_RESOURCES and count > chains:
+        elif free_resources and count > chains:
             n = count - chains
             print(f'Free resource request: {wf_id} requesting to free {n} resources for iteration {ind+1}')
-            return sendAndFetchResponse(wf_id, ExecutorRequest.FREE_RESOURCE.value, hosts, ind, cur_hosts, n, chains)
+            return sendAndFetchResponse(wf_id, ExecutorRequest.FREE_RESOURCE.value, hosts, ind, cur_hosts, n, chains, request_timeout)
 
     return cur_hosts, hosts
 
-def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
+def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, request_timeout=None):
+    if request_timeout is None:
+        request_timeout = RESOURCE_REQUEST_TIMEOUT
 
     config = getWorkflowConfig(wf_id)
 
@@ -294,6 +372,14 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
     }
 
     sim = getWorkflowConfig(wf_id)['sim']
+
+    # Mark request as pending so processNewResourcesHPO knows we're waiting.
+    # Late responses (arriving after timeout) are discarded when pending=False.
+    setNewResources(wf_id, None)  # Clear any stale data from previous iterations
+    setResourceRequestPending(wf_id, True)
+
+    rt_label = 'grow' if request_type == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
+    t_engine_request_sent = time.time()
     if sim:
         request['request-time'] = sim.now
         sim.sync().send(sim, 'resource_request_mb', str(request))
@@ -303,16 +389,29 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains):
     # Wait for response until timeout
     resources = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
     req_type = ExecutorRequest.FREE_RESOURCE.value # Only because less computation than merge
-    start_time, timeout = getTime(sim), 30 + RESOURCE_REQUEST_TIMEOUT # 30 sec network latency
+    start_time, timeout = getTime(sim), 30 + request_timeout # 30 sec network latency
+    outcome = 'timed_out'
+    t_engine_reply_received = ''
     while True:
         (sim or time).sleep(5)
         if getWorkflowConfig(wf_id).get('new_resources', None):
             req_type, resources = getWorkflowConfig(wf_id).get('new_resources')
+            t_engine_reply_received = time.time()
+            outcome = 'granted'
             setNewResources(wf_id, None)
+            setResourceRequestPending(wf_id, False)
             break
         if getTime(sim) - start_time > timeout:
             print(f'Timeout reached for {wf_id}. Continuing with available resources')
+            setNewResources(wf_id, None)
+            setResourceRequestPending(wf_id, False)  # Reject late responses
             break
+    negotiation_log.log('executor',
+                        wf_id=wf_id, iter_idx=ind, request_type=rt_label,
+                        requested_count=n,
+                        t_engine_request_sent=t_engine_request_sent,
+                        t_engine_reply_received=t_engine_reply_received,
+                        outcome=outcome)
     if req_type == ExecutorRequest.FREE_RESOURCE.value:
         return freeResources(resources, hosts, cur_hosts)
     else:
@@ -348,9 +447,11 @@ def freeResources(to_free_resources, hosts, cur_hosts):
                     )
                     cur_hosts[instance] = list(set(cur_hosts[instance]) - set(ips))
                 case 'on-demand':
-                    # Terminate last n instances
-                    deleteInstanceFromIp(hosts[cluster][instance][1][-n:])
-                    cur_hosts[instance] = list(set(cur_hosts[instance]) - set(hosts[cluster][instance][1][-n:]))
+                    # Remove from tracking only — scheduler handles instance termination
+                    # (termination moved to scheduler's freeResources to avoid double-terminate
+                    # and ~5 min executor blocking)
+                    ips_to_free = hosts[cluster][instance][1][-n:]
+                    cur_hosts[instance] = list(set(cur_hosts[instance]) - set(ips_to_free))
                     hosts[cluster][instance] = (
                         hosts[cluster][instance][0] - n,
                         hosts[cluster][instance][1][:-n]

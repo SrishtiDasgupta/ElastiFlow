@@ -1,5 +1,6 @@
 import threading
 import sys
+import os
 import argparse
 
 from utils.request import getConfig
@@ -9,41 +10,82 @@ from wf_queue.redis_queue import Redis_Queue
 # Import HPO-specific schedulers
 from scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
 from scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
+from scheduler.edf_scheduler_HPO import EDF_Scheduler_HPO
+from scheduler.edf_optimized_HPO import EDF_Optimized_HPO
 
-def main(scheduler_type='moldable'):
+# Map --infra flag to resource config files
+_INFRA_CONFIG_MAP = {
+    'hybrid': 'resources_HPO.yaml',
+    'cloud':  'resources_HPO_cloud.yaml',
+    'slurm':  'resources_HPO_slurm.yaml',
+}
+
+def main(scheduler_type='moldable', algo='fcfs', wf_count=None, infra='hybrid'):
     """
     Main entry point for HPO scheduling system
 
     Args:
         scheduler_type: 'static' or 'moldable' (default: moldable)
+        algo: 'fcfs' or 'edf' (default: fcfs)
+        wf_count: expected workflow count (encoded in output filenames)
+        infra: infrastructure config — 'hybrid', 'cloud', or 'slurm'
     """
 
-    print(f"🚀 Starting HPO Scheduling System")
-    print(f"Scheduler Type: {scheduler_type.upper()}")
+    print(f"Starting HPO Scheduling System")
+    print(f"Algorithm: {algo.upper()}, Mode: {scheduler_type.upper()}")
+    if wf_count:
+        print(f"Expected workflows: {wf_count}")
+    print(f"Infrastructure: {infra}")
     print("=" * 50)
+
+    # Resolve resource config path
+    config_filename = _INFRA_CONFIG_MAP.get(infra, 'resources_HPO.yaml')
+    resource_config = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'config', config_filename
+    )
+    print(f"Resource config: {config_filename}")
+
+    # Build file prefix for metrics output
+    # Format: {ALGO}_{MODE}_HPO_{Nwf}_{infra}_
+    algo_label = algo.upper()
+    mode_label = 'Moldable' if scheduler_type == 'moldable' else 'Static'
+    prefix_parts = [f'{algo_label}_{mode_label}_HPO']
+    if wf_count:
+        prefix_parts.append(f'{wf_count}wf')
+    prefix_parts.append(infra)
+    file_prefix = '_'.join(prefix_parts) + '_'
+    print(f"Output prefix: {file_prefix}")
 
     # Create queues for communication
     queue = Redis_Queue(queue_name='wf-queue')
     finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
     resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
 
-    # Select scheduler based on type
-    if scheduler_type == 'static':
+    # Select scheduler based on algo + mode
+    if algo == 'fcfs' and scheduler_type == 'static':
         print("Using Static HPO FCFS Scheduler")
-        sched = FCFS_Scheduler_HPO(
-            queue,
-            finish_queue,
-            resource_request_queue,
-            sort_key='cost_per_trial'
-        )
-    else:  # moldable
+        sched = FCFS_Scheduler_HPO(queue, finish_queue, resource_request_queue,
+                                   sort_key='cost_per_trial',
+                                   resource_config=resource_config,
+                                   file_prefix=file_prefix)
+    elif algo == 'fcfs' and scheduler_type == 'moldable':
         print("Using Moldable HPO FCFS Scheduler")
-        sched = FCFS_Optimized_HPO(
-            queue,
-            finish_queue,
-            resource_request_queue,
-            sort_key='cost_per_trial'
-        )
+        sched = FCFS_Optimized_HPO(queue, finish_queue, resource_request_queue,
+                                   sort_key='cost_per_trial',
+                                   resource_config=resource_config,
+                                   file_prefix=file_prefix)
+    elif algo == 'edf' and scheduler_type == 'static':
+        print("Using Static HPO EDF Scheduler")
+        sched = EDF_Scheduler_HPO(queue, finish_queue, resource_request_queue,
+                                  sort_key='cost_per_trial',
+                                  resource_config=resource_config,
+                                  file_prefix=file_prefix)
+    elif algo == 'edf' and scheduler_type == 'moldable':
+        print("Using Moldable HPO EDF Scheduler")
+        sched = EDF_Optimized_HPO(queue, finish_queue, resource_request_queue,
+                                  sort_key='cost_per_trial',
+                                  resource_config=resource_config,
+                                  file_prefix=file_prefix)
 
     print(f"Scheduler initialized: {sched.__class__.__name__}")
 
@@ -113,8 +155,8 @@ def main(scheduler_type='moldable'):
     print("  ✅ Resource Request Listener started")
 
     print("\n" + "=" * 50)
-    print("🎯 HPO Scheduling System Ready!")
-    print(f"Mode: {scheduler_type.upper()}")
+    print("HPO Scheduling System Ready!")
+    print(f"Algorithm: {algo.upper()}, Mode: {scheduler_type.upper()}")
     print("Waiting for HPO workflows...")
     print("=" * 50)
 
@@ -153,8 +195,26 @@ if __name__ == "__main__":
         default='moldable',
         help='Scheduler mode: static or moldable (default: moldable)'
     )
+    parser.add_argument(
+        '--algo',
+        choices=['fcfs', 'edf'],
+        default='fcfs',
+        help='Scheduling algorithm: fcfs or edf (default: fcfs)'
+    )
+    parser.add_argument(
+        '--count',
+        type=int,
+        default=None,
+        help='Expected workflow count (encoded in output filenames for experiment tracking)'
+    )
+    parser.add_argument(
+        '--infra',
+        choices=['hybrid', 'cloud', 'slurm'],
+        default='hybrid',
+        help='Infrastructure config: hybrid (default), cloud-only, or slurm-only'
+    )
 
     args = parser.parse_args()
 
-    # Run main with selected scheduler type
-    main(scheduler_type=args.mode)
+    main(scheduler_type=args.mode, algo=args.algo,
+         wf_count=args.count, infra=args.infra)

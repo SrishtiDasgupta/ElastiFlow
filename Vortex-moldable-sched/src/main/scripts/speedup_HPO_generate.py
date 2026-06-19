@@ -6,8 +6,8 @@ from sklearn.metrics import r2_score
 
 MODEL_FACTORS = {
     'vgg19': 1.0,
-    'wide_resnet101_2': 1.37,
-    'convnext_large': 2.03
+    'wide_resnet101_2': 1.34,
+    'convnext_large': 1.46
 }
 
 def extract_runtime_data(filename):
@@ -103,8 +103,8 @@ def getRuntime_{instance_name}(workers, model, epochs):
 """
 
 if __name__ == "__main__":
-    g4_data = extract_runtime_data("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/g4.jsonl")
-    g5_data = extract_runtime_data("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/g5.jsonl")
+    g4_data = extract_runtime_data("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/g4_img64.jsonl")
+    g5_data = extract_runtime_data("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/g5_img64.jsonl")
 
     best_g4 = fit_all_models(g4_data, "g4")
     best_g5 = fit_all_models(g5_data, "g5")

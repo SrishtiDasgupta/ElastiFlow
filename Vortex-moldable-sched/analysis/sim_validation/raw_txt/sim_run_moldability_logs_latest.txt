@@ -1,0 +1,43 @@
+Helvetica;
+;;;;
+;;;;
+
+Starting dispatcher for 3 workflows at 0...
+Starting scheduler at 0...
+Scheduler started listening to completed jobs...
+Sending wf0 at 1
+test-8ace708b-1e2f-487b-90de-38ece69740c6 allocated at 20: {'on-prem': {'on-prem': (3, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Scheduler overhead: 0
+Executing workflow test-8ace708b-1e2f-487b-90de-38ece69740c6 at 20
+test-8ace708b-1e2f-487b-90de-38ece69740c6 workflow 0 completed in 2204.35996014562
+Sending wf1 at 61
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d allocated at 80: {'on-prem': {}, 'reserved': {'hpc7a.24xlarge': (1, ['10.19.246.116']), 'c6i.32xlarge': (1, ['10.19.238.8'])}, 'on-demand': {'hpc7a.24xlarge': (1, [])}}
+Scheduler overhead: 0
+Executing workflow test-aea60ba5-675b-4a34-9424-caeb20ecb80d at 80
+Creating 1 instances of hpc7a.24xlarge
+Sending wf2 at 121
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d allocated at 140: {'on-prem': {}, 'reserved': {'c6i.16xlarge': (1, ['10.19.224.55'])}, 'on-demand': {'c6i.32xlarge': (1, [])}}
+Scheduler overhead: 0
+Executing workflow test-87ae289e-a8b6-491f-805a-472f2eeeea4d at 140
+Creating 1 instances of c6i.32xlarge
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d workflow 0 completed in 408.75996314558
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d workflow 0 completed in 620.77563324189201
+Free resource request: test-aea60ba5-675b-4a34-9424-caeb20ecb80d requesting to free 2 resources for iteration 2
+Scheduler freeing {'on-prem': {}, 'reserved': {}, 'on-demand': {}} for test-aea60ba5-675b-4a34-9424-caeb20ecb80d
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d workflow 1 completed in 423.24586678522356
+Free resource request: test-aea60ba5-675b-4a34-9424-caeb20ecb80d rquesting to free 1 resources for iteration 3
+Scheduler freeing {'on-prem': {}, 'reserved': {}, 'on-demand': {}} for test-aea60ba5-675b-4a34-9424-caeb20ecb80d
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d workflow 2 completed in 462.56823325485230
+Workflow test-aea60ba5-675b-4a34-9424-caeb20ecb80d complete at 1770.44
+Terminating instances ['1.123.201.53']
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d workflow freed at 1830
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d workflow 1 completed in 634.285822107535
+Workflow test-87ae289e-a8b6-491f-805a-472f2eeeea4d complete at 1880.20336586333
+Terminating instances ['1.129.112.50']
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d workflow freed at 1890
+New resource request: test-8ace708b-1e2f-487b-90de-38ece69740c6 requesting 1 resources for iteration 2
+test-8ace708b-1e2f-487b-90de-38ece69740c6 allocated additional resources: {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+test-8ace708b-1e2f-487b-90de-38ece69740c6 workflow 1 completed in 2204.35996014562
+Workflow test-8ace708b-1e2f-487b-90de-38ece69740c6 complete at 4822.5569710579
+test-8ace708b-1e2f-487b-90de-38ece69740c6 workflow freed at 4840
+

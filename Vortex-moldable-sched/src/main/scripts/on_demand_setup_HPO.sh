@@ -4,15 +4,13 @@ export DEBIAN_FRONTEND=noninteractive
 
 sudo bash -c 'echo "\$nrconf{restart} = '\''a'\''; > /etc/needrestart/conf.d/99-restart.conf'
 
-wget -o - https://fsx-lustre-client-repo-public-keys.s3.amazonaws.com/fsx-ubuntu-public-key.asc | gpg --dearmor | sudo tee /usr/share/keyrings/fsx-ubuntu-public-key.gpg >/dev/null
-
-yes | sudo bash -c 'echo "deb [signed-by=/usr/share/keyrings/fsx-ubuntu-public-key.gpg] https://fsx-lustre-client-repo.s3.amazonaws.com/ubuntu jammy main" > /etc/apt/sources.list.d/fsxlustreclientrepo.list && yes | apt-get update >> ~/setup.out'
-
-yes | sudo apt install -y lustre-client-modules-$(uname -r) >> ~/setup.out
+# Mount EFS (replaces FSx Lustre)
+sudo apt-get install -y nfs-common >> ~/setup.out 2>&1
 
 sudo mkdir -p /fsx
 
-sudo mount -t lustre -o relatime,flock fs-0577278416bdf1172.fsx.eu-north-1.amazonaws.com@tcp:/zyqr7bev /fsx
+sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576 \
+    fs-0c7ed8d283368b734.efs.eu-north-1.amazonaws.com:/ /fsx
 
 if ! command -v aws &> /dev/null; then
     cp /fsx/install_aws.sh ~
@@ -32,9 +30,9 @@ echo "Setup complete"
 
 cd ~
 
-sudo cp -r /fsx/Vortex/ ~
+sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
 
-cd Vortex/src/main
+cd Vortex-moldable-sched/src/main
 
 nohup python3 executor.py > ~/executor.out 2>&1 &
 

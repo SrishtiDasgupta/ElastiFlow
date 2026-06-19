@@ -7,8 +7,20 @@ Integrates with the existing license manager for dual-resource (compute + licens
 
 from abc import ABC, abstractmethod
 import math
+import os
 import time
 from typing import List, Tuple, Optional
+
+# Maximum nodes-per-chain (moldable DEPTH) the allocator may search. The cited
+# cost lever (Henkel & Treiber 2015) places the concave Abaqus solver's license-
+# cost optimum at deep d (up to ~8 on small meshes); the previous cloud cap of 4
+# truncated it. Configurable (LA_MAX_DEPTH) for the depth-sensitivity figure.
+MAX_NODES_PER_CHAIN = int(os.environ.get('LA_MAX_DEPTH', '8'))
+
+# Depth-selection objective. 'cost' (default) = license-cost-aware per-solver depth
+# (Henkel & Treiber). 'speedup' = the legacy solver-blind speedup-threshold search
+# (kept for the thesis ablation and old-vs-new comparison). Set LA_DEPTH_MODE.
+DEPTH_MODE = os.environ.get('LA_DEPTH_MODE', 'cost')
 
 from config.constants import (
     AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME,
@@ -115,10 +127,13 @@ class Scheduler_LA(ABC):
 
             # Hold licenses (two-phase commit)
             print(f"[DEBUG] Attempting to hold {licenses_needed} licenses...")
+            # Owner MUST equal the metrics df key (wf_plan['id'] == constraints['wf_id'])
+            # so the token-hold ledger attributes this initial allocation to the right
+            # workflow. The old "wf-" prefix orphaned ~22% of license cost.
             hold_id = self.license_manager.hold(
                 pool=license_pool,
                 amount=licenses_needed,
-                owner=f"wf-{constraints.get('wf_id', 'unknown')}",
+                owner=constraints.get('wf_id', 'unknown'),
                 ttl=300  # 5 minute hold
             )
             print(f"[DEBUG] License hold successful: {hold_id}")
@@ -502,8 +517,62 @@ class Scheduler_LA(ABC):
     # Adds the missing runtime feasibility check and moldability optimization.
     # =========================================================================
 
+    def _best_depth_total(self, max_npc, mesh, inst_name, cores_per_node,
+                          chains, tinyda_iters, budget, available_runtime,
+                          cost_per_sec_node, software_id, cold_per_node=0.0):
+        """Pick nodes-per-chain (moldable DEPTH) that minimises a workflow's total
+        (hardware + license) cost, subject to the deadline (available_runtime) and
+        budget. Returns 0 if no depth is feasible.
+
+        This replaces the old solver-blind speedup-threshold search. License cost
+        follows the cited token laws (Henkel & Treiber 2015) via
+        metrics.calculate_license_cost: only the concave Abaqus law rewards depth>1
+        (token count grows sublinearly while runtime falls), whereas LS-Dyna
+        (linear) and Ansys (workgroup + flat MEBA) are minimised at depth 1. The
+        old search picked depth purely for speedup, overshooting depth for the
+        linear/workgroup solvers (paying extra tokens) and was capped below the
+        Abaqus optimum. Minimising TOTAL cost is the defensible objective: deeper
+        allocations use more nodes (hardware rises with depth), which the optimum
+        balances against the solver's license curve.
+        """
+        if max_npc < 1:
+            return 0
+        if DEPTH_MODE == 'speedup':
+            # Legacy solver-blind selection: largest depth (from max down) whose
+            # marginal node still yields > SPEEDUP_THRESHOLD speedup AND fits budget;
+            # reject (0) if that depth misses the deadline. Mirrors the old greedy loop.
+            for d in range(int(max_npc), 0, -1):
+                runtime = getRuntime(d, mesh, inst_name)
+                total_nodes = d * chains
+                hw_cost = getEstimate(cost_per_sec_node * runtime, tinyda_iters, 1, total_nodes)
+                if cold_per_node:
+                    hw_cost += cold_per_node * total_nodes
+                if hw_cost < budget and getRuntime(d - 1, mesh, inst_name) / runtime > SPEEDUP_THRESHOLD:
+                    return d if runtime * tinyda_iters < available_runtime else 0
+            return 0
+        best_d, best_cost = 0, None
+        for d in range(1, int(max_npc) + 1):
+            runtime = getRuntime(d, mesh, inst_name)
+            if runtime * tinyda_iters >= available_runtime:      # deadline infeasible
+                continue
+            total_nodes = d * chains
+            duration = runtime * tinyda_iters
+            hw_cost = getEstimate(cost_per_sec_node * runtime, tinyda_iters, 1, total_nodes)
+            if cold_per_node:
+                hw_cost += cold_per_node * total_nodes
+            if hw_cost >= budget:                                # budget infeasible
+                continue
+            lic_cost = (self.metrics.calculate_license_cost(
+                            software_id, total_nodes * cores_per_node, duration)
+                        if software_id else 0.0)
+            total = hw_cost + lic_cost
+            if best_cost is None or total < best_cost:
+                best_d, best_cost = d, total
+        return best_d
+
     def checkNewResources(self, resources: List[Instance], current_resources: List[tuple[Instance, int, List]],
-                          budget: float, available_runtime: float, request, mesh) -> List[tuple[Instance, int]]:
+                          budget: float, available_runtime: float, request, mesh,
+                          software_id: Optional[int] = None) -> List[tuple[Instance, int]]:
         """
         Advanced moldable resource allocation (3-tier strategy from PLAIN fcfs_optimized)
 
@@ -524,21 +593,17 @@ class Scheduler_LA(ABC):
             to_be_used = 0
             # At least 1 node per chain/moldability
             if free_slots >= request['count']:
-                nodes_per_chain = request['chains'] - request['count'] + free_slots // request['chains']
-                while nodes_per_chain > 0:
-                    speedup_runtime = getRuntime(nodes_per_chain, mesh, instance.name)
-                    cost_per_node_iteration = instance.cost_per_second * speedup_runtime
-                    total_cost = getEstimate(cost_per_node_iteration, request['tinyda-iterations'], 1, nodes_per_chain * request['chains'])
-                    # If there is budget, and runtime is within limits, allocate
-                    if total_cost < budget and getRuntime(nodes_per_chain-1, mesh, instance.name) / speedup_runtime > SPEEDUP_THRESHOLD:
-                        # GLOBAL VIEW: Check if can complete within deadline (THIS WAS MISSING!)
-                        if speedup_runtime * request['tinyda-iterations'] < available_runtime:
-                            to_be_used = (nodes_per_chain * request['chains']) - (request['chains'] - request['count'])
-                            print(f'Moldable onprem with {nodes_per_chain} nodes per chain')
-                            break
-                        else: return []  # Cannot meet deadline - reject allocation
-                    else:
-                        nodes_per_chain -= 1
+                max_npc = request['chains'] - request['count'] + free_slots // request['chains']
+                # License-cost-aware DEPTH (was solver-blind speedup search).
+                nodes_per_chain = self._best_depth_total(
+                    max_npc, mesh, instance.name, instance.cores,
+                    request['chains'], request['tinyda-iterations'],
+                    budget, available_runtime, instance.cost_per_second,
+                    software_id, cold_per_node=0.0)
+                if nodes_per_chain > 0:
+                    to_be_used = (nodes_per_chain * request['chains']) - (request['chains'] - request['count'])
+                    print(f'Moldable onprem with {nodes_per_chain} nodes per chain '
+                          f'(cost-optimal, sw={software_id})')
             return [(instance, to_be_used)]
 
         # 2. Allocate possible reserved/on-demand if not case 1
@@ -565,26 +630,23 @@ class Scheduler_LA(ABC):
         to_be_used, nodes_per_chain = 0, 0
         if free_slots:
             print(f'Going into moldable cloud with {free_slots}')
-            nodes_per_chain = min((request['chains'] - request['count'] + free_slots) // request['chains'], 4)
-            while nodes_per_chain > 0:
-                speedup_runtime = getRuntime(nodes_per_chain, mesh, instances_to_be_used[-1][0].name)  # slowest instance
-                cost_per_node_iteration = instances_to_be_used[0][0].cost_per_second * speedup_runtime  # max cost
-                total_cost = getEstimate(cost_per_node_iteration, request['tinyda-iterations'], 1, nodes_per_chain * request['chains'])
-                if ondemandFlag:
-                    total_cost += COLD_START_TIME * instances_to_be_used[0][0].cost_per_second * nodes_per_chain * request['chains']
-                # If there is budget, and speedup is substantial, allocate nodes
-                if total_cost < budget and getRuntime(nodes_per_chain-1, mesh, instances_to_be_used[-1][0].name) / speedup_runtime > SPEEDUP_THRESHOLD:
-                    # GLOBAL VIEW: Check if can complete within deadline (THIS WAS MISSING!)
-                    if speedup_runtime * request['tinyda-iterations'] < available_runtime:
-                        to_be_used = (nodes_per_chain * request['chains']) - (request['chains'] - request['count'])
-                        print(f'Alloted moldable cloud with {nodes_per_chain} nodes per chain')
-                        break
-                    else:
-                        print('Not enough runtime for moldable cloud')
-                        return []  # Cannot meet deadline - reject allocation
-                else:
-                    print(f'Not enough budget for moldable cloud with {nodes_per_chain}. Total cost: {total_cost}, budget: {budget}')
-                    nodes_per_chain -= 1
+            # Cost model (unchanged): slowest instance drives runtime, priciest drives cost.
+            slow_name = instances_to_be_used[-1][0].name
+            slow_cpn  = instances_to_be_used[-1][0].cores
+            dear_cps  = instances_to_be_used[0][0].cost_per_second
+            # Cap lifted 4 -> MAX_NODES_PER_CHAIN so Abaqus's deep small-mesh optimum is reachable.
+            max_npc = min((request['chains'] - request['count'] + free_slots) // request['chains'],
+                          MAX_NODES_PER_CHAIN)
+            # License-cost-aware DEPTH (was solver-blind speedup search).
+            nodes_per_chain = self._best_depth_total(
+                max_npc, mesh, slow_name, slow_cpn,
+                request['chains'], request['tinyda-iterations'],
+                budget, available_runtime, dear_cps, software_id,
+                cold_per_node=(COLD_START_TIME * dear_cps if ondemandFlag else 0.0))
+            if nodes_per_chain > 0:
+                to_be_used = (nodes_per_chain * request['chains']) - (request['chains'] - request['count'])
+                print(f'Alloted moldable cloud with {nodes_per_chain} nodes per chain '
+                      f'(cost-optimal, sw={software_id})')
 
         # Extract last n to_be_used nodes from instances_to_be_used - cheaper
         acquired_instances = []

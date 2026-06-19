@@ -24,3 +24,15 @@ src/main/scripts/deadline_plot.png
 
 # Terraform binary plans
 IaC_scripts/*.tfplan
+
+# Raw per-cell sweep run outputs (large; reproducible from the sweep scripts,
+# the aggregated *_sweep.json / canonical_results.json are the data of record)
+license_results/sweep_runs/
+plain_results/sweep_runs/
+plain_results/k_sweep_runs/
+
+# Stray simulation outputs / temp files at the package root
+/EDF_HSM_*.csv
+/LAMF_*.csv
+*.tmp
+fsx/hyperparameter_test/error_log1.rtf

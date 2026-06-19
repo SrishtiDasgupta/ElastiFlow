@@ -2,10 +2,10 @@ import threading
 import sys
 import argparse
 from utils.sim import getTime
-from utils.exec_sched import setNewResources
+from utils.exec_sched import setNewResources, isResourceRequestPending
 from scripts.create_instance_HPO import deleteInstanceFromIp
 from utils.request import getConfig, sendRequest
-from workflow.steep_workflow import Steep_Workflow
+from workflow.steep_workflow_HPO import Steep_Workflow_HPO
 from server import server
 from wf_queue.redis_queue import Redis_Queue
 from config.constants_HPO import SIMULATE
@@ -53,7 +53,7 @@ def executeWorkflowHPO(data, sim=None):
 
     # Create Steep workflow (same as SeisSol)
     try:
-        workflow = Steep_Workflow(workflow_plan, sim, deadline)
+        workflow = Steep_Workflow_HPO(workflow_plan, sim, deadline)
         start_time = getTime(sim)
 
         print(f'Executing HPO workflow {workflow.id} at {start_time}')
@@ -83,33 +83,54 @@ def executeWorkflowHPO(data, sim=None):
         print(f"[ERROR] Workflow execution failed: {e}")
         import traceback
         traceback.print_exc()
-        raise
+        new_hosts = hosts  # Use original hosts for cleanup
+        isComplete = False
 
     # Tell scheduler workflow execution is complete
-    if SIMULATE:
-        sim.sleep(7.7)  # Executor overhead
+    try:
+        if sim:
+            sim.sleep(7.7)  # Executor overhead (simulation only)
 
-    request = {
-        "wf-id": workflow.id,
-        "hosts": new_hosts,
-        "start-time": start_time,
-        "finish-time": getTime(sim),
-        "complete": isComplete
-    }
+        request = {
+            "wf-id": workflow.id,
+            "hosts": new_hosts,
+            "start-time": start_time,
+            "finish-time": getTime(sim),
+            "complete": isComplete
+        }
 
-    print(f"HPO Workflow {workflow.id} complete at {request['finish-time']}")
+        print(f"HPO Workflow {workflow.id} complete at {request['finish-time']}")
 
-    if sim:
-        sim.sync().send(sim, 'completed_jobs_mb', str(request))
-    else:
-        sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
-
-    # Kill newly created on-demand instances (workers only, not executor)
-    # Note: Executor instance will be terminated by scheduler after this thread exits
-    for node in new_hosts.get('on-demand', {}):
-        if isinstance(new_hosts['on-demand'][node], tuple):
-            # Format: (count, [ips])
-            deleteInstanceFromIp(new_hosts['on-demand'][node][1])
+        if sim:
+            sim.sync().send(sim, 'completed_jobs_mb', str(request))
+        else:
+            # Retry completion notification up to 3 times.
+            # A lost notification means the scheduler never frees this
+            # workflow's resources, hanging the entire experiment.
+            for attempt in range(3):
+                success = sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
+                if success:
+                    break
+                print(f"[RETRY] Completion notification for {workflow.id} failed (attempt {attempt+1}/3)")
+                import time as _time
+                _time.sleep(5)
+            else:
+                print(f"[ERROR] All 3 completion notification attempts failed for {workflow.id}")
+    except Exception as e:
+        print(f"[ERROR] Failed to notify scheduler: {e}")
+    finally:
+        # ALWAYS clean up on-demand instances, even if notification failed
+        # Note: JSON serialization converts tuples to lists, so check both
+        if not sim and not SIMULATE:
+            for node in new_hosts.get('on-demand', {}):
+                val = new_hosts['on-demand'][node]
+                if isinstance(val, (tuple, list)) and len(val) >= 2:
+                    ips = val[1]
+                    print(f"[CLEANUP] Terminating on-demand instances: {ips}")
+                    try:
+                        deleteInstanceFromIp(ips)
+                    except Exception as e:
+                        print(f"[ERROR] Termination failed for {ips}: {e}")
 
     print(f"HPO Workflow {workflow.id} thread exiting")
 
@@ -119,9 +140,15 @@ def processNewResourcesHPO(data):
     Process new resource allocations for moldable HPO workflows
     Updates workflow config with new worker instances
     """
-    # Update workflow config with new resources
-    setNewResources(data['wf-id'], (data.get('request'), data.get('hosts')))
-    print(f"Updated resources for HPO workflow {data['wf-id']}")
+    wf_id = data['wf-id']
+    # Only accept if executor is still waiting for this response.
+    # Late responses (after executor timeout) are discarded to prevent
+    # stale resources being picked up by the next iteration.
+    if not isResourceRequestPending(wf_id):
+        print(f"[DISCARD] Late resource response for {wf_id} (executor already timed out)")
+        return
+    setNewResources(wf_id, (data.get('request'), data.get('hosts')))
+    print(f"Updated resources for HPO workflow {wf_id}")
 
 
 if __name__ == "__main__":

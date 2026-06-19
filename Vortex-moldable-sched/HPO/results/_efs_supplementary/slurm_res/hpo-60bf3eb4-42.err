@@ -1,0 +1,445 @@
++ source /home/ubuntu/rayenv/bin/activate
+++ deactivate nondestructive
+++ '[' -n '' ']'
+++ '[' -n '' ']'
+++ '[' -n /bin/bash -o -n '' ']'
+++ hash -r
+++ '[' -n '' ']'
+++ unset VIRTUAL_ENV
+++ unset VIRTUAL_ENV_PROMPT
+++ '[' '!' nondestructive = nondestructive ']'
+++ VIRTUAL_ENV=/home/ubuntu/rayenv
+++ export VIRTUAL_ENV
+++ _OLD_VIRTUAL_PATH=/opt/slurm/bin:/home/ubuntu/rayenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+++ PATH=/home/ubuntu/rayenv/bin:/opt/slurm/bin:/home/ubuntu/rayenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+++ export PATH
+++ '[' -n '' ']'
+++ '[' -z '' ']'
+++ _OLD_VIRTUAL_PS1=
+++ PS1='(rayenv) '
+++ export PS1
+++ VIRTUAL_ENV_PROMPT='(rayenv) '
+++ export VIRTUAL_ENV_PROMPT
+++ '[' -n /bin/bash -o -n '' ']'
+++ hash -r
++ module load libfabric-aws/1.22.0amzn5.0
+/var/spool/slurmd/job00042/slurm_script: line 16: module: command not found
++ true
+++ scontrol show hostnames 'gpu-compute-st-g4dn-nodes-[1-4]'
++ nodes='gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2
+gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
+++ echo 'gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2
+gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
+++ head -n1
++ head_node=gpu-compute-st-g4dn-nodes-1
+++ srun -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 hostname -I
+++ awk '{print $1}'
++ head_ip=172.31.1.11
++ port=7138
++ echo '[INFO] Cluster nodes: gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2
+gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
++ echo '[INFO] Head Node: gpu-compute-st-g4dn-nodes-1 (172.31.1.11)'
++ echo '[INFO] Using RAY_ADDRESS=172.31.1.11:7138'
++ trap cleanup EXIT
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-2 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-4 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ echo '[INFO] Waiting for Ray head GCS on 172.31.1.11:7138 ...'
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -c 'source ~/rayenv/bin/activate && ray start --head --node-ip-address=172.31.1.11 --port=7138 --block'
+++ seq 1 12
++ for attempt in $(seq 1 12)
++ python3 -c 'import socket; s=socket.socket(); s.settimeout(2); s.connect(('\''172.31.1.11'\'',7138)); s.close(); print('\''READY'\'')'
++ grep -q READY
++ '[' 1 -eq 12 ']'
++ echo '[INFO] GCS not ready yet (attempt 1/12), waiting 5s...'
++ sleep 5
++ for attempt in $(seq 1 12)
++ grep -q READY
++ python3 -c 'import socket; s=socket.socket(); s.settimeout(2); s.connect(('\''172.31.1.11'\'',7138)); s.close(); print('\''READY'\'')'
++ echo '[INFO] Ray head GCS ready after 10s'
++ break
+++ echo 'gpu-compute-st-g4dn-nodes-1
+gpu-compute-st-g4dn-nodes-2
+gpu-compute-st-g4dn-nodes-3
+gpu-compute-st-g4dn-nodes-4'
+++ tail -n +2
++ for node in $(echo "$nodes" | tail -n +2)
++ for node in $(echo "$nodes" | tail -n +2)
++ for node in $(echo "$nodes" | tail -n +2)
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-2 bash -c 'source ~/rayenv/bin/activate && ray start --address=172.31.1.11:7138 --block'
++ echo '[INFO] Waiting 15s for Ray workers to join ...'
++ sleep 15
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 bash -c 'source ~/rayenv/bin/activate && ray start --address=172.31.1.11:7138 --block'
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-4 bash -c 'source ~/rayenv/bin/activate && ray start --address=172.31.1.11:7138 --block'
++ echo '[INFO] Running HPO pipeline on head ....'
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -lc '
+export RAY_ADDRESS='\''172.31.1.11:7138'\''
+echo '\''{"learning_rate": 0.003795080953381467, "momentum": 0.7162764859016844, "next_trials": 9, "epochs": 2}'\''       | python3 /fsx/Vortex-mid/Vortex-moldable-sched/fsx/hyperparameter_test/hpo_pipeline_verbose.py --hosts 4 '
+2026-05-04 15:59:14,453	INFO worker.py:1672 -- Using address 172.31.1.11:7138 set in the environment variable RAY_ADDRESS
+2026-05-04 15:59:14,456	INFO worker.py:1814 -- Connecting to existing Ray cluster at address: 172.31.1.11:7138...
+2026-05-04 15:59:14,480	INFO worker.py:2003 -- Connected to Ray cluster. View the dashboard at [1m[32m127.0.0.1:8265 [39m[22m
+/home/ubuntu/rayenv/lib/python3.10/site-packages/ray/_private/worker.py:2051: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+2026-05-04 15:59:15,214	INFO registry.py:112 -- Detected unknown callable for trainable. Converting to class.
+[36m(TrainController pid=56084)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=56084)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=36832, ip=172.31.7.76)[0m Requesting resources: {'GPU': 1} * 1[32m [repeated 3x across cluster] (Ray deduplicates logs by default. Set RAY_DEDUP_LOGS=0 to disable log deduplication, or see https://docs.ray.io/en/master/ray-observability/user-guides/configure-logging.html#log-deduplication for more options.)[0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.
+[36m(TrainController pid=36832, ip=172.31.7.76)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1[32m [repeated 3x across cluster][0m
+[36m(TrainController pid=56084)[0m Started training worker group of size 1: 
+[36m(TrainController pid=56084)[0m - (ip=172.31.7.76, pid=36870) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m 
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m current device index = 0
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m =====================================================
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m 
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m 🔍 FULL CONFIG: epochs=12, lr=0.0006233944855565842, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m 
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m 
+[36m(RayTrainWorker pid=56188)[0m 
+[36m(RayTrainWorker pid=56188)[0m 
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m 
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m 
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m Setting up process group for: env:// [rank=0, world_size=1][32m [repeated 3x across cluster][0m
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(TrainController pid=36298, ip=172.31.1.198)[0m Started training worker group of size 1: [32m [repeated 3x across cluster][0m
+[36m(TrainController pid=36298, ip=172.31.1.198)[0m - (ip=172.31.15.104, pid=38417) world_rank=0, local_rank=0, node_rank=0[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m ================ WORKER DEVICE DEBUG ================[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m CUDA_VISIBLE_DEVICES = 0[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m torch.cuda.is_available() = True[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m torch.cuda.device_count() = 1[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m current device index = 0[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m device name = Tesla T4[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m =====================================================[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m 🔍 FULL CONFIG: epochs=12, lr=0.02571714793391382, batch_size=64, image_size=64[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m Moving model to device: cuda:0[32m [repeated 3x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.4161, 'best_accuracy': 0.4161, 'avg_epoch_time_s': 21.831721548998757}, validation=False)
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.5047, 'best_accuracy': 0.5047, 'avg_epoch_time_s': 23.62480100399989}, validation=False)[32m [repeated 3x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.4861, 'best_accuracy': 0.4861, 'avg_epoch_time_s': 21.407109803998537}, validation=False)
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5291, 'best_accuracy': 0.5291, 'avg_epoch_time_s': 23.319693773000836}, validation=False)[32m [repeated 3x across cluster][0m
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5121, 'best_accuracy': 0.5121, 'avg_epoch_time_s': 21.307613972666633}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5411, 'best_accuracy': 0.5411, 'avg_epoch_time_s': 23.049849077334027}, validation=False)[32m [repeated 3x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.4475, 'best_accuracy': 0.5121, 'avg_epoch_time_s': 21.295577511749798}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5227, 'best_accuracy': 0.5622, 'avg_epoch_time_s': 21.46017872850007}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5485, 'best_accuracy': 0.5485, 'avg_epoch_time_s': 23.068933157250285}, validation=False)
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5317, 'best_accuracy': 0.5317, 'avg_epoch_time_s': 21.310196220399668}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5318, 'best_accuracy': 0.5622, 'avg_epoch_time_s': 21.375586743400344}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5587, 'best_accuracy': 0.5587, 'avg_epoch_time_s': 23.072448290200555}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.4972, 'best_accuracy': 0.5317, 'avg_epoch_time_s': 21.296113720166733}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.4325, 'best_accuracy': 0.5622, 'avg_epoch_time_s': 21.348886327333577}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.5535, 'best_accuracy': 0.5587, 'avg_epoch_time_s': 23.102221827833393}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.4456, 'best_accuracy': 0.5317, 'avg_epoch_time_s': 21.251756823857118}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=56188)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5915, 'best_accuracy': 0.5969, 'avg_epoch_time_s': 21.386187688000064}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5744, 'best_accuracy': 0.5744, 'avg_epoch_time_s': 23.078843046571688}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.5083, 'best_accuracy': 0.5317, 'avg_epoch_time_s': 21.248122513125054}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=56188)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.6002, 'best_accuracy': 0.6002, 'avg_epoch_time_s': 21.364956180374975}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.5719, 'best_accuracy': 0.5744, 'avg_epoch_time_s': 23.049259559000348}, validation=False)
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.4237, 'best_accuracy': 0.5317, 'avg_epoch_time_s': 21.20424020744435}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=56188)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.5999, 'best_accuracy': 0.6002, 'avg_epoch_time_s': 21.354694821555313}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.5647, 'best_accuracy': 0.5744, 'avg_epoch_time_s': 23.055050069777888}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36339, ip=172.31.1.198)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.4665, 'best_accuracy': 0.5317, 'avg_epoch_time_s': 21.191975239800012}, validation=False)
+[36m(RayTrainWorker pid=38417, ip=172.31.15.104)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.5212, 'best_accuracy': 0.5622, 'avg_epoch_time_s': 21.227698130000135}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=56188)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.5874, 'best_accuracy': 0.6002, 'avg_epoch_time_s': 21.349293264099835}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.5634, 'best_accuracy': 0.5744, 'avg_epoch_time_s': 23.02141452290016}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=56188)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.6031, 'best_accuracy': 0.6031, 'avg_epoch_time_s': 21.351205154909124}, validation=False)[32m [repeated 3x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.5757, 'best_accuracy': 0.5757, 'avg_epoch_time_s': 23.02440135154558}, validation=False)
+[36m(PlacementGroupCleaner pid=38416, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 11x across cluster][0m
+[36m(RayTrainWorker pid=56188)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5942, 'best_accuracy': 0.6031, 'avg_epoch_time_s': 21.364260685916634}, validation=False)[32m [repeated 3x across cluster][0m
+[36m(TrainController pid=39645, ip=172.31.15.104)[0m Requesting resources: {'GPU': 1} * 1
+[36m(PlacementGroupCleaner pid=38419, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 5x across cluster][0m
+[36m(TrainController pid=39645, ip=172.31.15.104)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(TrainController pid=37435, ip=172.31.7.76)[0m Requesting resources: {'GPU': 1} * 1[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 3x across cluster][0m
+[36m(TrainController pid=36910, ip=172.31.1.198)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(TrainController pid=39645, ip=172.31.15.104)[0m Started training worker group of size 1: 
+[36m(TrainController pid=39645, ip=172.31.15.104)[0m - (ip=172.31.15.104, pid=39687) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m 
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m current device index = 0
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m =====================================================
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m 
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m 🔍 FULL CONFIG: epochs=12, lr=0.032413209113971324, batch_size=64, image_size=64
+[36m(TrainController pid=37435, ip=172.31.7.76)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=57640)[0m 
+[36m(RayTrainWorker pid=57640)[0m 
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Setting up process group for: env:// [rank=0, world_size=1][32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m 
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m 
+[36m(PlacementGroupCleaner pid=37515, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 13x across cluster][0m
+[36m(TrainController pid=36910, ip=172.31.1.198)[0m Started training worker group of size 1: 
+[36m(TrainController pid=36910, ip=172.31.1.198)[0m - (ip=172.31.1.11, pid=57640) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m ================ WORKER DEVICE DEBUG ================[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m CUDA_VISIBLE_DEVICES = 0[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m torch.cuda.is_available() = True[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m torch.cuda.device_count() = 1[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m current device index = 0[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m device name = Tesla T4[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m =====================================================[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m 🔍 FULL CONFIG: epochs=12, lr=0.004740286347616201, batch_size=64, image_size=64[32m [repeated 2x across cluster][0m
+[36m(TrainController pid=37435, ip=172.31.7.76)[0m Started training worker group of size 1: 
+[36m(TrainController pid=37435, ip=172.31.7.76)[0m - (ip=172.31.1.198, pid=36990) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Moving model to device: cuda:0[32m [repeated 2x across cluster][0m
+[36m(RayTrainWorker pid=36870, ip=172.31.7.76)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.58, 'best_accuracy': 0.58, 'avg_epoch_time_s': 23.34269413225017}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 16x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 15x across cluster][0m
+[36m(PlacementGroupCleaner pid=37515, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 17x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.4602, 'best_accuracy': 0.4602, 'avg_epoch_time_s': 21.714284867997776}, validation=False)
+[36m(TrainController pid=37099, ip=172.31.1.198)[0m Requesting resources: {'GPU': 1} * 1
+[36m(TrainController pid=37099, ip=172.31.1.198)[0m Attempting to start training worker group of size 1 with the following resources: [{'GPU': 1}] * 1
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Setting up process group for: env:// [rank=0, world_size=1]
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 15x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.5557, 'best_accuracy': 0.5557, 'avg_epoch_time_s': 21.893475250999472}, validation=False)
+[36m(TrainController pid=37099, ip=172.31.1.198)[0m Started training worker group of size 1: 
+[36m(TrainController pid=37099, ip=172.31.1.198)[0m - (ip=172.31.7.76, pid=37668) world_rank=0, local_rank=0, node_rank=0
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m 
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m current device index = 0
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m =====================================================
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m 
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m 🔍 FULL CONFIG: epochs=12, lr=0.002434421377876834, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.5581, 'best_accuracy': 0.5581, 'avg_epoch_time_s': 23.98354551399825}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5327, 'best_accuracy': 0.5327, 'avg_epoch_time_s': 21.375936425498367}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5611, 'best_accuracy': 0.5611, 'avg_epoch_time_s': 21.47032204700008}, validation=False)
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5643, 'best_accuracy': 0.5643, 'avg_epoch_time_s': 22.517754264999894}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.5514, 'best_accuracy': 0.5514, 'avg_epoch_time_s': 23.790523120002035}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 19x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.4477, 'best_accuracy': 0.5327, 'avg_epoch_time_s': 21.309708727333298}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5605, 'best_accuracy': 0.5611, 'avg_epoch_time_s': 21.380738500000007}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5753, 'best_accuracy': 0.5753, 'avg_epoch_time_s': 22.15299988299982}, validation=False)
+[36m(PlacementGroupCleaner pid=37515, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5592, 'best_accuracy': 0.5592, 'avg_epoch_time_s': 23.39109314649977}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.4875, 'best_accuracy': 0.5327, 'avg_epoch_time_s': 21.190749495749515}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.552, 'best_accuracy': 0.5611, 'avg_epoch_time_s': 21.365264008750273}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5878, 'best_accuracy': 0.5878, 'avg_epoch_time_s': 21.992075446250055}, validation=False)
+[36m(PlacementGroupCleaner pid=37515, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 22x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5675, 'best_accuracy': 0.5675, 'avg_epoch_time_s': 23.30674535066646}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5003, 'best_accuracy': 0.5327, 'avg_epoch_time_s': 21.148718744600046}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5614, 'best_accuracy': 0.5614, 'avg_epoch_time_s': 21.28587705280006}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5856, 'best_accuracy': 0.5878, 'avg_epoch_time_s': 21.886337479799842}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5857, 'best_accuracy': 0.5857, 'avg_epoch_time_s': 23.402953038000305}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.534, 'best_accuracy': 0.534, 'avg_epoch_time_s': 21.193890588499926}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.583, 'best_accuracy': 0.583, 'avg_epoch_time_s': 21.24261211866663}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 19x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.6035, 'best_accuracy': 0.6035, 'avg_epoch_time_s': 21.80884307816632}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 23x across cluster][0m
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5798, 'best_accuracy': 0.5857, 'avg_epoch_time_s': 23.41353352799997}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5415, 'best_accuracy': 0.5415, 'avg_epoch_time_s': 21.144246225428237}, validation=False)
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5992, 'best_accuracy': 0.5992, 'avg_epoch_time_s': 21.20362569428575}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.5841, 'best_accuracy': 0.6035, 'avg_epoch_time_s': 21.744544809428458}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 19x across cluster][0m
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.5965, 'best_accuracy': 0.5965, 'avg_epoch_time_s': 23.369663954833715}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.5883, 'best_accuracy': 0.5992, 'avg_epoch_time_s': 21.190588072875016}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.6007, 'best_accuracy': 0.6035, 'avg_epoch_time_s': 21.693628912250006}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 22x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.4326, 'best_accuracy': 0.5415, 'avg_epoch_time_s': 21.093463728666393}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.5895, 'best_accuracy': 0.5992, 'avg_epoch_time_s': 21.143958275111395}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.5993, 'best_accuracy': 0.6035, 'avg_epoch_time_s': 21.697800609555593}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 19x across cluster][0m
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 19x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.551, 'best_accuracy': 0.551, 'avg_epoch_time_s': 21.087688419999903}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.5875, 'best_accuracy': 0.6024, 'avg_epoch_time_s': 23.40169245874995}, validation=False)[32m [repeated 2x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.6067, 'best_accuracy': 0.6067, 'avg_epoch_time_s': 21.775214725899787}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.3596, 'best_accuracy': 0.551, 'avg_epoch_time_s': 21.084002480181713}, validation=False)
+[36m(PlacementGroupCleaner pid=37470, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 19x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.5919, 'best_accuracy': 0.5992, 'avg_epoch_time_s': 21.09640182018186}, validation=False)
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.5822, 'best_accuracy': 0.6024, 'avg_epoch_time_s': 23.43956162488919}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 22x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.6007, 'best_accuracy': 0.6067, 'avg_epoch_time_s': 21.867997994727126}, validation=False)
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 21x across cluster][0m
+[36m(PlacementGroupCleaner pid=39685, ip=172.31.15.104)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 20x across cluster][0m
+[36m(RayTrainWorker pid=39687, ip=172.31.15.104)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5151, 'best_accuracy': 0.551, 'avg_epoch_time_s': 21.119165666416546}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 23x across cluster][0m
+[36m(RayTrainWorker pid=57640)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5732, 'best_accuracy': 0.5992, 'avg_epoch_time_s': 21.089860474166624}, validation=False)
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.6118, 'best_accuracy': 0.6118, 'avg_epoch_time_s': 23.462159837100263}, validation=False)
+[36m(PlacementGroupCleaner pid=37515, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 14x across cluster][0m
+[36m(PlacementGroupCleaner pid=37515, ip=172.31.7.76)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(RayTrainWorker pid=36990, ip=172.31.1.198)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.6107, 'best_accuracy': 0.6107, 'avg_epoch_time_s': 21.96627215324982}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 10x across cluster][0m
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 5x across cluster][0m
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 5x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.6067, 'best_accuracy': 0.6118, 'avg_epoch_time_s': 23.469240218182016}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 6x across cluster][0m
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 5x across cluster][0m
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 6x across cluster][0m
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 5x across cluster][0m
+[36m(RayTrainWorker pid=37668, ip=172.31.7.76)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5968, 'best_accuracy': 0.6118, 'avg_epoch_time_s': 23.415883334666734}, validation=False)
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 5x across cluster][0m
+2026-05-04 16:09:19,846	INFO tune.py:1001 -- Wrote the latest version of all result files and experiment state to '/fsx/ray_results/pytorch_hpo_phase1' in 0.0858s.
+2026-05-04 16:09:20,130	INFO registry.py:112 -- Detected unknown callable for trainable. Converting to class.
+[36m(TrainController pid=40607, ip=172.31.15.104)[0m Requesting resources: {'GPU': 1} * 4
+[36m(PlacementGroupCleaner pid=37143, ip=172.31.1.198)[0m Failed to query Ray Train Controller actor state. State API may be temporarily unavailable. Continuing to monitor.[32m [repeated 2x across cluster][0m
+[36m(TrainController pid=40607, ip=172.31.15.104)[0m Attempting to start training worker group of size 4 with the following resources: [{'GPU': 1}] * 4
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Setting up process group for: env:// [rank=0, world_size=4]
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m 
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m ================ WORKER DEVICE DEBUG ================
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m CUDA_VISIBLE_DEVICES = 0
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m torch.cuda.is_available() = True
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m torch.cuda.device_count() = 1
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m current device index = 0
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m device name = Tesla T4
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m =====================================================
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m 
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m 🔍 FULL CONFIG: epochs=12, lr=0.001556175471824747, batch_size=64, image_size=64
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Moving model to device: cuda:0
+[36m(RayTrainWorker pid=38073, ip=172.31.1.198)[0m 
+[36m(RayTrainWorker pid=38073, ip=172.31.1.198)[0m 
+[36m(TrainController pid=40607, ip=172.31.15.104)[0m Started training worker group of size 4: 
+[36m(TrainController pid=40607, ip=172.31.15.104)[0m - (ip=172.31.15.104, pid=40648) world_rank=0, local_rank=0, node_rank=0
+[36m(TrainController pid=40607, ip=172.31.15.104)[0m - (ip=172.31.1.11, pid=58410) world_rank=1, local_rank=0, node_rank=1
+[36m(TrainController pid=40607, ip=172.31.15.104)[0m - (ip=172.31.7.76, pid=38717) world_rank=2, local_rank=0, node_rank=2
+[36m(TrainController pid=40607, ip=172.31.15.104)[0m - (ip=172.31.1.198, pid=38073) world_rank=3, local_rank=0, node_rank=3
+[36m(RayTrainWorker pid=38717, ip=172.31.7.76)[0m 
+[36m(RayTrainWorker pid=38717, ip=172.31.7.76)[0m 
+[36m(RayTrainWorker pid=58410)[0m 
+[36m(RayTrainWorker pid=58410)[0m 
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Wrapping provided model in DistributedDataParallel.
+[36m(RayTrainWorker pid=38717, ip=172.31.7.76)[0m Reporting training result 1: TrainingReport(checkpoint=None, metrics={'epoch': 1, 'accuracy': 0.4448, 'best_accuracy': 0.4448, 'avg_epoch_time_s': 7.59052720299951}, validation=False)
+[36m(RayTrainWorker pid=58410)[0m ================ WORKER DEVICE DEBUG ================[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m CUDA_VISIBLE_DEVICES = 0[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m torch.cuda.is_available() = True[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m torch.cuda.device_count() = 1[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m current device index = 0[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m device name = Tesla T4[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m =====================================================[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m 🔍 TRAINING WITH MODEL: resnext50_32x4d[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m 🔍 FULL CONFIG: epochs=12, lr=0.001556175471824747, batch_size=64, image_size=64[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m Moving model to device: cuda:0[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m Wrapping provided model in DistributedDataParallel.[32m [repeated 3x across cluster][0m
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Reporting training result 2: TrainingReport(checkpoint=None, metrics={'epoch': 2, 'accuracy': 0.5024, 'best_accuracy': 0.5024, 'avg_epoch_time_s': 7.213980646500204}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Reporting training result 3: TrainingReport(checkpoint=None, metrics={'epoch': 3, 'accuracy': 0.5276, 'best_accuracy': 0.5276, 'avg_epoch_time_s': 7.071243695333881}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=38073, ip=172.31.1.198)[0m Reporting training result 4: TrainingReport(checkpoint=None, metrics={'epoch': 4, 'accuracy': 0.5336, 'best_accuracy': 0.534, 'avg_epoch_time_s': 7.02984406250016}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Reporting training result 5: TrainingReport(checkpoint=None, metrics={'epoch': 5, 'accuracy': 0.5464, 'best_accuracy': 0.5464, 'avg_epoch_time_s': 6.985516547000588}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Reporting training result 6: TrainingReport(checkpoint=None, metrics={'epoch': 6, 'accuracy': 0.5536, 'best_accuracy': 0.5536, 'avg_epoch_time_s': 6.954420840333721}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=38717, ip=172.31.7.76)[0m Reporting training result 7: TrainingReport(checkpoint=None, metrics={'epoch': 7, 'accuracy': 0.53, 'best_accuracy': 0.53, 'avg_epoch_time_s': 6.9444995148572035}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m Reporting training result 8: TrainingReport(checkpoint=None, metrics={'epoch': 8, 'accuracy': 0.5556, 'best_accuracy': 0.5556, 'avg_epoch_time_s': 6.925511596375145}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m Reporting training result 9: TrainingReport(checkpoint=None, metrics={'epoch': 9, 'accuracy': 0.55, 'best_accuracy': 0.5556, 'avg_epoch_time_s': 6.924875861555645}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=38717, ip=172.31.7.76)[0m Reporting training result 10: TrainingReport(checkpoint=None, metrics={'epoch': 10, 'accuracy': 0.5424, 'best_accuracy': 0.5424, 'avg_epoch_time_s': 6.927813957200124}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=40648, ip=172.31.15.104)[0m Reporting training result 11: TrainingReport(checkpoint=None, metrics={'epoch': 11, 'accuracy': 0.5776, 'best_accuracy': 0.5776, 'avg_epoch_time_s': 6.906957808363751}, validation=False)[32m [repeated 4x across cluster][0m
+[36m(RayTrainWorker pid=58410)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5624, 'best_accuracy': 0.564, 'avg_epoch_time_s': 6.899233211666797}, validation=False)[32m [repeated 4x across cluster][0m
+2026-05-04 16:11:05,383	INFO tune.py:1001 -- Wrote the latest version of all result files and experiment state to '/fsx/ray_results/pytorch_hpo_phase2' in 0.0237s.
+[36m(RayTrainWorker pid=38073, ip=172.31.1.198)[0m Reporting training result 12: TrainingReport(checkpoint=None, metrics={'epoch': 12, 'accuracy': 0.5748, 'best_accuracy': 0.576, 'avg_epoch_time_s': 6.9044131473334955}, validation=False)[32m [repeated 3x across cluster][0m
++ echo '[INFO] Shutting down Ray Cluster ..........'
++ srun --label bash -c 'ray stop'
++ echo '[INFO] HPO Completed!'
++ cleanup
++ echo '[INFO] Cleaning up Ray on all nodes...'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-1 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-2 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-3 bash -c 'source ~/rayenv/bin/activate && ray stop'
++ for node in $nodes
++ srun --overlap -N1 -n1 -w gpu-compute-st-g4dn-nodes-4 bash -c 'source ~/rayenv/bin/activate && ray stop'
