@@ -3,20 +3,21 @@
 version: 1
 
 # Global pools tracked by the scheduler
-# UPDATED: Reduced from 16,800 to create meaningful license scarcity
-# Based on 400-workflow test: measured peaks were ANSYS=5,843, ABAQUS=1,894, LSDYNA=6,592
-# Using 1.15× factor for 15% headroom → ~87% peak utilization (high scarcity)
+# Sized to 1.15x the BASELINE STATIC (EDF-ST-LA) peak token demand at N=400, measured
+# buffer-free across 6 seeds (max-seed peak: ANSYS=5071, ABAQUS=1376, LSDYNA=5408).
+# => static sits at ~87% peak occupancy (high, non-blocking scarcity). Policy-independent
+# reference (static never buffers), replacing the earlier elastic-inflated peak.
 pools:
   ANSYS:
-    total_tokens: 6700         # Was 16,800 - measured peak: 5,843 tokens (87% at peak)
+    total_tokens: 5832         # 1.15 x 5071 static peak (was 6700; elastic-inflated)
     reserved_floor: 0          # optionally keep some tokens unallocatable
     burst_cap: null            # optional short-term cap > total_tokens for grace windows
   ABAQUS:
-    total_tokens: 2200         # Was 16,800 - measured peak: 1,894 tokens (86% at peak)
+    total_tokens: 1582         # 1.15 x 1376 static peak (was 2200)
     reserved_floor: 0
     burst_cap: null
   LSDYNA:
-    total_tokens: 7600         # Was 16,800 - measured peak: 6,592 tokens (87% at peak)
+    total_tokens: 6219         # 1.15 x 5408 static peak (was 7600)
     reserved_floor: 0
     burst_cap: null
 

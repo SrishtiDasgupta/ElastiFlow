@@ -213,10 +213,18 @@ def dispatcher_LA(sim, wf_mb):
         else:
             print(f'  [✗] Failed to load workflow {i}, skipping')
 
-    # Send END signal after all workflows complete
+    # Send END signal after all workflows have had time to finish.
+    # The buffer is set generously large (~58 simulated days) so even the
+    # slowest workflow at the largest workload size finishes before END
+    # fires. Simulus advances through empty simulated time near-instantly,
+    # so an oversized buffer adds negligible wall-clock cost — but a buffer
+    # that is too small causes still-running workflows to be marked
+    # "incomplete" and silently excluded from the cost / miss-rate averages,
+    # which biases every metric. Do NOT shrink this value without verifying
+    # `Incomplete workflows: 0` in the summary at the highest N tested.
     print('')
     print(f'[{sim.now:8.1f}s] All workflows dispatched, waiting for completion...')
-    sim.sleep(150000)  # Wait for workflows to finish
+    sim.sleep(5_000_000)  # generous: ~58 simulated days
     print(f'[{sim.now:8.1f}s] Sending END signal')
     sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main")))
 

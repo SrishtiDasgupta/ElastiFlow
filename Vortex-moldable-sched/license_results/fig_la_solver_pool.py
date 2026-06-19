@@ -80,11 +80,12 @@ def _grouped_bar(metric_fn, ylabel, title, fname, ylim_top=None, fmt='{:.0f}'):
     fig, ax = plt.subplots(figsize=(13, 6.5))
     snap = {}
     for j, sv in enumerate(SOLVERS):
-        ms, sds = [], []
+        ms, sds, seed_vals = [], [], []
         for p in pols:
-            vals = [metric_fn(c, sv) for c in cells(p, HEADLINE_N)]
+            vals = [v for v in (metric_fn(c, sv) for c in cells(p, HEADLINE_N))
+                    if v is not None]
             m, s = _mean_std(vals)
-            ms.append(m); sds.append(s)
+            ms.append(m); sds.append(s); seed_vals.append(vals)
             snap.setdefault(PN.DISPLAY[p], {})[sv] = round(m, 1)
         ms, sds = np.array(ms), np.array(sds)
         bars = ax.bar(x + (j - 1) * w, ms, w, yerr=sds, capsize=3,
@@ -93,6 +94,16 @@ def _grouped_bar(metric_fn, ylabel, title, fname, ylim_top=None, fmt='{:.0f}'):
         for i, p in enumerate(pols):
             if p in PN.STATIC:
                 bars[i].set_hatch('//')
+            # Per-seed dots, jittered across this solver's bar — same idiom as
+            # the HPO bar charts; shows the spread behind the std cap.
+            sv_vals = seed_vals[i]
+            if sv_vals:
+                bx = x[i] + (j - 1) * w
+                jit = (np.linspace(-0.08, 0.08, len(sv_vals))
+                       if len(sv_vals) > 1 else np.array([0.0]))
+                ax.scatter(np.full(len(sv_vals), bx) + jit, sv_vals, s=14,
+                           color='white', edgecolor='black', linewidth=0.7,
+                           zorder=11)
     ax.set_xticks(x)
     ax.set_xticklabels([PN.DISPLAY[p] for p in pols], rotation=20, ha='right')
     ax.set_ylabel(ylabel, fontsize=LABEL_FS)
@@ -136,8 +147,7 @@ def main():
     out['LA_07_completion_by_solver'] = _grouped_bar(
         _completion,
         'Completion rate (%)',
-        f'Per-solver completion at N = {HEADLINE_N}  '
-        '(FCFS starves ANSYS; EDF balances)',
+        f'Per-solver completion at N = {HEADLINE_N}',
         'LA_07_completion_by_solver', ylim_top=109)
     out['LA_08_pool_util'] = _grouped_bar(
         _pool_util,
@@ -147,8 +157,7 @@ def main():
     out['LA_08b_lic_share'] = _grouped_bar(
         _lic_share,
         'Share of license spend (%)',
-        f'Per-solver license-cost share at N = {HEADLINE_N}  '
-        '(ANSYS dominates the budget)',
+        f'Per-solver license-cost share at N = {HEADLINE_N}',
         'LA_08b_lic_share', ylim_top=70)
     (HERE / 'data_la_solver_pool.json').write_text(json.dumps(out, indent=2))
 

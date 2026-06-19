@@ -1,0 +1,11 @@
+run_id,env,paired_with,n_workflows_executed,avg_makespan,avg_cost,avg_wait,avg_util,deadline_miss_rate,budget_miss_rate,overall_miss_rate
+infra_A,infra,sim_A,10,632.2145,0.9171,23.9037,177.5,0.9,0.0,0.9
+sim_A,sim,infra_A,10,743.985,0.8522,23.0,175.1324,0.9,0.0,0.9
+infra_B_r1,infra,sim_B,10,688.6662,0.9315,17.2312,179.0,0.9,0.0,0.9
+infra_B_r2,infra,sim_B,10,931.8887,1.0571,13.7252,178.3333,0.9,0.0,0.9
+infra_B_r3,infra,sim_B,10,943.2065,1.0715,10.9745,176.5,0.9,0.0,0.9
+sim_B,sim,infra_B_r2,10,1026.4726,1.3489,18.0,175.1324,0.9,0.0,0.9
+sim_B_uncalib,sim,,10,868.8182,0.9853,14.0,175.1029,0.9,0.0,0.9
+sim_A_intermediate,sim,,10,646.3201,0.8694,23.0,175.0882,0.9,0.0,0.9
+sim_moldable_r1,sim,,3,,,,,,,
+sim_moldable_r2,sim,,3,,,,,,,

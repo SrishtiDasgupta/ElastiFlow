@@ -301,3 +301,30 @@ class Scheduler_HPO(ABC):
             print(f"HPO Workflow {wf_plan['id']} can no longer be executed, discarding it at {getTime(sim)}")
             return True
         return False
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers for instance classification.
+#
+# getFamily()      : GPU-architecture compatibility key. Two instances share a
+#                    family iff they carry the same GPU and may participate in
+#                    the same binding under a future Policy B bracket.
+# getInstanceKey() : Full inventory key (== Instance.name). Selection scoring
+#                    and resize lock both operate on this key, so multiple
+#                    sizes within a family are kept distinct end-to-end.
+#
+# Both are pure functions of the instance name and have no callers yet that
+# change behaviour — they exist so the registry in
+# scripts/speedup_HPO_runtime.py and the deferred bracket predicate in
+# POLICY_B_TODO.md can be wired in additively.
+# ---------------------------------------------------------------------------
+def getFamily(instance_name: str) -> str:
+    if 'g4dn' in instance_name or 'on-prem' in instance_name:
+        return 'g4'
+    if 'g5' in instance_name:
+        return 'g5'
+    return 'unknown'
+
+
+def getInstanceKey(instance_name: str) -> str:
+    return instance_name

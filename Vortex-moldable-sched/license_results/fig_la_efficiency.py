@@ -113,7 +113,7 @@ def main():
     out['LA_04_eff_util'] = plot_vs_n(
         lambda c: c.get('eff_lic_util'),
         'Effective license utilisation (%)',
-        'Share of license budget spent on completed work vs N',
+        'Effective license utilisation vs N',
         'LA_04_eff_util_vs_n')
     # NB: waste_frac == 100 - eff_lic_util exactly, so a waste% plot would just
     # mirror LA_04. Instead show the dollar magnitude of wasted license spend
@@ -129,7 +129,7 @@ def main():
         lambda c: (c['token_sec_total'] / c['n_done'] / 1e6)
         if c.get('token_sec_total') and c.get('n_done') else None,
         'Token-seconds per completed workflow\n(millions)',
-        'License-time consumed per completed workflow vs N',
+        'License-time per completed workflow vs N',
         'LA_06_tokensec_per_done_vs_n')
     (HERE / 'data_la_efficiency.json').write_text(json.dumps(out, indent=2))
 

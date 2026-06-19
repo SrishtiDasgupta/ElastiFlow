@@ -1,83 +1,83 @@
 {
   "LA_07_completion_by_solver": {
-    "STATIC-FCFS": {
+    "FCFS-ST-LA": {
       "ANSYS": 68.5,
       "ABAQUS": 74.8,
       "LSDYNA": 76.1
     },
-    "STATIC-EDF": {
+    "EDF-ST-LA": {
       "ANSYS": 90.7,
       "ABAQUS": 92.1,
       "LSDYNA": 90.7
     },
-    "ELASTIC-FCFS": {
+    "FCFS-LAMF": {
       "ANSYS": 70.6,
       "ABAQUS": 77.3,
       "LSDYNA": 73.2
     },
-    "ELASTIC-EDF": {
+    "EDF-LAMF": {
       "ANSYS": 84.8,
       "ABAQUS": 91.1,
       "LSDYNA": 89.3
     },
-    "ELASTIC-HSM": {
-      "ANSYS": 84.9,
-      "ABAQUS": 91.1,
-      "LSDYNA": 88.5
+    "HSM": {
+      "ANSYS": 88.2,
+      "ABAQUS": 91.3,
+      "LSDYNA": 90.2
     }
   },
   "LA_08_pool_util": {
-    "STATIC-FCFS": {
+    "FCFS-ST-LA": {
       "ANSYS": 29.2,
       "ABAQUS": 33.6,
       "LSDYNA": 29.7
     },
-    "STATIC-EDF": {
+    "EDF-ST-LA": {
       "ANSYS": 30.4,
       "ABAQUS": 33.2,
       "LSDYNA": 31.7
     },
-    "ELASTIC-FCFS": {
+    "FCFS-LAMF": {
       "ANSYS": 28.6,
       "ABAQUS": 30.9,
       "LSDYNA": 33.0
     },
-    "ELASTIC-EDF": {
+    "EDF-LAMF": {
       "ANSYS": 29.4,
       "ABAQUS": 35.5,
       "LSDYNA": 34.1
     },
-    "ELASTIC-HSM": {
-      "ANSYS": 29.2,
-      "ABAQUS": 34.3,
-      "LSDYNA": 35.0
+    "HSM": {
+      "ANSYS": 29.8,
+      "ABAQUS": 33.9,
+      "LSDYNA": 34.7
     }
   },
   "LA_08b_lic_share": {
-    "STATIC-FCFS": {
+    "FCFS-ST-LA": {
       "ANSYS": 49.2,
       "ABAQUS": 20.8,
       "LSDYNA": 30.0
     },
-    "STATIC-EDF": {
+    "EDF-ST-LA": {
       "ANSYS": 49.8,
       "ABAQUS": 19.8,
       "LSDYNA": 30.4
     },
-    "ELASTIC-FCFS": {
+    "FCFS-LAMF": {
       "ANSYS": 47.3,
       "ABAQUS": 19.3,
       "LSDYNA": 33.4
     },
-    "ELASTIC-EDF": {
+    "EDF-LAMF": {
       "ANSYS": 47.5,
       "ABAQUS": 20.6,
       "LSDYNA": 31.9
     },
-    "ELASTIC-HSM": {
-      "ANSYS": 47.5,
-      "ABAQUS": 20.0,
-      "LSDYNA": 32.6
+    "HSM": {
+      "ANSYS": 48.0,
+      "ABAQUS": 19.7,
+      "LSDYNA": 32.3
     }
   }
 }

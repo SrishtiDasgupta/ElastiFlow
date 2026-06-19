@@ -41,6 +41,14 @@ _parser.add_argument('--rank-deadline', type=float, default=None,
                      help='DEADLINE_FACTOR for the rank scheduler (e.g. 5.0 for [50,50], 7.5 for [25,75])')
 _parser.add_argument('--N', type=int, default=None,
                      help='Override TOTAL_WORKFLOWS (default: from constants.py)')
+_parser.add_argument('--chains-per-node', type=int, default=None,
+                     help='Override CHAINS_PER_NODE: max chains the moldable '
+                          'scale-down loop packs per node (default 3). Used for '
+                          'the k-sensitivity ablation.')
+_parser.add_argument('--iter0-factor', type=float, default=None,
+                     help='Override OPTIM_FCFS_BFACTOR[0]/DFACTOR[0] (iteration-0 '
+                          'budget/deadline residual factor). Diagnostic for '
+                          'whether FACTOR[0] is ever operative.')
 _args = _parser.parse_args()
 ALGO, MODE, OUT_DIR = _args.algo, _args.mode, _args.out_dir
 assert ALGO in {"fcfs", "edf", "heft", "rank"}
@@ -73,6 +81,13 @@ if _args.rank_deadline is not None:
 if _args.N is not None:
     C.TOTAL_WORKFLOWS = _args.N
     print(f'[N] TOTAL_WORKFLOWS overridden to {C.TOTAL_WORKFLOWS}')
+if _args.chains_per_node is not None:
+    C.CHAINS_PER_NODE = _args.chains_per_node
+    print(f'[ablation] CHAINS_PER_NODE overridden to {C.CHAINS_PER_NODE}')
+if _args.iter0_factor is not None:
+    C.OPTIM_FCFS_BFACTOR[0] = _args.iter0_factor
+    C.OPTIM_FCFS_DFACTOR[0] = _args.iter0_factor
+    print(f'[ablation] OPTIM_FCFS_*FACTOR[0] overridden to {_args.iter0_factor}')
 
 import simulus
 from wf_queue.redis_queue import Redis_Queue
@@ -118,6 +133,8 @@ elif ALGO == 'rank':
     d = _args.rank_deadline if _args.rank_deadline is not None else C.DEADLINE_FACTOR
     tag_parts.append(f"b{b}_d{d}")
 tag_parts.append(f"{C.TOTAL_WORKFLOWS}wf")
+if _args.chains_per_node is not None:
+    tag_parts.append(f"k{_args.chains_per_node}")
 if _args.seed is not None:
     tag_parts.append(f"seed{_args.seed}")
 tag = "_".join(tag_parts)

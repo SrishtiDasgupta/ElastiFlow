@@ -102,8 +102,19 @@ def main():
 
     # Annotate total per-workflow cost (USD) above each bar.
     snap = {}
+    seed_max = 0.0
     for i, p in enumerate(pols):
         lic_pct = 100 * lic[i] / totals[i] if totals[i] else 0
+        # Per-seed total-cost dots (one per seed), jittered across the bar —
+        # same idiom as the HPO bar charts; shows the spread behind the std bar.
+        seed_tot = [c['avg_cost_eur'] * EUR_TO_USD for c in cells(p, HEADLINE_N)
+                    if c.get('avg_cost_eur') is not None]
+        if seed_tot:
+            jit = (np.linspace(-0.12, 0.12, len(seed_tot))
+                   if len(seed_tot) > 1 else np.array([0.0]))
+            ax.scatter(np.full(len(seed_tot), i) + jit, seed_tot, s=22,
+                       color='white', edgecolor='black', linewidth=0.9, zorder=11)
+            seed_max = max(seed_max, max(seed_tot))
         ax.text(i, (totals[i] + tot_std[i]) * 1.02, f'${totals[i]:.0f}',
                 ha='center', va='bottom', fontsize=ANNOT_FS, fontweight='bold')
         snap[PN.DISPLAY[p]] = dict(hardware_usd=round(hw[i], 2),
@@ -122,7 +133,7 @@ def main():
                  fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
     ax.grid(True, axis='y', alpha=0.3)
-    ax.set_ylim(top=(totals + tot_std).max() * 1.12)
+    ax.set_ylim(top=max((totals + tot_std).max(), seed_max) * 1.12)
     from matplotlib.patches import Patch
     handles = [Patch(facecolor='#10B981', edgecolor='white', label='Hardware (compute)'),
                Patch(facecolor='#3B82F6', edgecolor='white', label='License (tokens)'),

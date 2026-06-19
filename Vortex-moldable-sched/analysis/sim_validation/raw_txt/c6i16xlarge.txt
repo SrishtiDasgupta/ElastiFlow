@@ -1,0 +1,49 @@
+Helvetica;
+;;;;
+;;;;
+
+kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]
+Started the executor...
+Starting server on port 8089...
+Workflow received at 1750890813.744455
+10.19.224.232 - - [25/Jun/2025 22:33:33] "POST / HTTP/1.1" 200 -
+Executing workflow test-87ae289e-a8b6-491f-805a-472f2eeeea4d at 1750890813.7458255
+Creating 1 instances of c6i.32xlarge
+Instance ID: i-0ea000ce773c0875c
+Private IP: 10.19.246.194
+Connecting to host10.19.246.194
+Setting up on-demand
+Generating public/private rsa key pair.
+Your identification has been saved in /home/ubuntu/.ssh/id_rsa
+Your public key has been saved in /home/ubuntu/.ssh/id_rsa.pub
+The key fingerprint is:
+SHA256:x3cVytQYdE/8TqSNnLnVhKPnFPPbrpFaGRUYoreLL8o ubuntu@ip-10-19-246-194
+The key's randomart image is:
++---[RSA 4096]----+
+|     ..=**.|
+|     . +oBoB|
+|    . . = &*|
+|    .. o OoB|
+|    S o..+o=o|
+|    .....o=o|
+|    . . =. |
+|   . .. o ..|
+|   E. ... .. |
++----[SHA256]-----+
+setup Seissol done
+<built-in method decode of bytes object at 0x7ea92814a8c0>
+On demand set up in 379.3889887332916
+['10.19.246.194']
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d Workflow iteration 0 started at 1750891215.5431597
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d Workflow iteration 0 finished at 1750891832.035239
+{'likelihood': -25.04601434390355, 'cohesion': 1067680.1406442393, 'runtime': 609.6384253501892}
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d Workflow iteration 1 started at 1750891832.035393
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d Workflow iteration 1 finished at 1750892467.7950962
+{'likelihood': -1.2586707403593476, 'cohesion': 1774338.5604798384, 'runtime': 628.8750977516174}
+Workflow test-87ae289e-a8b6-491f-805a-472f2eeeea4d complete at 1750892467.7952123
+Data sent successfully!
+Terminating instances ['10.19.246.194']
+[{'TerminatingInstances': [{'InstanceId': 'i-0ea000ce773c0875c', 'CurrentState': {'Code': 32, 'Name': 'shutting-down'}, 'PreviousState': {'Code': 16, 'Name': 'running'}}], 'ResponseMetadata': {'RequestId': '277880e5-9d0f-4ae4-a8de-5623003e4c5b', 'HTTPStatusCode': 200, 'HTTPHeaders': {'x-amzn-requestid': '277880e5-9d0f-4ae4-a8de-5623003e4c5b', 'cache-control': 'no-cache, no-store', 'strict-transport-security': 'max-age=31536000; includeSubDomains', 'content-type': 'text/xml;charset=UTF-8', 'content-length': '426', 'date': 'Wed, 25 Jun 2025 23:01:08 GMT', 'server': 'AmazonEC2'}, 'RetryAttempts': 0}}]
+['10.19.246.194'] stopped.
+Connection to 10.19.224.55 closed by remote host.
+Connection to 10.19.224.55 closed.

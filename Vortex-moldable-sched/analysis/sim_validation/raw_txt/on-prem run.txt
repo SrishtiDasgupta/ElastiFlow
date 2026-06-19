@@ -1,0 +1,44 @@
+Helvetica;
+;;;;
+;;;;
+
+python3 main.py
+Starting scheduler at 1748334447.4322834...
+Scheduler started listening to completed jobs...
+Starting server on port 8080...
+Starting server on port 8082...
+Starting server on port 8084...
+Workflow received at 1748334454.3011115
+10.3.14.37 - - [27/May/2025 08:27:34] "POST / HTTP/1.1" 200 -
+Workflow received at 1748334455.3538203
+10.3.14.37 - - [27/May/2025 08:27:35] "POST / HTTP/1.1" 200 -
+test-8ace708b-1e2f-487b-90de-38ece69740c6 allocated at 1748334477.4650803: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d allocated at 1748334507.5064182: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+Workflow received at 1748334515.462208
+10.3.14.37 - - [27/May/2025 08:28:35] "POST / HTTP/1.1" 200 -
+test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 allocated at 1748334537.5464318: {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+Workflow received at 1748334575.5697055
+10.3.14.37 - - [27/May/2025 08:29:35] "POST / HTTP/1.1" 200 -
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d allocated at 1748334597.6172378: {}
+No resources to allocate, waiting...
+Workflow received at 1748334655.7007782
+10.3.14.37 - - [27/May/2025 08:30:55] "POST / HTTP/1.1" 200 -
+10.19.212.212 - - [27/May/2025 08:33:50] "POST / HTTP/1.1" 200 -
+test-8ace708b-1e2f-487b-90de-38ece69740c6 workflow freed at 1748334867.8563762
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d allocated at 1748334867.8957772: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+test-127d0707-8125-499c-979a-f55792e1346e allocated at 1748334897.9366944: {}
+No resources to allocate, waiting...
+10.19.212.212 - - [27/May/2025 08:37:42] "POST / HTTP/1.1" 200 -
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d workflow freed at 1748335108.0448923
+test-127d0707-8125-499c-979a-f55792e1346e allocated at 1748335108.1537428: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Data sent successfully!
+10.19.212.212 - - [27/May/2025 08:40:38] "POST / HTTP/1.1" 200 -
+test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 workflow freed at 1748335288.1728585
+10.19.212.212 - - [27/May/2025 08:46:24] "POST / HTTP/1.1" 200 -
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d workflow freed at 1748335588.475681
+10.19.212.212 - - [27/May/2025 08:46:40] "POST / HTTP/1.1" 200 -
+test-127d0707-8125-499c-979a-f55792e1346e workflow freed at 1748335648.4825933

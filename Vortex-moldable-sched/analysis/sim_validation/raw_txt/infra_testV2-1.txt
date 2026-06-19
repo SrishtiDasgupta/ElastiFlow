@@ -1,0 +1,77 @@
+Helvetica;
+;;;;
+;;;;
+
+Starting dispatcher for 10 workflows at 0...
+Starting scheduler at 0...
+Scheduler started listening to completed jobs...
+Sending wf0 at 1
+test-8ace708b-1e2f-487b-90de-38ece69740c6 allocated at 20: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Executing workflow test-8ace708b-1e2f-487b-90de-38ece69740c6 at 20
+Sending wf1 at 61
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d allocated at 80: {'on-prem': {'on-prem': (2, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Executing workflow test-aea60ba5-675b-4a34-9424-caeb20ecb80d at 80
+Sending wf2 at 121
+test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 allocated at 140: {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Executing workflow test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 at 140
+Sending wf3 at 201
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d allocated at 220: {'on-prem': {}, 'reserved': {'hpc7a.24xlarge': (1, ['10.19.246.116'])}, 'on-demand': {'hpc7a.24xlarge': (1, [])}}
+Executing workflow test-87ae289e-a8b6-491f-805a-472f2eeeea4d at 220
+Creating 1 instances of hpc7a.24xlarge
+Sending wf4 at 301
+test-127d0707-8125-499c-979a-f55792e1346e allocated at 320: {'on-prem': {}, 'reserved': {'c6i.32xlarge': (1, ['10.19.238.8'])}, 'on-demand': {'c6i.32xlarge': (1, [])}}
+Executing workflow test-127d0707-8125-499c-979a-f55792e1346e at 320
+Creating 1 instances of c6i.32xlarge
+Sending wf5 at 551
+test-870538f9-6808-412d-bfcc-13b3e70e6f8d allocated at 560: {'on-prem': {}, 'reserved': {'c6i.16xlarge': (1, ['10.19.224.55'])}, 'on-demand': {'c6i.16xlarge': (1, [])}}
+Executing workflow test-870538f9-6808-412d-bfcc-13b3e70e6f8d at 560
+Creating 1 instances of c6i.16xlarge
+Workflow test-aea60ba5-675b-4a34-9424-caeb20ecb80d complete at 635.008
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d workflow freed at 640
+Workflow test-8ace708b-1e2f-487b-90de-38ece69740c6 complete at 657.212
+test-8ace708b-1e2f-487b-90de-38ece69740c6 workflow freed at 660
+Sending wf6 at 851
+test-fd13408f-a595-41f5-b32e-6620e71d7475 allocated at 860: {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Executing workflow test-fd13408f-a595-41f5-b32e-6620e71d7475 at 860
+Sending wf7 at 891
+test-740fc458-3d19-4822-b609-f93866aae4e5 allocated at 900: {'on-prem': {'on-prem': (3, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+Executing workflow test-740fc458-3d19-4822-b609-f93866aae4e5 at 900
+Sending wf8 at 1011
+test-279a0c70-48de-4887-b007-aea5ab2ddde0 allocated at 1020: {}
+No resources to allocate, waiting...
+Workflow test-127d0707-8125-499c-979a-f55792e1346e complete at 1034.7645127549156
+Terminating instances ['1.80.69.107']
+test-127d0707-8125-499c-979a-f55792e1346e workflow freed at 1040
+test-279a0c70-48de-4887-b007-aea5ab2ddde0 allocated at 1060: {'on-prem': {}, 'reserved': {'c6i.32xlarge': (1, ['10.19.238.8'])}, 'on-demand': {'c6i.32xlarge': (1, [])}}
+Executing workflow test-279a0c70-48de-4887-b007-aea5ab2ddde0 at 1060
+Creating 1 instances of c6i.32xlarge
+Workflow test-fd13408f-a595-41f5-b32e-6620e71d7475 complete at 1208.8390000000002
+Sending wf9 at 1211
+test-4b52291f-cf9e-4874-a1eb-7468f42ae7f3 allocated at 1220: {'on-prem': {'on-prem': (1, ['10.19.212.212'])}, 'reserved': {}, 'on-demand': {}}
+test-fd13408f-a595-41f5-b32e-6620e71d7475 workflow freed at 1220
+Executing workflow test-4b52291f-cf9e-4874-a1eb-7468f42ae7f3 at 1220
+Workflow test-870538f9-6808-412d-bfcc-13b3e70e6f8d complete at 1354.5019983194622
+Terminating instances ['1.112.97.237']
+test-870538f9-6808-412d-bfcc-13b3e70e6f8d workflow freed at 1360
+Workflow test-87ae289e-a8b6-491f-805a-472f2eeeea4d complete at 1468.8038798794353
+Terminating instances ['1.77.57.171']
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d workflow freed at 1480
+Workflow test-740fc458-3d19-4822-b609-f93866aae4e5 complete at 1851.968
+test-740fc458-3d19-4822-b609-f93866aae4e5 workflow freed at 1860
+Workflow test-4b52291f-cf9e-4874-a1eb-7468f42ae7f3 complete at 1909.9780000000003
+test-4b52291f-cf9e-4874-a1eb-7468f42ae7f3 workflow freed at 1920
+Workflow test-279a0c70-48de-4887-b007-aea5ab2ddde0 complete at 2224.696533510695
+Terminating instances ['1.59.188.22']
+test-279a0c70-48de-4887-b007-aea5ab2ddde0 workflow freed at 2240
+Workflow test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 complete at 3118.9539999999997
+test-a03a8e35-712d-4ea2-82b4-2467ae3e9777 workflow freed at 3120
+Computing metrics...
+Total workflows = 100
+Executed workflows = 10
+Average Makespan = 1026.4726
+Average Cost = 1.3489
+Average Wait Time = 18.0
+Average resource utilization = 175.1324
+Deadline miss rate = 0.9
+Budget miss rate = 0.0
+Overall miss rate = 0.9

@@ -34,8 +34,8 @@ OD_CREATION_S = 300
 INTER_ITER_OVERHEAD_S = 30
 RATE_OD = {'cluster_g4': 0.526, 'cluster_g5': 1.006}
 
-CLUSTER_CAP = {'slurm': 4, 'cluster_g4': 4, 'cluster_g5': 4}
-RESERVED   = {'slurm': 4, 'cluster_g4': 2, 'cluster_g5': 2}
+CLUSTER_CAP = {'slurm': 4, 'cluster_g4': 5, 'cluster_g5': 5}   # deployed-fleet ceiling (was 4/4/4); OD-spawnable per cluster = CAP - RESERVED = 0/3/3
+RESERVED   = {'slurm': 4, 'cluster_g4': 2, 'cluster_g5': 2}    # reserved-only lanes per cluster (unchanged)
 
 WFS = {
     'data8':  {'submit': 0,    'deadline': 6160, 'model': 'vgg19',

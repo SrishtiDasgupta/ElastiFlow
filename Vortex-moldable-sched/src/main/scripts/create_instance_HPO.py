@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import HPO-specific constants
 from config.constants_HPO import SIMULATE, COLD_START_TIME
+from scripts import cold_start_log
 
 region = 'eu-north-1'  # Stockholm region for HPO testing
 
@@ -25,6 +26,14 @@ AZ_SUBNETS = [
     ('eu-north-1c', 'subnet-016c0e4a31d8955d7'),
     ('eu-north-1a', 'subnet-05ea82169d51876b4'),
 ]
+
+# Per-instance-type AZ exclusions: AWS does not offer all G-instance families in every AZ.
+# g5.xlarge in eu-north-1 is only available in 1b and 1c (not 1a).
+INSTANCE_AZ_EXCLUSIONS = {
+    'g5.xlarge':   {'eu-north-1a'},
+    'g5.2xlarge':  {'eu-north-1a'},
+    'g5.4xlarge':  {'eu-north-1a'},
+}
 
 def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', sim=None) -> str:
     """
@@ -94,6 +103,12 @@ def _setup_single_instance(instance, instance_role):
     private_ip = instance.private_ip_address
     private_dns = instance.private_dns_name
 
+    cold_start_log.mark(
+        instance.id, "t_running",
+        instance_type=instance.instance_type,
+        role=instance_role,
+        az=instance.placement.get("AvailabilityZone", ""),
+    )
     print(f"Instance {instance.id} running: {private_ip} ({instance_role})")
 
     # Poll SSH
@@ -108,6 +123,7 @@ def _setup_single_instance(instance, instance_role):
 
             out = subprocess.run(script, shell=True, capture_output=True, text=True)
             if 'True' in out.stdout:
+                cold_start_log.mark(instance.id, "t_ssh")
                 print(f"SSH ready on {private_ip}")
                 break
         except Exception as e:
@@ -128,6 +144,7 @@ def _setup_single_instance(instance, instance_role):
         ok = setupInstanceHPO(ssh, private_ip)
 
         if ok:
+            cold_start_log.mark(instance.id, "t_setup_done")
             # Verify executor is listening on port 8089 before returning
             print(f"Verifying executor on {private_ip}:8089 ...")
             executor_verified = False
@@ -137,6 +154,7 @@ def _setup_single_instance(instance, instance_role):
                 )
                 chk = stdout_chk.read().decode().strip()
                 if 'NOT_READY' not in chk:
+                    cold_start_log.mark(instance.id, "t_executor_listening")
                     print(f"Executor verified on {private_ip}:8089")
                     executor_verified = True
                     break
@@ -150,17 +168,21 @@ def _setup_single_instance(instance, instance_role):
 
             ssh.close()
             if not executor_verified:
+                cold_start_log.finalize(instance.id, "executor_timeout")
                 _terminate_failed_instance(instance, private_ip, "executor not started")
                 return None
+            cold_start_log.finalize(instance.id, "ok")
             return private_ip
 
         else:
+            cold_start_log.finalize(instance.id, "setup_failed")
             print(f"Setup FAILED for {instance_role} instance: {private_ip}")
             ssh.close()
             _terminate_failed_instance(instance, private_ip, "setup failed")
             return None
 
     except Exception as e:
+        cold_start_log.finalize(instance.id, f"exception:{type(e).__name__}")
         print(f"Error setting up instance {private_ip}: {e}")
         _terminate_failed_instance(instance, private_ip, str(e))
         return None
@@ -176,8 +198,14 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
     """
     instance_details = []
 
+    excluded_azs = INSTANCE_AZ_EXCLUSIONS.get(instanceName, set())
+    candidate_azs = [(az, sn) for az, sn in AZ_SUBNETS if az not in excluded_azs]
+    if excluded_azs:
+        skipped = [az for az, _ in AZ_SUBNETS if az in excluded_azs]
+        print(f"[AZ-FILTER] {instanceName} not offered in {skipped}; trying {[az for az,_ in candidate_azs]}")
+
     # Try each AZ in fallback order until instances launch
-    for az, subnet_id in AZ_SUBNETS:
+    for az, subnet_id in candidate_azs:
         for vcpu_retry in range(VCPU_MAX_RETRIES + 1):
             try:
                 print(f"Trying {instanceName} x{count} in {az} ({subnet_id})...")
@@ -221,6 +249,10 @@ def launchInstanceHPO(instanceName: str, count: int, instance_role: str):
                     SecurityGroupIds=['sg-0d61f6325a433891b'],
                     SubnetId=subnet_id
                 )
+
+                for inst in instances:
+                    cold_start_log.mark(inst.id, "t_request",
+                                        instance_type=instanceName, role=instance_role, az=az)
 
                 # Wait for all instances in parallel (SSH-wait + setup are independent per instance)
                 with ThreadPoolExecutor(max_workers=len(instances)) as pool:

@@ -1,0 +1,233 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c100000\c100000\c100000;\cssrgb\c0\c0\c0;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs32 \cf0 \cb2 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec3 import argparse\
+import numpy as np\
+import time\
+import umbridge\
+import tinyDA as tda\
+from scipy.stats import multivariate_normal\
+import ray\
+import concurrent.futures\
+import boto3\
+import heapq\
+from speedup import getRuntime\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 # === Ray Task ===\
+@ray.remote\
+def run_sampling_remote(server_url, E_func, prior_params, data, cov_likelihood, proposal_cfg, iterations, n_chains):\
+\'a0 \'a0 import umbridge\
+\'a0 \'a0 import tinyDA as tda\
+\'a0 \'a0 from scipy.stats import multivariate_normal\
+\'a0 \'a0 import numpy as np\
+\'a0 \'a0 import concurrent.futures\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 E = lambda x: np.array(x)\
+\'a0 \'a0 model = umbridge.HTTPModel(f"\{server_url\}", "forward")\
+\'a0 \'a0 model = tda.UmBridgeModel(model, pre=E)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 n_dim = len(prior_params)\
+\'a0 \'a0 prior = multivariate_normal(prior_params, np.eye(n_dim) * 1.36e12, allow_singular=True)\
+\'a0 \'a0 loglike = tda.GaussianLogLike(np.array(data), np.array(cov_likelihood))\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 proposal = tda.GaussianRandomWalk(C=np.array(proposal_cfg))\
+\'a0 \'a0 posterior = tda.Posterior(prior, loglike, model)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:\
+\'a0 \'a0 \'a0 \'a0 future = executor.submit(lambda: tda.sample(posterior, proposal, iterations=iterations, n_chains=n_chains))\
+\'a0 \'a0 \'a0 \'a0 return future.result()\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 # === For Chains > Nodes ===\
+def fetch_instance_types(ips, region="eu-north-1"):\
+\'a0 \'a0 ec2 = boto3.client("ec2", region_name=region)\
+\'a0 \'a0 reservations = ec2.describe_instances(Filters=[\
+\'a0 \'a0 \{"Name": "private-ip-address", "Values": ips\}\
+\'a0 \'a0 ])["Reservations"]\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 ip_to_type = \{\}\
+\'a0 \'a0 for res in reservations:\
+\'a0 \'a0 \'a0 \'a0 for inst in res["Instances"]:\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 ip = inst["PrivateIpAddress"]\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 typ = inst["InstanceType"]\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 ip_to_type[ip] = typ\
+\'a0 \'a0 return ip_to_type\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 def collectHostRuntimes(hosts, mesh):\
+\'a0 \'a0 return \{host: getRuntime(1, mesh, host) for host in hosts\}\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 def sequentialChainAllocation(hosts, chains, mesh):\
+\'a0 \'a0 runtimes = collectHostRuntimes(hosts, mesh)\
+\'a0 \'a0 heap = []\
+\'a0 \'a0 host_counts = \{host: 0 for host in hosts\}\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 for host in hosts:\
+\'a0 \'a0 \'a0 \'a0 for _ in hosts[host]:\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 heapq.heappush(heap, (runtimes[host], host))\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 extraChains = chains - len(heap)\
+\'a0 \'a0 while extraChains > 0:\
+\'a0 \'a0 \'a0 \'a0 runtime, host = heapq.heappop(heap)\
+\'a0 \'a0 \'a0 \'a0 heapq.heappush(heap, (runtime + runtimes[host], host))\
+\'a0 \'a0 \'a0 \'a0 extraChains -= 1\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 for _, host in heap:\
+\'a0 \'a0 \'a0 \'a0 host_counts[host] += 1\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 return host_counts\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 # === Main ===\
+if __name__ == "__main__":\
+\'a0 \'a0 parser = argparse.ArgumentParser()\
+\'a0 \'a0 parser.add_argument("servers", nargs='+', help="List of servers with ports (ip:port)")\
+\'a0 \'a0 parser.add_argument("--chains", type=int, required=True)\
+\'a0 \'a0 parser.add_argument("--iterations", type=int, required=True)\
+\'a0 \'a0 parser.add_argument("--cohesion", type=float, required=True)\
+\'a0 \'a0 args = parser.parse_args()\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 ray.init(ignore_reinit_error=True)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 # Parse and map server IPs\
+\'a0 \'a0 server_ips = [ip_port.split(":")[0] for ip_port in args.servers]\
+\'a0 \'a0 num_nodes = len(server_ips)\
+\'a0 \'a0 ip_to_type = fetch_instance_types(server_ips)\
+\'a0 \'a0 hosts = \{\}\
+\'a0 \'a0 for ip in server_ips:\
+\'a0 \'a0 \'a0 \'a0 inst_type = ip_to_type[ip]\
+\'a0 \'a0 \'a0 \'a0 hosts.setdefault(inst_type, []).append(ip)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 # Schedule chains based on load only if chains > nodes\
+\'a0 \'a0 # TBD: CORNER CASE OF CHAINS == NODES (????) -> HANDLE IT\'a0\
+\'a0 \'a0 if args.chains > num_nodes:\
+\'a0 \'a0 \'a0 \'a0 allocation = sequentialChainAllocation(hosts, args.chains, mesh=1000)\
+\'a0 \'a0 else:\
+\'a0 \'a0 \'a0 \'a0 # Evenly distribute chains across IPs\
+\'a0 \'a0 \'a0 \'a0 allocation = \{\}\
+\'a0 \'a0 \'a0 \'a0 per_node = args.chains // num_nodes\
+\'a0 \'a0 \'a0 \'a0 extras = args.chains % num_nodes\
+\'a0 \'a0 \'a0 \'a0 for i, ip in enumerate(server_ips):\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 inst_type = ip_to_type[ip]\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 allocation[inst_type] = allocation.get(inst_type, 0) + per_node + (1 if i < extras else 0)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 # Setup Umbridge models\
+\'a0 \'a0 server_models = []\
+\'a0 \'a0 for address in args.servers:\
+\'a0 \'a0 \'a0 \'a0 base_url = f"http://\{address\}"\
+\'a0 \'a0 \'a0 \'a0 model = umbridge.HTTPModel(base_url, "forward")\
+\'a0 \'a0 \'a0 \'a0 model.get_input_sizes(\{\})\
+\'a0 \'a0 \'a0 \'a0 server_models.append(model)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 n_dim = server_models[0].get_input_sizes()[0]\
+\'a0 \'a0 mean_prior = np.zeros(n_dim) + args.cohesion\
+\'a0 \'a0 cov_prior = np.eye(n_dim) * 1.36e12\
+\'a0 \'a0 sigma_like = 0.1\
+\'a0 \'a0 data = np.array([\
+\'a0 \'a0 0.16548211102121133, 0.10009936999735425, 0.3063361710114957, 0.09183226689188462,\
+\'a0 \'a0 0.06786203933175347, 0.14964602482686096, 0.09760305905160768, 0.070179070290844,\
+\'a0 \'a0 0.07502393292274322, 0.05862669585853282, 0.09774360840157227, 0.10530374636225937,\
+\'a0 \'a0 0.09503648926458205, 0.09708766433530303, 0.07170645408620686, 0.11424754327742728,\
+\'a0 \'a0 0.11732727332405052, 0.1343788893754726, 0.09462409894887182, 0.09853320811296683\
+\'a0 \'a0 ])\
+\'a0 \'a0 cov_likelihood = sigma_like**2 * np.eye(data.shape[0])\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 # Map instance types to models\
+\'a0 \'a0 instance_type_to_models = \{\}\
+\'a0 \'a0 for model in server_models:\
+\'a0 \'a0 \'a0 \'a0 ip = model.url.replace("http://", "").split(":")[0]\
+\'a0 \'a0 \'a0 \'a0 inst_type = ip_to_type[ip]\
+\'a0 \'a0 \'a0 \'a0 instance_type_to_models.setdefault(inst_type, []).append(model)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 # Launch chains\'a0\
+\'a0 \'a0 start_time = time.time()\
+\'a0 \'a0 ray_futures = []\
+\'a0 \'a0 for inst_type, models in instance_type_to_models.items():\
+\'a0 \'a0 \'a0 \'a0 total_chains = allocation.get(inst_type, 0)\
+\'a0 \'a0 \'a0 \'a0 if total_chains == 0:\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 continue\
+\'a0 \'a0 \'a0 \'a0 per_model = total_chains // len(models)\
+\'a0 \'a0 \'a0 \'a0 extras = total_chains % len(models)\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 \'a0 \'a0 for i, model in enumerate(models):\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 assigned = per_model + (1 if i < extras else 0)\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 if assigned == 0:\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 continue\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 ray_futures.append(\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 run_sampling_remote.remote(\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 model.url,\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 None,\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 mean_prior.tolist(),\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 data.tolist(),\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 cov_likelihood.tolist(),\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 np.eye(n_dim).tolist(),\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 args.iterations,\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 assigned\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 )\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 )\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 # Aggregate and print output\
+\'a0 \'a0 results = ray.get(ray_futures)\
+\'a0 \'a0 output = \{"likelihood": 100, "cohesion": 0\}\
+\'a0 \'a0 for res in results:\
+\'a0 \'a0 \'a0 \'a0 for j in range(res["n_chains"]):\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 chain = f"chain_\{j\}"\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 if chain in res and res[chain]:\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 if res[chain][-1].likelihood < output["likelihood"]:\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 output["likelihood"] = res[chain][-1].likelihood\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 output["cohesion"] = res[chain][-1].parameters[0]\
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \strokec3 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb2 \strokec3 \'a0 \'a0 output["runtime"] = time.time() - start_time\
+\'a0 \'a0 print(output)\
+}

@@ -4,7 +4,7 @@ import threading
 import time
 from typing import List
 
-from config.constants import CLOSENESS_TOLERANCE, COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST, OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
+from config.constants import CHAINS_PER_NODE, CLOSENESS_TOLERANCE, COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST, OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
 from scripts.speedup import getRuntime
 from resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from resource_manager.resource_manager import ResourceManager
@@ -244,8 +244,8 @@ class FCFS_Optimized(Scheduler):
                 cur_count += inst_tuple[1]
 
         # Check safeness without moldability
-        # Can the workflow be completed with 3, 2, 1 chains per node?
-        chains_per_node = 3
+        # Can the workflow be completed with CHAINS_PER_NODE, ..., 2, 1 chains per node?
+        chains_per_node = CHAINS_PER_NODE
         request['count'] = None
         min_needed_count = request['chains']
         runtime_per_model = getRuntime(1, mesh, cur_instance.name)

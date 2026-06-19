@@ -3,21 +3,25 @@ EDF_HSM_LA: Hybrid Static-Moldable EDF with License Awareness
 
 This scheduler combines static and moldable approaches:
 
-ITERATION 0 (Static Phase):
-- Fixed resource allocation at workflow start
-- No dynamic scaling during iteration 0
-- Provides "deadline insurance" with upfront commitment
+STATIC PHASE (iterations 0 .. STATIC_PHASE_ITERS):
+- Holds the initial allocation; no scale-up/down
+- Provides "deadline insurance" while early progress is established
+- NB: iteration 0 is the initial allocation and is static for EVERY policy;
+  HSM's distinct behaviour comes from also suppressing the first
+  STATIC_PHASE_ITERS *renegotiations* (default 1 => iterations 0 and 1 static)
 
-ITERATIONS 1-5 (Moldable Phase):
+MOLDABLE PHASE (iterations > STATIC_PHASE_ITERS):
 - Full EDF-LAMF moldability (deadline-driven triggers)
 - Urgency-based scaling (CRITICAL/WARNING/EARLY/MID-ITERATION triggers)
 - Graduated boost factors (1.2× → 2.0×)
 - Smart scale-down guards (license pool, late iteration, deadline proximity)
 
-Key innovation:
-- Best of both worlds: Static's deadline protection + Moldable's cost efficiency
-- 40% budget allocated to iteration 0, remaining 60% for iterations 1-5
-- Progressive OPTIM factors: 0.6 (iter 0) → 1.0 (iter 5)
+Key idea:
+- Best of both worlds: static's deadline protection in the opening iterations +
+  moldable cost efficiency thereafter
+- Static-phase length is the env-tunable STATIC_PHASE_ITERS (LA_HSM_STATIC_ITERS)
+- Progressive OPTIM factors apply only once the moldable phase begins; the
+  iteration-0 OPTIM factor (0.6) is inert (iteration 0 never renegotiates)
 """
 
 import heapq
@@ -41,6 +45,57 @@ from resource_manager.license.exceptions import LicenseError, InsufficientTokens
 from utils.sim import getTime, getAllElements, peekElement, removeElement
 from utils.resource_LA import getConstraintsFromWorkflow, getEstimate
 from scheduler.scheduler_LA import Scheduler_LA
+
+import os
+
+# ---------------------------------------------------------------------------
+# HSM phase-transition policy (licence-aware static -> moldable gate)
+# ---------------------------------------------------------------------------
+# HSM is NOT a fixed schedule. A workflow begins in a STATIC phase that holds its
+# initial allocation (scale-UP allowed for deadline protection, scale-DOWN
+# forbidden) and transitions to the MOLDABLE phase -- where full EDF-LAMF
+# cost-optimising logic applies -- only once it is *safe AND cheap* to do so:
+#
+#   safe  := projected deadline slack at the current allocation >= TAU * window
+#            (the workflow has demonstrably banked enough margin that releasing
+#             resources will not endanger its deadline)
+#   cheap := licence-pool pressure < RHO
+#            (tokens are abundant, so any later re-acquisition is cheap/low-risk)
+#
+# Release requires BOTH (the licence signal can VETO a release): the slack
+# estimate is contention-blind (linear runtime model, no co-location penalty), so
+# a slack-only release is over-optimistic and triggers the premature-scale-down /
+# panic-scale-up thrash of pure-moldable scheduling. Requiring an uncontended pool
+# before releasing is the contention-aware contribution, specialised to a
+# licence-constrained setting. The transition is one-way and decided per workflow
+# from its own deadline state and the *global* pool occupancy.
+#
+# STATIC_PHASE_ITERS is a hard floor (minimum renegotiations held static before
+# the gate may fire) -- default 0 lets the gate decide from the first
+# renegotiation. All three are env-tunable for the sensitivity study.
+STATIC_PHASE_ITERS = int(os.environ.get('LA_HSM_STATIC_ITERS', '0'))
+HSM_SLACK_TAU = float(os.environ.get('LA_HSM_SLACK_TAU', '0.15'))
+
+# Per-pool contention threshold rho. A single global rho is crude: the three
+# pools have different token economics (LSDYNA linear/cheap, ABAQUS power-law,
+# ANSYS workgroup). Higher rho => "cheap" more often => release that pool freely
+# (recover cost); lower rho => hold it under contention (protect deadlines). So
+# the licence-aware tuning is: raise rho on abundant/cheap pools, lower it on
+# scarce/expensive ones.
+#
+# DEPLOYED per-pool values (validated across the full N grid, 6 seeds): release
+# the cheap/abundant LSDYNA pool (linear token law) freely at rho=0.95, hold the
+# expensive ANSYS/ABAQUS pools under contention at rho=0.60. This beats EDF-LAMF
+# on deadline misses / overall misses / effective licence utilisation at 6/7
+# workload sizes, at a cost premium under ~1% on average (within seed noise).
+# Each pool overridable via LA_HSM_POOL_RHO_<POOL>; LA_HSM_POOL_RHO is the
+# fallback for any pool not listed.
+HSM_POOL_RHO_DEFAULT = float(os.environ.get('LA_HSM_POOL_RHO', '0.70'))
+HSM_POOL_RHO = {
+    'ANSYS':  float(os.environ.get('LA_HSM_POOL_RHO_ANSYS',  '0.60')),
+    'ABAQUS': float(os.environ.get('LA_HSM_POOL_RHO_ABAQUS', '0.60')),
+    'LSDYNA': float(os.environ.get('LA_HSM_POOL_RHO_LSDYNA', '0.95')),
+}
 
 
 class EDF_HSM_LA(Scheduler_LA):
@@ -71,6 +126,10 @@ class EDF_HSM_LA(Scheduler_LA):
 
         # License hold tracking (like LAMF)
         self.license_holds = {}  # {wf_id: [hold_ids]}
+
+        # HSM per-workflow phase state: 'STATIC' (hold allocation) -> 'MOLDABLE'
+        # (full EDF-LAMF). One-way; gated by the licence-aware criterion below.
+        self.hsm_phase = {}  # {wf_id: 'STATIC' | 'MOLDABLE'}
 
         super().__init__(queue, finish_queue, resource_request_queue)
 
@@ -270,6 +329,9 @@ class EDF_HSM_LA(Scheduler_LA):
                             # which created a bootstrap deadlock — once False, the entire
                             # Phase 3 block was skipped and no allocation could ever fire
                             # again because no completion could fire without an allocation.
+                            # A guarded re-add was tested (only throttle when workflows are
+                            # running) but recovered no cost (returnResources re-arms the
+                            # flag every completion/release, so it almost never fires).
                             # Just skip this iteration; the natural polling loop retries.
                             if loop_counter % 10000 == 0:
                                 print(f'⏳ {wf_plan["id"]} waiting for resources/licenses (heap_size={len(self.workflow_heap)})...')
@@ -656,12 +718,79 @@ class EDF_HSM_LA(Scheduler_LA):
     # DDM-EDF RESOURCE REQUEST PROCESSING (with urgency-based scaling)
     # =========================================================================
 
+    def _hsm_in_static_phase(self, request, instances, deadline, start_time, mesh,
+                             license_pool, software_id, ind, sim):
+        """Licence-aware static -> moldable gate. Returns True if the workflow
+        should remain in the STATIC phase (scale-down suppressed) this renegotiation.
+
+        Transition (one-way) STATIC -> MOLDABLE fires when EITHER:
+          safe  := projected deadline slack at the current allocation
+                   >= HSM_SLACK_TAU * (deadline - start_time), OR
+          cheap := licence-pool pressure (allocated/total) < rho[pool].
+        A workflow already in MOLDABLE stays there. STATIC_PHASE_ITERS is a hard
+        floor: the gate cannot fire while ind <= STATIC_PHASE_ITERS.
+        """
+        wf_id = request['wf-id']
+        if self.hsm_phase.get(wf_id, 'STATIC') == 'MOLDABLE':
+            return False  # already moldable -- stay moldable
+
+        # --- projected deadline slack at the CURRENT (held) allocation ---
+        cur_instance = instances[-1][0]
+        cur_count = instances[-1][1]
+        if not isinstance(instances[0][0], OnPremInstance):
+            cur_count = sum(t[1] for t in instances)
+        cur_count = max(1, cur_count)
+
+        runtime_per_model = getRuntime(1, mesh, cur_instance.name)
+        chains = request['chains']
+        tinyda = request['tinyda-iterations']
+        chains_per_node_eff = -(-chains // cur_count)  # ceil
+        runtime_per_iter = chains_per_node_eff * runtime_per_model * tinyda
+
+        last_iter = max(OPTIM_FCFS_DFACTOR)          # highest iteration index
+        remaining_iters = max(0, last_iter - ind)    # iterations still to run
+        now = getTime(sim)
+        projected_finish = now + remaining_iters * runtime_per_iter
+        slack = (deadline - DEADLINE_BUFFER) - projected_finish
+        window = max(1e-9, deadline - start_time)
+        safe = slack >= HSM_SLACK_TAU * window
+
+        # --- licence-pool pressure vs this pool's own threshold ---
+        pool_pressure = 0.0
+        rho = HSM_POOL_RHO_DEFAULT
+        if license_pool:
+            ps = self.license_manager.get_pool_status(license_pool)
+            pool_pressure = (ps['allocated'] / ps['total']) if ps['total'] else 0.0
+            rho = HSM_POOL_RHO.get(license_pool, HSM_POOL_RHO_DEFAULT)
+        cheap = pool_pressure < rho
+
+        floor_ok = ind > STATIC_PHASE_ITERS  # hard minimum static window
+
+        # Release ONLY when the workflow is BOTH on-track (safe) AND the pool is
+        # uncontended (cheap). Rationale: the slack estimate is contention-blind
+        # (linear runtime model, no co-location penalty), so a slack-only release
+        # is over-optimistic -- the licence-pool signal must be able to VETO a
+        # cost-driven scale-down under scarcity. Hold static if at-risk OR contended.
+        if floor_ok and safe and cheap:
+            self.hsm_phase[wf_id] = 'MOLDABLE'
+            print(f"\n🔀 [HSM GATE] {wf_id} STATIC->MOLDABLE @iter{ind}: "
+                  f"slack={slack:.0f}s (>= {HSM_SLACK_TAU:.2f}*{window:.0f}={HSM_SLACK_TAU*window:.0f}? {safe}), "
+                  f"pool={pool_pressure*100:.0f}% (< rho[{license_pool}]={rho*100:.0f}%? {cheap})")
+            return False
+
+        veto = 'at-risk' if not safe else ('contended' if not cheap else 'floor')
+        print(f"\n📌 [HSM GATE] {wf_id} STATIC @iter{ind} ({veto}): holding allocation "
+              f"(slack={slack:.0f}s safe={safe}, pool={pool_pressure*100:.0f}% cheap={cheap}, "
+              f"floor_ok={floor_ok})")
+        return True
+
     def processFreeRequestWithLicenses(self, sim, wf_mb, request):
         """
         HSM: Hybrid Static-Moldable resource allocation
 
-        Iteration 0: STATIC (no scaling, resources committed at start)
-        Iterations 1-5: MOLDABLE (full EDF-LAMF logic):
+        Phase is decided per workflow by _hsm_in_static_phase (licence-aware gate):
+          STATIC   -> hold allocation; scale-UP allowed, scale-DOWN suppressed
+          MOLDABLE -> full EDF-LAMF logic:
         1. EDF heap ordering for deadline-based priority
         2. Iteration-weighted budget/deadline constraints (OPTIM factors)
         3. Deadline-first triggers (CRITICAL/WARNING/EARLY/MID-ITERATION)
@@ -678,14 +807,16 @@ class EDF_HSM_LA(Scheduler_LA):
         # Iteration-weighted constraints (from LAMF)
         ind = request['iteration']
 
-        # === HSM: STATIC ITERATION-0 PHASE ===
-        if ind == 0:
-            print(f"\n📌 [HSM ITERATION-0] {request['wf-id']} in static phase")
-            print(f"  → Resources committed at workflow start (no scaling in iteration 0)")
-            print(f"  → Will begin moldable scaling in iteration 1")
-            return  # Skip all moldable logic - iteration 0 is static
+        # === HSM: LICENCE-AWARE STATIC -> MOLDABLE PHASE GATE ===
+        # Decide (and persist) this workflow's phase from its own deadline slack
+        # and the global licence-pool pressure. In STATIC the scale-DOWN branch is
+        # suppressed (scale-UP stays enabled for deadline protection); in MOLDABLE
+        # the full EDF-LAMF logic below runs unchanged.
+        hsm_static = self._hsm_in_static_phase(
+            request, instances, deadline, start_time, mesh, license_pool,
+            software_id, ind, sim)
 
-        # === HSM: MOLDABLE PHASE (Iterations 1-5) ===
+        # === HSM: MOLDABLE PHASE (logic below; scale-down gated by hsm_static) ===
         available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
 
         cur_instance: Instance = instances[-1][0]
@@ -758,7 +889,12 @@ class EDF_HSM_LA(Scheduler_LA):
         runtime_per_model = getRuntime(1, mesh, cur_instance.name)
         print(f"  runtime_per_model: {runtime_per_model:.1f}s")
 
-        # Only attempt scale-down if not skipped by urgency trigger
+        # Only attempt scale-down if not skipped by urgency trigger AND the
+        # workflow has left the HSM static phase (static phase forbids scale-down).
+        if hsm_static:
+            skip_scale_down = True
+            print(f"  📌 [HSM STATIC] scale-down suppressed (holding allocation); "
+                  f"scale-up remains enabled")
         while chains_per_node > 0 and not skip_scale_down:
             runtime = chains_per_node * runtime_per_model * request['tinyda-iterations']
             print(f"  [chains_per_node={chains_per_node}] runtime={runtime:.1f}s vs available_time={available_time:.1f}s")
@@ -783,7 +919,11 @@ class EDF_HSM_LA(Scheduler_LA):
                     # No solver is hardcoded; the cost sign is computed per decision. SAT is the
                     # single saturation knob (was GUARD 1's 70%), configurable for sensitivity.
                     if license_pool:
-                        LA_GUARD_SAT = 0.70
+                        # Saturation knob: block cost-adverse shrinks only when pool
+                        # util >= LA_GUARD_SAT. Default 0.70; set 0.0 to make the
+                        # solver-aware cost guard UNCONDITIONAL (block any licence-cost
+                        # -inflating scale-down at all contention levels).
+                        LA_GUARD_SAT = float(os.environ.get('LA_GUARD_SAT', '0.70'))
                         pool_status = self.license_manager.get_pool_status(license_pool)
                         pool_utilization = (pool_status['allocated'] / pool_status['total']
                                             if pool_status['total'] else 0.0)

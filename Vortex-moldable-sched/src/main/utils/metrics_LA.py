@@ -556,12 +556,17 @@ class MetricsLA:
             elif self.scale_up_successes > 0 and self.total_instances_added > 0:
                 print(f'  ✓ Moldability active - {self.scale_up_successes} successful scale-ups')
 
-    def computeMetrics(self, file_prefix=''):
+    def computeMetrics(self, file_prefix='', license_cost_by_owner=None):
         """
         Compute and display all performance metrics.
 
         Args:
             file_prefix: Optional prefix for output files (e.g., 'LAMF_400_' or 'Baseline_400_')
+            license_cost_by_owner: Optional dict {wf_id: honest license cost} from the
+                LicenseManager token-hold ledger (Henkel & Treiber Token-Hours). When given,
+                it REPLACES the instance-based license cost for every workflow — billing for
+                tokens actually checked out of the pool (incl. the partial-release buffer),
+                so cost == pool occupancy. When None, falls back to instance-based billing.
 
         Metrics calculated:
         - Average Flowtime (completion time - submit time)
@@ -626,12 +631,17 @@ class MetricsLA:
 
                 # Compute hardware cost (license cost is stored separately)
                 wf_hw_cost = self.computeCost(wf_id, wf_data['finish_time'])
-                wf_lic_cost = wf_data.get('license_cost', 0.0)  # Stored by computeCost()
+                # Honest billing: prefer the token-hold ledger (tokens actually checked
+                # out of the pool, incl. buffer); fall back to instance-based if absent.
+                if license_cost_by_owner is not None:
+                    wf_lic_cost = license_cost_by_owner.get(wf_id, wf_data.get('license_cost', 0.0))
+                    wf_data['license_cost'] = wf_lic_cost
+                else:
+                    wf_lic_cost = wf_data.get('license_cost', 0.0)  # Stored by computeCost()
                 wf_cost = wf_hw_cost + wf_lic_cost  # Total cost for reporting
 
                 wf_data['cost'] = wf_cost
                 wf_data['hardware_cost'] = wf_hw_cost
-                # license_cost already stored by computeCost()
 
                 cost += wf_cost
                 hardware_cost_total += wf_hw_cost
@@ -651,7 +661,11 @@ class MetricsLA:
             else:
                 # Incomplete workflow
                 wf_wasted_hw = self.computeCost(wf_id, wf_data['finish_time'])
-                wf_wasted_lic = wf_data.get('license_cost', 0.0)  # Stored by computeCost()
+                if license_cost_by_owner is not None:
+                    wf_wasted_lic = license_cost_by_owner.get(wf_id, wf_data.get('license_cost', 0.0))
+                    wf_data['license_cost'] = wf_wasted_lic
+                else:
+                    wf_wasted_lic = wf_data.get('license_cost', 0.0)  # Stored by computeCost()
                 wf_wasted_cost = wf_wasted_hw + wf_wasted_lic
 
                 wasted_cost += wf_wasted_cost

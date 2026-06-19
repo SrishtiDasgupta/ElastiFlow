@@ -1,0 +1,11 @@
+workflow_id,case_a_point,cv_prior_pct,envelope_lo_95,envelope_hi_95,note
+test-127d0707-8125-499c-979a-f55792e1346e,900.9,1.89,867.5,934.2,raw single observation
+test-279a0c70-48de-4887-b007-aea5ab2ddde0,530.4,2.67,502.6,558.2,broken-record substitution (median of Case B same-ID observations)
+test-4b52291f-cf9e-4874-a1eb-7468f42ae7f3,610.5,2.32,582.7,638.2,broken-record substitution (median of Case B same-ID observations)
+test-740fc458-3d19-4822-b609-f93866aae4e5,960.9,3.01,904.2,1017.5,raw single observation
+test-870538f9-6808-412d-bfcc-13b3e70e6f8d,900.8,0.00,900.8,900.9,raw single observation
+test-87ae289e-a8b6-491f-805a-472f2eeeea4d,1501.5,0.00,1501.4,1501.5,raw single observation
+test-8ace708b-1e2f-487b-90de-38ece69740c6,360.4,4.16,331.0,389.7,raw single observation
+test-a03a8e35-712d-4ea2-82b4-2467ae3e9777,720.7,1.41,700.8,740.6,raw single observation
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d,570.6,0.00,570.5,570.6,raw single observation
+test-fd13408f-a595-41f5-b32e-6620e71d7475,420.3,0.00,420.3,420.4,raw single observation

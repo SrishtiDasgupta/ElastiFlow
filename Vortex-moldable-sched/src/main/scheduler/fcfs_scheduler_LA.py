@@ -56,6 +56,11 @@ class FCFS_Scheduler_LA(Scheduler_LA):
 
         while True:
 
+            # Advance the license ledger clock (honest Token-Hours billing — same
+            # basis as the moldable schedulers, so cost is comparable across policies).
+            if sim is not None:
+                self.license_manager.set_sim_time(getTime(sim))
+
             # Check queue for resource requests (should be minimal in static mode)
             resource_request = peekElement(resource_request_mb, self.resource_request_queue)
 
@@ -80,7 +85,10 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                 if wf_plan['id'] == 'END':
                     removeElement(wf_mb, self.queue)
                     from config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(file_prefix=f'Baseline_{TOTAL_WORKFLOWS}_')
+                    self.metrics.computeMetrics(
+                        file_prefix=f'Baseline_{TOTAL_WORKFLOWS}_',
+                        license_cost_by_owner=self.license_manager.license_cost_by_owner(
+                            getTime(sim) if sim is not None else self.license_manager.sim_now))
                     break
 
                 # Skip workflows that have been rejected as impossible

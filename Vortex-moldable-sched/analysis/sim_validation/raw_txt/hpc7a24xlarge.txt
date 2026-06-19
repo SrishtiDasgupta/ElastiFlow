@@ -1,0 +1,59 @@
+Helvetica;
+;;;;
+;;;;
+
+Started the executor...
+Starting server on port 8089...
+Workflow received at 1750890773.6916666
+10.19.224.232 - - [25/Jun/2025 22:32:53] "POST / HTTP/1.1" 200 -
+Executing workflow test-aea60ba5-675b-4a34-9424-caeb20ecb80d at 1750890773.6947074
+Creating 1 instances of hpc7a.24xlarge
+Instance ID: i-0b943b283e5bd5268
+Private IP: 10.19.242.16
+Connecting to host10.19.242.16
+Setting up on-demand
+Generating public/private rsa key pair.
+Your identification has been saved in /home/ubuntu/.ssh/id_rsa
+Your public key has been saved in /home/ubuntu/.ssh/id_rsa.pub
+The key fingerprint is:
+SHA256:lKpi/JwuWZ4Fyqm0+42fi8RDL2jII2vmLSR1UK5AlIA ubuntu@ip-10-19-242-16
+The key's randomart image is:
++---[RSA 4096]----+
+|=o...      |
+|E...  .   |
+|. .. o    |
+| ...o o    |
+| o.= .. S    |
+|++B o..     |
+|**=O.+     |
+|+B*+O..     |
+|=o+B*=.     |
++----[SHA256]-----+
+setup Seissol done
+<built-in method decode of bytes object at 0x748e601e15a0>
+On demand set up in 395.2964289188385
+['10.19.242.16']
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d Workflow iteration 0 started at 1750891191.207182
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d Workflow iteration 0 finished at 1750891644.3911545
+{'likelihood': -14.682330146551022, 'cohesion': -1826219.750595217, 'runtime': 445.9849259853363}
+Free resource request: test-aea60ba5-675b-4a34-9424-caeb20ecb80d requesting to free 2 resources for iteration 2
+Data sent successfully!
+Workflow received at 1750891654.6264932
+10.19.224.232 - - [25/Jun/2025 22:47:34] "POST / HTTP/1.1" 200 -
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d Workflow iteration 1 started at 1750891659.4202192
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d Workflow iteration 1 finished at 1750892107.6490963
+{'likelihood': -25.242690836770116, 'cohesion': 18287.00171039012, 'runtime': 442.27316904067993}
+Free resource request: test-aea60ba5-675b-4a34-9424-caeb20ecb80d requesting to free 1 resources for iteration 3
+Data sent successfully!
+Workflow received at 1750892115.1137614
+10.19.224.232 - - [25/Jun/2025 22:55:15] "POST / HTTP/1.1" 200 -
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d Workflow iteration 2 started at 1750892117.671795
+test-aea60ba5-675b-4a34-9424-caeb20ecb80d Workflow iteration 2 finished at 1750892572.7300026
+{'likelihood': -0.6997652551207911, 'cohesion': 211477.98669792555, 'runtime': 448.3986852169037}
+Workflow test-aea60ba5-675b-4a34-9424-caeb20ecb80d complete at 1750892572.730408
+Data sent successfully!
+Terminating instances ['10.19.242.16']
+[{'TerminatingInstances': [{'InstanceId': 'i-0b943b283e5bd5268', 'CurrentState': {'Code': 32, 'Name': 'shutting-down'}, 'PreviousState': {'Code': 16, 'Name': 'running'}}], 'ResponseMetadata': {'RequestId': '7e601ab4-7a44-43a3-82f3-10c8bd9ede51', 'HTTPStatusCode': 200, 'HTTPHeaders': {'x-amzn-requestid': '7e601ab4-7a44-43a3-82f3-10c8bd9ede51', 'cache-control': 'no-cache, no-store', 'strict-transport-security': 'max-age=31536000; includeSubDomains', 'content-type': 'text/xml;charset=UTF-8', 'content-length': '426', 'date': 'Wed, 25 Jun 2025 23:02:53 GMT', 'server': 'AmazonEC2'}, 'RetryAttempts': 0}}]
+['10.19.242.16'] stopped.
+Connection to 10.19.246.116 closed by remote host.
+Connection to 10.19.246.116 closed.

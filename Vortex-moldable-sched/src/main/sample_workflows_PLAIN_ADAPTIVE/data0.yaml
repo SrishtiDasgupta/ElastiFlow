@@ -1,0 +1,28 @@
+actions:
+- actions:
+  - inputs:
+    - id: tinyda_input
+      var: i
+    outputs:
+    - id: tinyda_output
+      var: output_coh
+    service: Seis-Bridge/tinyda_client_adaptive.py
+    type: execute
+  enumerator: i
+  input: input_coh
+  type: for
+  yieldToInput: output_coh
+api: 4.7.0
+config:
+  mesh: 750
+  workflowIterations: 50
+  adaptive: true
+constraints:
+  budget: 200.0
+  chains: 4
+  deadline: 60000.0
+  tinydaIterations: 2000
+id: test-adaptive-seissol-0001
+vars:
+- id: input_coh
+  value: {cohesion: 3.0, next_links: 4, next_chains: 4}

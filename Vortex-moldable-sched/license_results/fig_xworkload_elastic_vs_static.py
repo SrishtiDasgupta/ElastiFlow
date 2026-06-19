@@ -43,15 +43,19 @@ TICK_FS = 13
 
 # rows = metrics, cols = workloads (hardware-dominated -> license-dominated)
 METRICS = ['CPR / cost', 'Queue wait', 'Budget miss', 'Deadline miss', 'Turnaround']
-WORKLOADS = ['HPO\n(hardware)', 'Plain SeisSol\n(hardware,\ndeadline-tight)', 'LA / CAE\n(license)']
+WORKLOADS = ['HPO\n(hardware)', 'SeisSol-TinyDA\n(hardware,\ndeadline-tight)', 'License-\nConstrained\n(license)']
 NAN = np.nan
 # % improvement of best elastic vs matching static (positive = elastic better)
+# LA column recomputed from canonical_results_newHSM.json (N=300, 6-seed) with the
+# NEW licence-aware per-pool HSM in the elastic set; best-elastic vs EDF-ST-LA,
+# CPR = cost_USD/(1-overall_miss). (Old hardcoded LA col [5.7,12.5,20.3,2.3,-7.7]
+# was stale vs current canonical data too -- e.g. static deadline 0.268 -> 0.088.)
 GRID = np.array([
-    [ 69.8,  41.1,   5.7],   # CPR / cost
-    [  NAN,  40.2,  12.5],   # Queue wait
-    [  NAN,  75.0,  20.3],   # Budget miss
-    [  0.0,  -1.3,   2.3],   # Deadline miss
-    [ 14.9,   3.1,  -7.7],   # Turnaround
+    [ 69.8,  41.1,  -2.7],   # CPR / cost
+    [  NAN,  40.2,   1.7],   # Queue wait
+    [  NAN,  75.0,  31.2],   # Budget miss
+    [  0.0,  -1.3, -22.7],   # Deadline miss
+    [ 14.9,   3.1, -18.1],   # Turnaround
 ])
 
 

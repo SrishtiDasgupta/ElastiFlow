@@ -45,6 +45,15 @@ DEADLINE_FACTOR = 7.5
 OPTIM_FCFS_BFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
 OPTIM_FCFS_DFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
 SPEEDUP_THRESHOLD = 1.4
+# Maximum number of SeisSol-TinyDA chains the moldable scale-down loop will
+# attempt to pack onto a single node. The loop probes k, k-1, ..., 1 chains
+# per node and keeps the densest packing that still fits the per-iteration
+# time budget (Scheduler.processFreeRequest / FCFS_Optimized.processFreeRequest).
+# The runtime model assumes linear scaling (k chains cost k x the single-chain
+# runtime), so k is the ceiling at which that linearity is assumed to hold.
+# Default 3; overridable via simulate_sweep.py --chains-per-node for the
+# k-sensitivity ablation.
+CHAINS_PER_NODE = 3
 # Closeness tolerance for the moldable cloud path (fraction). A cloud
 # instance whose 1-node runtime is within ±CLOSENESS_TOLERANCE of any
 # runtime in the workflow's current fleet is eligible for scale-up.

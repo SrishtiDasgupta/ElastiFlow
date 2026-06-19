@@ -282,7 +282,10 @@ def plot_cross_chapter_pareto():
 def plot_hpo_intent_satisfaction_n7():
     d = json.loads(HPO_JSON.read_text())
     moldable = [("MAL EDF", "N7_moldable_edf"), ("MAL FCFS", "N7_moldable_fcfs")]
-    fig, ax = plt.subplots(figsize=(10, 6.5))
+    # Height matched to the 02g compute-nodes strip (5.5") so the two pair
+    # cleanly side-by-side; include both with \includegraphics[height=...] in
+    # LaTeX for an exact top/bottom alignment regardless of aspect ratio.
+    fig, ax = plt.subplots(figsize=(10, 5.5))
     x = np.arange(len(moldable))
 
     # Compute per-run share, then mean across 6 runs (consistent with how
@@ -424,7 +427,7 @@ def plot_hpo_scaling_events_n7():
 
     fig.suptitle(
         "Workflow-Engine intent outcomes — Elastic-EDF$_c$ at N = 7\n"
-        "(only 1 of the 6 runs in this cell captured per-event logs)",
+        "(per-event trace from a single run)",
         fontsize=TITLE_FS, y=1.00)
     fig.tight_layout(rect=[0, 0, 1, 0.92])
     _save(fig, "HPO_08_intent_events_n7")

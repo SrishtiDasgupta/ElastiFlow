@@ -4,7 +4,7 @@ import time
 from typing import List
 
 from config.constants import (
-    AVG_WORKFLOW_ITERATIONS, CLOSENESS_TOLERANCE, COLD_START_TIME,
+    AVG_WORKFLOW_ITERATIONS, CHAINS_PER_NODE, CLOSENESS_TOLERANCE, COLD_START_TIME,
     DEADLINE_BUFFER, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME,
     OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR,
     RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD,
@@ -258,10 +258,10 @@ class Scheduler(ABC):
             for inst_tuple in instances:
                 cur_count += inst_tuple[1]
 
-        # Probe whether the workflow can complete with 3, then 2, then 1
-        # chains per node within the per-iteration time budget. If so,
-        # scale DOWN to the minimum count that still fits.
-        chains_per_node = 3
+        # Probe whether the workflow can complete with CHAINS_PER_NODE, then
+        # CHAINS_PER_NODE-1, ..., 1 chains per node within the per-iteration
+        # time budget. If so, scale DOWN to the minimum count that still fits.
+        chains_per_node = CHAINS_PER_NODE
         request['count'] = None
         min_needed_count = request['chains']
         runtime_per_model = getRuntime(1, mesh, cur_instance.name)

@@ -159,6 +159,22 @@ def agg(cells, key):
     s = stdev(vs) if len(vs) > 1 else 0.0
     return (m, s)
 
+def agg_cost_per_wf(cells):
+    """Average realised cost per FINISHED workflow (USD): per-seed
+    total_cost / executed_workflows, then mean+std across seeds.
+
+    This is the Way-1 denominator used consistently across all three
+    use-cases (Eq. 9, average cost per workflow): the full realised cost,
+    including capacity burned on workflows that never complete, is charged
+    to the deliverables rather than diluted across the whole submission
+    set (which would reward a policy for rejecting work)."""
+    vs = [c["total_cost_eur"] * EUR_TO_USD / c["executed_workflows"]
+          for c in cells
+          if c.get("total_cost_eur") is not None and c.get("executed_workflows")]
+    if not vs:
+        return (float("nan"), 0.0)
+    return (mean(vs), stdev(vs) if len(vs) > 1 else 0.0)
+
 DATA = load_data()
 
 # ============================================================================
@@ -169,14 +185,14 @@ def plot_01_cost_vs_n():
     for v in VARIANTS:
         ms, sds = [], []
         for n in NS:
-            m, s = agg(DATA[(v, n)], "total_cost_eur")
-            ms.append(m * EUR_TO_USD / n)
-            sds.append(s * EUR_TO_USD / n)
+            m, s = agg_cost_per_wf(DATA[(v, n)])
+            ms.append(m)
+            sds.append(s)
         ms, sds = np.array(ms), np.array(sds)
         ax.plot(NS, ms, label=LABEL[v], linewidth=2.2, markersize=8, **STYLE[v])
         ax.fill_between(NS, ms - sds, ms + sds, color=STYLE[v]["c"], alpha=0.08)
     ax.set_xlabel("Batch size N (workflows)", fontsize=LABEL_FS)
-    ax.set_ylabel("Average cost per workflow (USD)", fontsize=LABEL_FS)
+    ax.set_ylabel("Average cost per finished workflow (USD)", fontsize=LABEL_FS)
     ax.set_title("Cost-per-workflow scaling", fontsize=TITLE_FS)
     ax.set_xticks(NS)
     ax.tick_params(labelsize=TICK_FS)
@@ -235,9 +251,10 @@ def _plot_one_metric_vs_n(key, ylabel, title, fname, per_n=False, legend_below=T
     for v in VARIANTS:
         ms, sds = [], []
         for n in NS:
-            m, s = agg(DATA[(v, n)], key)
-            if per_n:
-                m, s = m * EUR_TO_USD / n, s * EUR_TO_USD / n
+            if per_n:                       # cost: per FINISHED workflow (Way 1)
+                m, s = agg_cost_per_wf(DATA[(v, n)])
+            else:
+                m, s = agg(DATA[(v, n)], key)
             ms.append(m); sds.append(s)
         ms, sds = np.array(ms), np.array(sds)
         ax.plot(NS, ms, label=LABEL[v], linewidth=2.2, markersize=8, **STYLE[v])
@@ -260,8 +277,8 @@ def _plot_one_metric_vs_n(key, ylabel, title, fname, per_n=False, legend_below=T
 
 def plot_02_cost_vs_n():
     _plot_one_metric_vs_n("total_cost_eur",
-                          "Cost per workflow (USD)",
-                          "Cost per workflow vs batch size N",
+                          "Cost per finished workflow (USD)",
+                          "Cost per finished workflow vs batch size N",
                           "02_cost_per_wf_vs_n", per_n=True, legend_below=True)
 
 def plot_02_miss_vs_n():
@@ -426,8 +443,9 @@ def plot_02e_saturation():
                     v1 = cells1[s].get(key)
                     if v0 is None or v1 is None:
                         continue
-                    if per_n:
-                        v0, v1 = v0 / n0, v1 / n1
+                    if per_n:               # cost: per FINISHED workflow (Way 1)
+                        v0 = v0 / cells0[s]["executed_workflows"]
+                        v1 = v1 / cells1[s]["executed_workflows"]
                     if v0:
                         per_seed.append(100 * (v1 - v0) / v0)
                 m, s = _mean_std(per_seed)
@@ -518,6 +536,62 @@ def plot_02f_miss_decomposition():
     _save(fig, "02f_miss_decomposition")
 
 # ============================================================================
+# 02g — Cost-performance ratio (CPR) bar @ N=HEADLINE_N
+# CPR = average per-workflow cost ÷ (1 − overall miss rate)
+#     = USD per successfully constraint-satisfying workflow
+# Lower is better. Combines the cost axis (Fig. 01) and the overall-miss
+# axis (component of Fig. 02f) into a single efficiency metric for
+# side-by-side ranking across all eleven policies.
+# ============================================================================
+def plot_02g_cpr_bar():
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    x = np.arange(len(VARIANTS))
+
+    means, stds = [], []
+    for v in VARIANTS:
+        # Per-seed CPR so the error bar reflects run-to-run CPR variability
+        # directly (no propagation assumptions). One cell per seed.
+        cell_cprs = []
+        for c in DATA[(v, HEADLINE_N)]:
+            tc = c.get("total_cost_eur")
+            om = c.get("overall_miss_rate")
+            if tc is None or om is None:
+                continue
+            cost_per_wf = tc * EUR_TO_USD / HEADLINE_N
+            success = max(1.0 - om, 1e-9)
+            cell_cprs.append(cost_per_wf / success)
+        m = mean(cell_cprs) if cell_cprs else float("nan")
+        s = stdev(cell_cprs) if len(cell_cprs) > 1 else 0.0
+        means.append(m); stds.append(s)
+
+    means = np.array(means); stds = np.array(stds)
+    cols = [STYLE[v]["c"] for v in VARIANTS]
+    hatch = ['//' if 'static' in v or 'heft' in v else '' for v in VARIANTS]
+    bars = ax.bar(x, means, yerr=stds, capsize=4, color=cols,
+                  edgecolor="black", linewidth=1.0)
+    for b, h in zip(bars, hatch):
+        b.set_hatch(h)
+    for i, mval in enumerate(means):
+        ax.text(i, mval + stds[i] + 0.6, f"{mval:.1f}",
+                ha="center", va="bottom", fontsize=ANNOT_FS, fontweight="bold")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([LABEL[v] for v in VARIANTS], rotation=35, ha="right")
+    ax.set_ylabel(f"CPR  =  cost ($) / (1 − OMR)", fontsize=LABEL_FS)
+    ax.set_title(f"Cost-performance ratio at N = {HEADLINE_N}  (lower is better)",
+                 fontsize=TITLE_FS)
+    ax.tick_params(labelsize=TICK_FS)
+    ax.grid(True, axis="y", alpha=0.3)
+
+    from matplotlib.patches import Patch
+    ax.legend(handles=[Patch(facecolor="white", edgecolor="black", hatch="//", label="Static"),
+                       Patch(facecolor="white", edgecolor="black", label="Elastic")],
+              fontsize=LEG_FS, loc="upper center",
+              bbox_to_anchor=(0.5, -0.30), ncol=2, framealpha=0.92)
+    fig.tight_layout()
+    _save(fig, "02g_cpr_bar")
+
+# ============================================================================
 # 04 — Paired Δ% (moldable vs static) @ N=400
 # ============================================================================
 def plot_04_paired_delta():
@@ -604,23 +678,28 @@ def plot_06_pareto():
     the frontier line, and the dominated region."""
     fig, ax = plt.subplots(figsize=(13.5, 8))
 
-    # Frontier composition (same as deadline-only Pareto)
-    FRONTIER = ["edf_static_c", "edf_moldable_c", "rank_moldable_5050"]
+    # Frontier composition under the Way-1 (per-finished) cost denominator.
+    # Elastic-EDF_c is both the cheapest policy overall AND a strong
+    # compliance point; EDF-ST_c is the lowest-miss (Hard-SLO) extreme.
+    # Elastic-Rank[50,50] — the cheapest point under the old per-submitted
+    # denominator — is now dominated by Elastic-EDF_c and falls into the
+    # dominated region.
+    FRONTIER = ["edf_moldable_c", "edf_static_c"]
     frontier_set = set(FRONTIER)
     FRONTIER_COL = {
-        "edf_static_c":       "#1D4ED8",
         "edf_moldable_c":     "#059669",
-        "rank_moldable_5050": "#D97706",
+        "edf_static_c":       "#1D4ED8",
     }
 
-    # N=400 (cost, overall_miss) for every variant, with std across seeds
+    # N=400 (cost, overall_miss) for every variant, with std across seeds.
+    # Cost is per FINISHED workflow (Way 1).
     pts = {}
     errs = {}
     for v in VARIANTS:
-        cm, cs = agg(DATA[(v, NS[-1])], "total_cost_eur")
+        cm, cs = agg_cost_per_wf(DATA[(v, NS[-1])])
         mm, ms = agg(DATA[(v, NS[-1])], "overall_miss_rate")
-        pts[v] = (cm * EUR_TO_USD / NS[-1], mm)
-        errs[v] = (cs * EUR_TO_USD / NS[-1], ms)
+        pts[v] = (cm, mm)
+        errs[v] = (cs, ms)
 
     # Per-variant label offsets (in display points). All dominated points
     # have positive dx so labels live inside the shaded dominated region
@@ -628,10 +707,10 @@ def plot_06_pareto():
     OFFSET = {
         # Frontier — pushed high above so the dominated cluster has room.
         "edf_static_c":        ( 0,   38),
-        "edf_moldable_c":      ( 0,   38),
-        "rank_moldable_5050":  ( 0,   72),
-        # Elastic cluster — fanned in three distinct directions so no two
+        "edf_moldable_c":      ( 0,   42),
+        # Elastic cluster — fanned in distinct directions so no two
         # labels share the same patch of plot.
+        "rank_moldable_5050":  ( 18,  30),   # up-right (now dominated)
         "fcfs_moldable_c":     ( 35,  38),   # up-right
         "fcfs_moldable_r":     ( 95, -22),   # right, well below
         "rank_moldable_2575":  (110,  10),   # far right, level
@@ -696,7 +775,7 @@ def plot_06_pareto():
                     bbox=dict(boxstyle="round,pad=0.3",
                               fc="white", ec=col, linewidth=1.5))
 
-    ax.set_xlabel("Average cost per workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("Average cost per finished workflow (USD)", fontsize=LABEL_FS)
     ax.set_ylabel("Overall miss-rate (budget OR deadline)", fontsize=LABEL_FS)
     ax.set_title("Policy frontier at N = 400", fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
@@ -774,7 +853,7 @@ def _retired_plot_06b_pareto_overall():
                     bbox=dict(boxstyle="round,pad=0.3",
                               fc="white", ec=col, linewidth=1.5))
 
-    ax.set_xlabel("Average cost per workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("Average cost per finished workflow (USD)", fontsize=LABEL_FS)
     ax.set_ylabel("Overall miss-rate (budget OR deadline)", fontsize=LABEL_FS)
     ax.set_title(f"Policy frontier on OVERALL miss at N = {NS[-1]}",
                  fontsize=TITLE_FS)
@@ -1114,10 +1193,10 @@ def plot_09_sortkey_panel():
     for ax, (title, vr, vc) in zip(axes.flatten(), pairs):
         x = np.arange(len(NS))
         width = 0.35
-        cr = [agg(DATA[(vr, n)], "total_cost_eur")[0]*EUR_TO_USD/n for n in NS]
-        cc = [agg(DATA[(vc, n)], "total_cost_eur")[0]*EUR_TO_USD/n for n in NS]
-        cre = [agg(DATA[(vr, n)], "total_cost_eur")[1]*EUR_TO_USD/n for n in NS]
-        cce = [agg(DATA[(vc, n)], "total_cost_eur")[1]*EUR_TO_USD/n for n in NS]
+        cr = [agg_cost_per_wf(DATA[(vr, n)])[0] for n in NS]
+        cc = [agg_cost_per_wf(DATA[(vc, n)])[0] for n in NS]
+        cre = [agg_cost_per_wf(DATA[(vr, n)])[1] for n in NS]
+        cce = [agg_cost_per_wf(DATA[(vc, n)])[1] for n in NS]
         mr  = [agg(DATA[(vr, n)], "deadline_miss_rate")[0] for n in NS]
         mc  = [agg(DATA[(vc, n)], "deadline_miss_rate")[0] for n in NS]
         mre = [agg(DATA[(vr, n)], "deadline_miss_rate")[1] for n in NS]
@@ -1132,7 +1211,7 @@ def plot_09_sortkey_panel():
                error_kw={"lw": 0.8, "ecolor": "black"})
         ax.set_xticks(x)
         ax.set_xticklabels([f"N={n}" for n in NS])
-        ax.set_ylabel("Cost per workflow (USD)", fontsize=LABEL_FS-2)
+        ax.set_ylabel("Cost per finished workflow (USD)", fontsize=LABEL_FS-2)
         ax.set_title(title, fontsize=TITLE_FS-2)
         ax.grid(True, axis="y", alpha=0.3)
         # secondary axis for miss
@@ -1164,13 +1243,13 @@ def plot_10_rank_pair():
     cols = ["#0EA5E9", "#DB2777"]
     # left: cost
     for v, c in zip(rs, cols):
-        ms = [agg(DATA[(v, n)], "total_cost_eur")[0]*EUR_TO_USD/n for n in NS]
-        sds= [agg(DATA[(v, n)], "total_cost_eur")[1]*EUR_TO_USD/n for n in NS]
+        ms = [agg_cost_per_wf(DATA[(v, n)])[0] for n in NS]
+        sds= [agg_cost_per_wf(DATA[(v, n)])[1] for n in NS]
         axes[0].errorbar(NS, ms, yerr=sds, marker="o", linewidth=2.2,
                          markersize=9, color=c, capsize=4, label=LABEL[v])
     axes[0].set_xticks(NS)
     axes[0].set_xlabel("N", fontsize=LABEL_FS)
-    axes[0].set_ylabel("Cost per workflow (USD)", fontsize=LABEL_FS)
+    axes[0].set_ylabel("Cost per finished workflow (USD)", fontsize=LABEL_FS)
     axes[0].set_title("Cost vs N", fontsize=TITLE_FS)
     axes[0].grid(True, alpha=0.3)
     axes[0].legend(fontsize=LEG_FS, loc="upper center",
@@ -1224,15 +1303,18 @@ def _read_resources_csv(rep_dir):
             op_cap, rs_cap, od_cap)
 
 def plot_11_util_timeline():
-    """Fleet utilisation over time for the three Pareto operating points
+    """Fleet utilisation over time for three representative policies
     side-by-side. Reads each cell's *_resources.csv. The contrast between
     Elastic and Static is the chapter's "why elasticity saves cost"
     intuition figure — Static keeps OD nodes alive much longer."""
-    # Three Pareto operating points (label, dir, regime)
+    # Three representative policies spanning the cost range (dir, regime).
+    # Under the per-finished cost denominator the frontier is just two
+    # points (Cost-optimal + Hard-SLO); Rank[50,50] is shown for reference
+    # as the cheapest policy under the old per-submitted denominator.
     panels = [
-        ("rank_moldable_5050",  "Cost-first"),
-        ("edf_moldable_c",      "Balanced"),
-        ("edf_static_c",        "Hard-SLO"),
+        ("edf_moldable_c",      "Cost-optimal (Elastic-EDF$_c$)"),
+        ("rank_moldable_5050",  "Elastic-Rank[50,50]"),
+        ("edf_static_c",        "Hard-SLO (EDF-ST$_c$)"),
     ]
     fig, axes = plt.subplots(3, 1, figsize=(13, 11), sharex=True)
     last_active = 0.0
@@ -1278,7 +1360,7 @@ def plot_11_util_timeline():
     axes[-1].set_xlabel("Elapsed time (hours)", fontsize=LABEL_FS)
     for ax in axes:
         ax.set_xlim(0, last_active * 1.05)
-    fig.suptitle("Fleet utilisation over time — three Pareto policies\n"
+    fig.suptitle("Fleet utilisation over time — three representative policies\n"
                  "(N=400, one representative run)",
                  fontsize=TITLE_FS, y=0.995)
     fig.tight_layout(rect=[0, 0, 1, 0.97])
@@ -1293,7 +1375,7 @@ def plot_12_per_wf_scatter():
     fig, ax = plt.subplots(figsize=(11, 6.5))
     for v in VARIANTS:
         for c in DATA[(v, HEADLINE_N)]:
-            ax.scatter(c["total_cost_eur"] * EUR_TO_USD / c["_N"],
+            ax.scatter(c["total_cost_eur"] * EUR_TO_USD / c["executed_workflows"],
                        c["avg_flowtime_s"],
                        s=80, alpha=0.7,
                        color=STYLE[v]["c"],
@@ -1304,7 +1386,7 @@ def plot_12_per_wf_scatter():
                           markersize=10, mfc=STYLE[v]["c"]) for v in VARIANTS]
     ax.legend(handles=handles, fontsize=LEG_FS, ncol=4,
               loc="upper center", bbox_to_anchor=(0.5, -0.18), framealpha=0.92)
-    ax.set_xlabel("Cost per workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("Cost per finished workflow (USD)", fontsize=LABEL_FS)
     ax.set_ylabel("Average turnaround time per workflow\n(seconds)",
                   fontsize=LABEL_FS)
     ax.set_title(f"Cost vs turnaround time — individual runs @ N={HEADLINE_N}",
@@ -1343,6 +1425,7 @@ def main():
         plot_02d_turnaround_stack,
         plot_02e_saturation,
         plot_02f_miss_decomposition,
+        plot_02g_cpr_bar,
         plot_04_paired_delta,
         plot_06_pareto,
         plot_07_scaling_activity,
