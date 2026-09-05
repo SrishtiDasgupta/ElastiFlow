@@ -51,3 +51,6 @@ license_results/plots_ansys_n4_backup/
 
 # Local tooling
 .claude/
+
+# pytest
+.pytest_cache/
