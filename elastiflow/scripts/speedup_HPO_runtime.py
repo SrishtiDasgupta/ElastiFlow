@@ -9,7 +9,7 @@ import numpy as np
 #
 # Adding a new size is additive: drop a new entry here and the scheduler picks
 # it up via getRuntime(name, ...). Family classification is in
-# scheduler/scheduler_HPO.py::getFamily(); see POLICY_B_TODO.md for the
+# scheduler/scheduler_HPO.py::getFamily(); see docs/history/POLICY_B_TODO.md for the
 # deferred structural changes that exercise heterogeneity within a family.
 RUNTIME_MODELS = {
     'g4dn.xlarge': (

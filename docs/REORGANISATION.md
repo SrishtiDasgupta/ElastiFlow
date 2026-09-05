@@ -246,6 +246,14 @@ the package, and the deploy scripts' checkout name (`/fsx/ElastiFlow`,
 package for Phase B: `config/`, `scripts/` (dispatchers, generators, runtime
 models, provisioning) and the workload YAMLs, because the framework imports them.
 
+A6 (2026-09-06): documentation. `README.md`, `docs/ARCHITECTURE.md` (components
+by their dissertation names, the execution modes as implemented, the three forks
+with the policy-to-class tables), `docs/PROVENANCE.md` (every data-derived
+dissertation figure mapped to dataset, generator and committed output, with the
+byte and rendered-text comparison that produced it), `docs/INSTALL.md`; the root
+working notes and context logs are archived under `docs/history/`; `CLAUDE.md`
+is rewritten for the new layout. **Phase A is complete.**
+
 **Phase A, move without changing behaviour** (git mv, import rewrites, path fixes,
 deletions). The three runners and the three scheduler forks survive this phase
 untouched inside the new tree; `elastiflow.cli` simply dispatches to them.

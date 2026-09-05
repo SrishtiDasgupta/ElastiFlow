@@ -1,0 +1,111 @@
+# Architecture
+
+This document describes the code as it is on the `refactoring` branch after
+Phase A, using the component names of the dissertation (Ch. 4 and 6), and
+states plainly where the implementation still differs from that description.
+The target layout and the plan are in `docs/REORGANISATION.md`.
+
+## Components and where they live
+
+| dissertation component | package location | notes |
+|---|---|---|
+| Gateway (submission, completion, resource-request endpoints) | `elastiflow/server/server.py`, `elastiflow/wf_queue/` | HTTP handlers; three Redis queues (`wf-queue`, `completed-jobs-queue`, `resource-request-queue`). Ports from `config/resources.yaml`: user requests 8080, workflow completion 8082, resource requests 8084, executor 8089. |
+| Scheduler | `elastiflow/scheduler/` | one abstract base per use case today (see below) and the policy classes |
+| Resource Manager | `elastiflow/resource_manager/` | `instance.py` (instance model), `resource_manager.py` / `resource_manager_LA.py` |
+| Licence Manager | `elastiflow/resource_manager/license/` | `manager.py`, `policy.py` (token laws per solver), `models.py`, `persistence.py` |
+| Load Balancer | inside the schedulers and `utils/exec_sched.py` | stream-to-resource assignment (SeisSol) and phase-conditioned assignment (HPO) are methods of the policy classes, not a separate module yet |
+| Workflow Engine | `elastiflow/workflow/` | Steep parser and actions (`steep/`), `steep_workflow.py`; `utils/validate_workflow.py`; `utils/exec_sched.py` dispatches per workflow type (`detectWorkflowType`, `getClientInputs_*`) |
+| Application drivers | `use_cases/seissol/driver/` (TinyDA client/server), `use_cases/hpo/application/` (CIFAR-10 trainers, Ray) | the per-iteration `service` a workflow invokes |
+| Runtime model | `elastiflow/scripts/speedup.py`, `speedup_HPO_runtime.py` | fitted speedup curves per mesh and instance type; the simulated backend's source of iteration times |
+| Provisioning | `elastiflow/scripts/create_instance.py`, `create_instance_HPO.py` | boto3 in live mode; `(sim or time).sleep(COLD_START_TIME)` in simulated mode |
+| Dispatcher (arrival process) | `elastiflow/scripts/dispatcher.py`, `dispatcher_LA.py`, `dispatcher_HPO.py` | replays the BMW submission trace (`scripts/submitTimes.csv`) with jitter; the licence variant compresses it by 0.5 and jitters over 2 min |
+
+## Execution modes
+
+The dissertation (Fig. 7.1) describes one execution-backend interface with a
+mode flag. In the code today the mode is a constant per use case
+(`config/constants.py`, `constants_LA.py`: `SIMULATE = True`; `constants_HPO.py`:
+`SIMULATE = False`) plus a `sim` object threaded through method signatures, and
+about a hundred call sites in some thirty files branch on it individually. The
+simulated backend is realised at four places:
+
+* `workflow/steep/steep_actions.py` (execute action): runs the workflow's
+  `service` script, which in simulated mode is `scripts/simulate-tinyda-seissol.py`
+  returning the modelled runtime from `speedup.getRuntime`, then
+  `(sim or time).sleep(min(runtime, remaining) + 7.7)`; the 7.7 s is the
+  measured executor overhead (Ch. 7, Table 7.x);
+* `scripts/create_instance.py`: provisioning becomes a simulated delay of
+  `COLD_START_TIME` (400.5 s SeisSol, 530 s HPO);
+* `scripts/dispatcher*.py`: the arrival process as a simulus process;
+* `executor.py`: the completion event goes to a simulus mailbox instead of an
+  HTTP request.
+
+Even simulated runs use a live Redis for the three queues.
+
+HPO has no working simulated backend: `simulate_main_HPO.py` is the live driver
+that was run on AWS (it wraps the live engine in simulus); the batch-size sweep
+in the dissertation uses the standalone analytical models under
+`use_cases/hpo/results/r7_n7_actual_vs_modeled/`, which import nothing from the
+framework. The author confirmed on 2026-09-05 that HPO runs live only and the
+simulated backend serves SeisSol and licence.
+
+## The three per-use-case forks
+
+The framework exists in three parallel copies, one per experiment, with
+unrelated abstract base classes. Phase B merges them.
+
+| layer | SeisSol | licence | HPO |
+|---|---|---|---|
+| runner | `simulate_sweep.py` (campaign), `simulate_main.py` (Ch. 7) | `simulate_main_LA.py` | `simulate_main_HPO.py` (live) |
+| scheduler base | `scheduler/scheduler.py` `Scheduler` | `scheduler_LA.py` `Scheduler_LA` | `scheduler_HPO.py` `Scheduler_HPO` |
+| dispatcher | `dispatcher.py` | `dispatcher_LA.py` | `dispatcher_HPO.py` |
+| executor | `executor.py` | `executor_LA.py` | `executor_HPO.py` |
+| constants | `config/constants.py` | `constants_LA.py` | `constants_HPO.py` |
+| metrics | `utils/metrics.py` | `metrics_LA.py` | `metrics_HPO.py` |
+| resource manager | `resource_manager.py` | `resource_manager_LA.py` | HPO instance model |
+| workload generator | `workflow_generator.py` | `workflow_generator_LA.py` | `workflow_generator_HPO.py` |
+| workloads | `sample_workflows/` (400) | `workflow/sample_workflows_LA/` (800) | `workflow/sample_workflows_HPO/` (20) |
+
+### Policies as the dissertation names them
+
+SeisSol–TinyDA, via `simulate_sweep.py <algo> <mode> [--sort-key runtime|cost]`:
+
+| thesis name | algo/mode | class |
+|---|---|---|
+| FCFS-ST_r, FCFS-ST_c | `fcfs static`, sort key runtime / cost | `fcfs_optimized.FCFS_Optimized` |
+| Elastic-FCFS_r, Elastic-FCFS_c | `fcfs moldable` | same class, `MOLDABLE = True` |
+| EDF-ST_r, EDF-ST_c, Elastic-EDF_r, Elastic-EDF_c | `edf static` / `edf moldable` | `earliest_deadline_edf.EarliestDeadlineEDF` |
+| HEFT-ST | `heft static` | `heft_heft_req.HEFT_HEFT_REQ` (with `resource_manager/heft_rm.py`) |
+| Elastic-Rank[50,50], Elastic-Rank[25,75] | `rank moldable --rank-budget/--rank-deadline` | `priority_priority.PriorityPriority` |
+
+Licence-constrained, via `simulate_main_LA.py --scheduler`:
+
+| thesis name | `--scheduler` | class |
+|---|---|---|
+| FCFS-ST-LA | `FCFS-ST-LA` | `fcfs_scheduler_LA.FCFS_Scheduler_LA` |
+| EDF-ST-LA | `EDF-ST-LA` | `edf_scheduler_LA.EDF_Scheduler_LA` |
+| FCFS-LAMF | `LAMF` | `fcfs_optimized_LA.FCFS_Optimized_LA` |
+| EDF-LAMF | `EDF-LAMF` | `edf_optimized_LA.EDF_Optimized_LA` |
+| HSM | `EDF-HSM` (with `LA_HSM_POOL_RHO*=0.70`) | `edf_hsm_LA.EDF_HSM_LA` |
+
+HPO, via `simulate_main_HPO.py --algo {fcfs,edf} --mode {static,moldable}`:
+`FCFS_Scheduler_HPO`, `FCFS_Optimized_HPO`, `EDF_Scheduler_HPO`, `EDF_Optimized_HPO`.
+
+## Data of record
+
+`use_cases/seissol/results/plain_results_per_run.json` (264 runs: 11 variants ×
+4 batch sizes × 6 seeds), `use_cases/licence/results/canonical_results.json`
+(210 runs: 5 policies × 7 batch sizes × 6 seeds),
+`use_cases/hpo/results/plots/total_cost_per_run.json` (12 cells × 6 seeds from
+the analytical model, calibrated on the live R7 run). Superseded generations are
+kept beside them as dated snapshots (`*.ansys_n4_2026-09-02.json`,
+`*.pre_negotiation_2026-09-02.json`) so that any artefact can be scored against
+the generation that produced it. The regression tests reproduce one cell of each
+from the current tree.
+
+## Site-specific values
+
+`config/resources.yaml` carries the scheduler's LRZ address and the instance
+runtimes and prices of the evaluated pool (148 on-premise slots, 36 reserved and
+72 on-demand cloud slots across six instance types); `deploy/` scripts assume the
+checkout at `/fsx/ElastiFlow` on the cluster's FSx mount.
