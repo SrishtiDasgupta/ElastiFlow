@@ -33,7 +33,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent          # plain_results/
 REPO_ROOT = HERE.parent                          # Vortex-moldable-sched/
 SIM_SCRIPT = REPO_ROOT / 'src' / 'main' / 'simulate_sweep.py'
-VENV_PY = REPO_ROOT.parent / 'vortex_venv' / 'bin' / 'python3'
+VENV_PY = Path(sys.executable)                  # the interpreter running this driver
 OUTPUT_JSON = HERE / 'plain_results_per_run.json'
 RUN_DIR = HERE / 'sweep_runs'                    # per-cell run dirs go here
 

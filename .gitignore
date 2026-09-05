@@ -69,3 +69,6 @@ license_results/plots_ansys_n4_backup/
 
 # Local tooling
 .claude/
+
+# HPO engine runtime log written into the source tree
+src/main/*.log

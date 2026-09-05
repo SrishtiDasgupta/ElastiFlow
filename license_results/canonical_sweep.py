@@ -25,7 +25,7 @@ from statistics import mean, pstdev
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent
 SIM_SCRIPT = REPO_ROOT / 'src' / 'main' / 'simulate_main_LA.py'
-VENV_PY = REPO_ROOT.parent / 'vortex_venv' / 'bin' / 'python3'
+VENV_PY = Path(sys.executable)                  # the interpreter running this driver
 RUN_ROOT = Path('/tmp/canonical_runs')
 OUT_JSON = HERE / 'canonical_results.json'
 sys.path.insert(0, str(HERE))
