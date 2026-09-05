@@ -24,7 +24,7 @@ from statistics import mean, pstdev
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent
-SIM_SCRIPT = REPO_ROOT / 'src' / 'main' / 'simulate_main_LA.py'
+SIM_SCRIPT = REPO_ROOT / 'elastiflow' / 'simulate_main_LA.py'
 VENV_PY = Path(sys.executable)                  # the interpreter running this driver
 RUN_ROOT = Path('/tmp/canonical_runs')
 OUT_JSON = HERE / 'canonical_results.json'
@@ -63,7 +63,7 @@ def run_cell(pol, N, sd):
     t0 = time.time()
     with open(sp, 'w') as fh:
         proc = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT,
-                              cwd=REPO_ROOT / 'src' / 'main', env=env, timeout=45 * 60)
+                              cwd=REPO_ROOT / 'elastiflow', env=env, timeout=45 * 60)
     p = parse_la_run.parse(sp.read_text())
     rg = glob.glob(str(out_dir / '*_results.csv'))
     ug = glob.glob(str(out_dir / '*_license_usage.csv'))

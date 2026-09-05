@@ -1,0 +1,36 @@
+actions:
+- actions:
+  - inputs:
+    - id: tinyda_input
+      var: i
+    outputs:
+    - id: tinyda_output
+      var: output_coh
+    service: scripts/simulate-tinyda-seissol.py
+    type: execute
+  enumerator: i
+  input: input_coh
+  type: for
+  yieldToInput: output_coh
+api: 4.7.0
+config:
+  mesh: 1000
+  workflowConfig:
+  - chains: 5
+    tinydaIterations: 9
+  - chains: 6
+    tinydaIterations: 1
+  - chains: 2
+    tinydaIterations: 3
+  - chains: 4
+    tinydaIterations: 3
+  workflowIterations: 4
+constraints:
+  budget: 56.67537992723053
+  chains: 5
+  deadline: 14104.256297444777
+  tinydaIterations: 9
+id: test-b60241ac-4ca1-42ae-8fa1-b70627fa6911
+vars:
+- id: input_coh
+  value: '3'

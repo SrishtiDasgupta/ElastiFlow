@@ -16,6 +16,7 @@ Output: distributions of (misses, sum-flow, OD cost) per (N, corner),
 plus "win-rate" of moldable vs static.
 """
 import json
+_REPO = __import__('pathlib').Path(__file__).resolve().parents[3]
 import math
 import random
 import statistics
@@ -30,7 +31,7 @@ N_TRIALS = 100
 # -----------------------------------------------------------------------------
 # Empirical distributions from R3-R7 results.jsonl
 # -----------------------------------------------------------------------------
-HPO_LOGS = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/results/r7_n7_edf_mold/hpo_logs'
+HPO_LOGS = str(_REPO / 'HPO/results/r7_n7_edf_mold/hpo_logs')
 WF_FILES = {
     'data8':  'hpo-60bf3eb4', 'data9': 'hpo-b03a4442',
     'data5':  'hpo-df19b440', 'data7': 'hpo-73120874',

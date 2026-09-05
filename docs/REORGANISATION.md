@@ -199,6 +199,16 @@ drivers to `sys.executable` (pulled forward from A4 because the flatten had brok
 it); added the never-committed `F0SENS` outputs of a tracked generator; ignored
 `src/main/*.log`, which the HPO engine writes into the source tree.
 
+A3 (2026-09-06): `src/main` is now the package `elastiflow/` with `pyproject.toml`
+and an editable install (`pip install -e .`); 306 import lines in 56 files carry
+the `elastiflow.` prefix, every `sys.path` hack that reached into the package is
+gone, `config/paths.py` exposes `PACKAGE_DIR` and `REPO_ROOT`, and the drivers,
+harness, Ch7 sweep and deploy scripts point at the new location. The in-package
+`.gitignore` had been hiding `sample_workflows/`: the 400 SeisSol workflows the
+runner reads were never committed, so a clone could not run that campaign. They
+are tracked now, per the decision to keep generated workloads in the repository.
+`src/test/` (workload fixtures and one ad-hoc script) moves in A5.
+
 **Phase A, move without changing behaviour** (git mv, import rewrites, path fixes,
 deletions). The three runners and the three scheduler forks survive this phase
 untouched inside the new tree; `elastiflow.cli` simply dispatches to them.

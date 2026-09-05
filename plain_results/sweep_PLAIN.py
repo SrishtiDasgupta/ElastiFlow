@@ -32,7 +32,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent          # plain_results/
 REPO_ROOT = HERE.parent                          # Vortex-moldable-sched/
-SIM_SCRIPT = REPO_ROOT / 'src' / 'main' / 'simulate_sweep.py'
+SIM_SCRIPT = REPO_ROOT / 'elastiflow' / 'simulate_sweep.py'
 VENV_PY = Path(sys.executable)                  # the interpreter running this driver
 OUTPUT_JSON = HERE / 'plain_results_per_run.json'
 RUN_DIR = HERE / 'sweep_runs'                    # per-cell run dirs go here
@@ -150,7 +150,7 @@ def run_cell(variant: str, N: int, seed: int) -> dict:
         proc = subprocess.run(
             cmd,
             stdout=fh, stderr=subprocess.STDOUT,
-            cwd=REPO_ROOT / 'src' / 'main',
+            cwd=REPO_ROOT / 'elastiflow',
             timeout=30 * 60,
         )
     wall_s = time.time() - t0

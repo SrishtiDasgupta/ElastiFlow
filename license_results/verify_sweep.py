@@ -1,6 +1,6 @@
 import json, sys
 from pathlib import Path
-HERE = Path('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/license_results')
+HERE = Path(__file__).resolve().parent
 base = json.loads((HERE/'canonical_results.pre_negotiation_2026-09-02.json').read_text())
 new  = json.loads((HERE/'canonical_results.json').read_text()) if (HERE/'canonical_results.json').exists() else {}
 FIELDS = ['total_workflows','executed_workflows','incomplete_workflows','avg_flowtime_s',
