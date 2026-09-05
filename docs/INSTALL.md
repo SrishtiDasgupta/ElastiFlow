@@ -6,8 +6,8 @@
 * A Redis server on `localhost:6379`. Both execution modes use it for the three
   work queues (this dependency of the *simulated* mode is removed in Phase B of
   `docs/REORGANISATION.md`).
-* For live mode only: AWS credentials and the cluster setup under `IaC_scripts/`
-  and `fsx/`; SLURM on the on-premise tier.
+* For live mode only: AWS credentials and the cluster setup under `deploy/aws/`
+  and `deploy/nodes/`; SLURM on the on-premise tier.
 
 ### Redis
 
@@ -56,5 +56,5 @@ python simulate_sweep.py edf moldable --sort-key cost /tmp/out --seed 7 --N 100 
 python simulate_main_LA.py --scheduler EDF-LAMF --N 150 --seed 7 --output-dir /tmp/la  # licence-constrained
 ```
 
-Whole campaigns: `plain_results/sweep_PLAIN.py` and `license_results/canonical_sweep.py`
+Whole campaigns: `use_cases/seissol/results/sweep_PLAIN.py` and `use_cases/licence/results/canonical_sweep.py`
 (both merge results into the dataset files in place; run them on a branch).

@@ -316,7 +316,7 @@ class Scheduler_HPO(ABC):
 # Both are pure functions of the instance name and have no callers yet that
 # change behaviour — they exist so the registry in
 # scripts/speedup_HPO_runtime.py and the deferred bracket predicate in
-# POLICY_B_TODO.md can be wired in additively.
+# docs/history/POLICY_B_TODO.md can be wired in additively.
 # ---------------------------------------------------------------------------
 def getFamily(instance_name: str) -> str:
     if 'g4dn' in instance_name or 'on-prem' in instance_name:

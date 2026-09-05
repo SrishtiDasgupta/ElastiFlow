@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "elastiflow"
 version = "0.1.0"
+readme = "README.md"
 description = "ElastiFlow: a runtime framework for elastic resource management of iterative scientific workflows, with a discrete-event simulation backend"
 requires-python = ">=3.10"
-license = { text = "MIT" }
 authors = [{ name = "Srishti Dasgupta" }]
 dependencies = [
   "simulus>=1.2",

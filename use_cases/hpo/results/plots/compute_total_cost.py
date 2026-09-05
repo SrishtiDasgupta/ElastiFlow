@@ -1,7 +1,7 @@
 """Compute total submitter cost per (corner, N) by instrumenting the simulator.
 
 Rates (per lane-hour) from elastiflow/config/resources_HPO.yaml:
-  - Slurm on-prem (TCO):  $0.84  (see gpu-cluster-cost.md)
+  - Slurm on-prem (TCO):  $0.84  (see docs/history/gpu-cluster-cost.md)
   - Reserved g4dn.xlarge: $0.227
   - Reserved g5.xlarge:   $0.435
   - On-demand g4dn:       $0.526

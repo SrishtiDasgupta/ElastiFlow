@@ -116,7 +116,7 @@ G5_RUNTIMES_12EP = {
 # ====================================================================================
 
 INSTANCE_COSTS = {
-    # On-premise (calculated TCO from thesis methodology — see gpu-cluster-cost.md)
+    # On-premise (calculated TCO from thesis methodology — see docs/history/gpu-cluster-cost.md)
     'on_premise_g4': 0.84,  # $0.84/hour based on 3-year TCO for 4-node T4 GPU cluster
 
     # Cloud Reserved Instances (xlarge, 1-year no-upfront)
@@ -131,7 +131,7 @@ INSTANCE_COSTS = {
     # Per-(family, size) entries — additive, unreferenced by current code.
     # The deployed inventory (single size per family) does not exercise
     # these; they exist so a future inventory widening can drop in extra
-    # sizes without further config edits. See POLICY_B_TODO.md.
+    # sizes without further config edits. See docs/history/POLICY_B_TODO.md.
     # AWS list prices, eu-north-1.
     # ----------------------------------------------------------------------
     'cloud_reserved_g4dn.xlarge':  0.227,
