@@ -198,7 +198,7 @@ if __name__ == "__main__":
     #   smaller `bottom` -> more vertical room for panels (can bring bottom row closer to supxlabel/legend)
 
     fig.supxlabel(
-        'Number of instances',
+        r'Number of instances ($\nu$)',
         fontsize=AXIS_LABEL_FS,
         fontweight='bold',
         y=SUPXLABEL_Y,
@@ -217,9 +217,9 @@ if __name__ == "__main__":
 
     from matplotlib.patches import Patch
     custom_legend = [
-        Patch(facecolor='green', label='Mesh Resolution: 500'),
-        Patch(facecolor='darkorange', label='Mesh Resolution: 750'),
-        Patch(facecolor='cornflowerblue', label='Mesh Resolution: 1000'),
+        Patch(facecolor='green', label=r'Mesh Resolution ($m^w$): 500'),
+        Patch(facecolor='darkorange', label=r'Mesh Resolution ($m^w$): 750'),
+        Patch(facecolor='cornflowerblue', label=r'Mesh Resolution ($m^w$): 1000'),
     ]
     fig.legend(
         handles=custom_legend,

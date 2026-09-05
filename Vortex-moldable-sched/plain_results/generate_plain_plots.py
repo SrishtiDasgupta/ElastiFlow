@@ -192,7 +192,7 @@ def plot_01_cost_vs_n():
         ax.plot(NS, ms, label=LABEL[v], linewidth=2.2, markersize=8, **STYLE[v])
         ax.fill_between(NS, ms - sds, ms + sds, color=STYLE[v]["c"], alpha=0.08)
     ax.set_xlabel("Batch size N (workflows)", fontsize=LABEL_FS)
-    ax.set_ylabel("Average cost per finished workflow (USD)", fontsize=LABEL_FS)
+    ax.set_ylabel("$\\bar{\\gamma}$ (cost per finished workflow, USD)", fontsize=LABEL_FS)
     ax.set_title("Cost-per-workflow scaling", fontsize=TITLE_FS)
     ax.set_xticks(NS)
     ax.tick_params(labelsize=TICK_FS)
@@ -231,7 +231,7 @@ def plot_01b_cost_stack():
                 ha="center", va="bottom", fontsize=ANNOT_FS, fontweight="bold")
     ax.set_xticks(x)
     ax.set_xticklabels([LABEL[v] for v in VARIANTS], rotation=35, ha="right")
-    ax.set_ylabel("Total batch cost (USD)", fontsize=LABEL_FS)
+    ax.set_ylabel("$\\gamma_{\\mathrm{total}}$ (total batch cost, USD)", fontsize=LABEL_FS)
     ax.set_title(f"Cost-tier decomposition at N = {HEADLINE_N}", fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
     ax.grid(True, axis="y", alpha=0.3)
@@ -277,7 +277,7 @@ def _plot_one_metric_vs_n(key, ylabel, title, fname, per_n=False, legend_below=T
 
 def plot_02_cost_vs_n():
     _plot_one_metric_vs_n("total_cost_eur",
-                          "Cost per finished workflow (USD)",
+                          "$\\bar{\\gamma}$ (cost per finished workflow, USD)",
                           "Cost per finished workflow vs batch size N",
                           "02_cost_per_wf_vs_n", per_n=True, legend_below=True)
 
@@ -672,7 +672,7 @@ def plot_06_pareto():
     (deadline OR budget) as the most honest summary metric. The
     deadline-vs-budget breakdown is exposed separately in 02f.
 
-    Regime names (Hard-SLO / Balanced / Cost-first) are not drawn on the
+    Regime names (Lowest-miss / Balanced / Cost-first) are not drawn on the
     plot — they belong in the chapter prose. The plot shows only:
     frontier points (large coloured dots), dominated points (small grey),
     the frontier line, and the dominated region."""
@@ -680,7 +680,7 @@ def plot_06_pareto():
 
     # Frontier composition under the Way-1 (per-finished) cost denominator.
     # Elastic-EDF_c is both the cheapest policy overall AND a strong
-    # compliance point; EDF-ST_c is the lowest-miss (Hard-SLO) extreme.
+    # compliance point; EDF-ST_c is the Lowest-miss extreme.
     # Elastic-Rank[50,50] — the cheapest point under the old per-submitted
     # denominator — is now dominated by Elastic-EDF_c and falls into the
     # dominated region.
@@ -775,7 +775,7 @@ def plot_06_pareto():
                     bbox=dict(boxstyle="round,pad=0.3",
                               fc="white", ec=col, linewidth=1.5))
 
-    ax.set_xlabel("Average cost per finished workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("$\\bar{\\gamma}$ (cost per finished workflow, USD)", fontsize=LABEL_FS)
     ax.set_ylabel("Overall miss-rate (budget OR deadline)", fontsize=LABEL_FS)
     ax.set_title("Policy frontier at N = 400", fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
@@ -853,7 +853,7 @@ def _retired_plot_06b_pareto_overall():
                     bbox=dict(boxstyle="round,pad=0.3",
                               fc="white", ec=col, linewidth=1.5))
 
-    ax.set_xlabel("Average cost per finished workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("$\\bar{\\gamma}$ (cost per finished workflow, USD)", fontsize=LABEL_FS)
     ax.set_ylabel("Overall miss-rate (budget OR deadline)", fontsize=LABEL_FS)
     ax.set_title(f"Policy frontier on OVERALL miss at N = {NS[-1]}",
                  fontsize=TITLE_FS)
@@ -1091,8 +1091,8 @@ def plot_08_intent_satisfaction():
                 capsize=4, lw=1.2, zorder=10)
     ax.set_xticks(x)
     ax.set_xticklabels([LABEL[v] for v in moldable_vs], rotation=30, ha="right")
-    ax.set_ylabel("Share of WE-UP intents (%)", fontsize=LABEL_FS)
-    ax.set_title("Outcome of every Workflow-Engine UP intent (N ≥ 200)",
+    ax.set_ylabel("Share of scale-up requests (%)", fontsize=LABEL_FS)
+    ax.set_title("Outcome of every scale-up request (N ≥ 200)",
                  fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
     ax.grid(True, axis="y", alpha=0.3)
@@ -1211,7 +1211,7 @@ def plot_09_sortkey_panel():
                error_kw={"lw": 0.8, "ecolor": "black"})
         ax.set_xticks(x)
         ax.set_xticklabels([f"N={n}" for n in NS])
-        ax.set_ylabel("Cost per finished workflow (USD)", fontsize=LABEL_FS-2)
+        ax.set_ylabel("$\\bar{\\gamma}$ (cost per finished workflow, USD)", fontsize=LABEL_FS-2)
         ax.set_title(title, fontsize=TITLE_FS-2)
         ax.grid(True, axis="y", alpha=0.3)
         # secondary axis for miss
@@ -1249,7 +1249,7 @@ def plot_10_rank_pair():
                          markersize=9, color=c, capsize=4, label=LABEL[v])
     axes[0].set_xticks(NS)
     axes[0].set_xlabel("N", fontsize=LABEL_FS)
-    axes[0].set_ylabel("Cost per finished workflow (USD)", fontsize=LABEL_FS)
+    axes[0].set_ylabel("$\\bar{\\gamma}$ (cost per finished workflow, USD)", fontsize=LABEL_FS)
     axes[0].set_title("Cost vs N", fontsize=TITLE_FS)
     axes[0].grid(True, alpha=0.3)
     axes[0].legend(fontsize=LEG_FS, loc="upper center",
@@ -1303,20 +1303,17 @@ def _read_resources_csv(rep_dir):
             op_cap, rs_cap, od_cap)
 
 def plot_11_util_timeline():
-    """Fleet utilisation over time for three representative policies
+    """Fleet utilisation over time for the two frontier policies
     side-by-side. Reads each cell's *_resources.csv. The contrast between
     Elastic and Static is the chapter's "why elasticity saves cost"
     intuition figure — Static keeps OD nodes alive much longer."""
-    # Three representative policies spanning the cost range (dir, regime).
-    # Under the per-finished cost denominator the frontier is just two
-    # points (Cost-optimal + Hard-SLO); Rank[50,50] is shown for reference
-    # as the cheapest policy under the old per-submitted denominator.
+    # The two Pareto-frontier operating points under the per-finished
+    # denominator: Lowest-cost (Elastic-EDF_c) and Lowest-miss (EDF-ST_c).
     panels = [
-        ("edf_moldable_c",      "Cost-optimal (Elastic-EDF$_c$)"),
-        ("rank_moldable_5050",  "Elastic-Rank[50,50]"),
-        ("edf_static_c",        "Hard-SLO (EDF-ST$_c$)"),
+        ("edf_moldable_c",      "Lowest-cost (Elastic-EDF$_c$)"),
+        ("edf_static_c",        "Lowest-miss (EDF-ST$_c$)"),
     ]
-    fig, axes = plt.subplots(3, 1, figsize=(13, 11), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
     last_active = 0.0
     od_costs = {}
     for ax, (variant, regime) in zip(axes, panels):
@@ -1360,7 +1357,7 @@ def plot_11_util_timeline():
     axes[-1].set_xlabel("Elapsed time (hours)", fontsize=LABEL_FS)
     for ax in axes:
         ax.set_xlim(0, last_active * 1.05)
-    fig.suptitle("Fleet utilisation over time — three representative policies\n"
+    fig.suptitle("Fleet utilisation over time — two frontier policies\n"
                  "(N=400, one representative run)",
                  fontsize=TITLE_FS, y=0.995)
     fig.tight_layout(rect=[0, 0, 1, 0.97])
@@ -1386,7 +1383,7 @@ def plot_12_per_wf_scatter():
                           markersize=10, mfc=STYLE[v]["c"]) for v in VARIANTS]
     ax.legend(handles=handles, fontsize=LEG_FS, ncol=4,
               loc="upper center", bbox_to_anchor=(0.5, -0.18), framealpha=0.92)
-    ax.set_xlabel("Cost per finished workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("$\\bar{\\gamma}$ (cost per finished workflow, USD)", fontsize=LABEL_FS)
     ax.set_ylabel("Average turnaround time per workflow\n(seconds)",
                   fontsize=LABEL_FS)
     ax.set_title(f"Cost vs turnaround time — individual runs @ N={HEADLINE_N}",

@@ -67,21 +67,47 @@ class MetricsLA:
             'insufficient_compute': 0,
             'insufficient_licenses': 0,
             'budget_exhausted': 0,
-            'time_exhausted': 0
+            'time_exhausted': 0,
+            'unattributed': 0,
         }
 
         # Track scale-up attempts per workflow (to detect missed opportunities)
         # Format: {workflow_id: num_scale_up_attempts}
         self.scale_up_attempts_per_workflow = {}
 
+        # Stage 1 licence-gate outcome, in the decision vocabulary of Ch.5 Sec. 5.6.
+        # 'approve'      : f_l(s) <= avail(l, Sigma), request granted in full
+        # 'modify'       : partial allocation, largest pool-feasible k* < k granted
+        # 'deny_licence' : no non-empty allocation fits the available tokens
+        # 'deny_compute' : rejected by the compute gate before licences were tested
+        self.negotiation_outcomes = {
+            'approve': 0,
+            'modify': 0,
+            'deny_licence': 0,
+            'deny_compute': 0,
+        }
+        # For each 'modify', the (requested_instances, granted_instances) pair, so the
+        # partial-allocation depth can be reported and not merely its frequency.
+        self.partial_allocations = []
+        # Token headroom seen at each licence-gate evaluation: (needed, available).
+        self.licence_gate_samples = []
+
         self.scale_down_attempts = 0
         self.scale_down_successes = 0
         self.scale_down_blocked = 0
+        # NOTE: these keys must match the blocked_reason strings emitted by the
+        # LA schedulers exactly. Three of them were previously absent, so the
+        # 'in dict' guard below silently discarded those blocks and the printed
+        # reasons did not reconcile to scale_down_blocked. 'other' is a catch-all
+        # so the breakdown always sums to the total.
         self.scale_down_blocked_by_reason = {
-            'license_pool_saturated': 0,
+            'license_cost_adverse_saturated': 0,
             'late_iteration': 0,
+            'deadline_proximity': 0,
             'time_progress': 0,
-            'budget_or_time_progress': 0
+            'budget_or_time_progress': 0,
+            'min_instance_limit': 0,
+            'other': 0,
         }
 
         self.total_instances_added = 0
@@ -98,7 +124,7 @@ class MetricsLA:
         Based on formulas from Henkel & Treiber 2015 and JSSPP 2025 Section 2.2:
         - LS-Dyna: T(n) = n
         - Abaqus: T(n) = 5 × n^0.422
-        - Ansys: T_meba = 1, T_workgroup = n - 4 (for n > 4)
+        - Ansys: T_meba = 1, T_hpc = n - 2 (for n > 2)   [Henkel anshpc model]
 
         Args:
             software_id: Software identifier (1=ANSYS, 2=ABAQUS, 3=LSDYNA, 0=unlicensed)
@@ -122,9 +148,9 @@ class MetricsLA:
             # Power law formula: for negative cores, this would produce complex numbers
             return 5.0 * (cores ** 0.422)
 
-        elif software_id == SOFTWARE_ID_ANSYS:  # Ansys (workgroup model)
-            # 1 MEBA token (covers up to 4 cores) + workgroup licenses for additional cores
-            return 1.0 + max(0, cores - 4)
+        elif software_id == SOFTWARE_ID_ANSYS:  # Ansys (anshpc model, Henkel & Treiber 2015)
+            # 1 MEBA token (anshpc base covers 2 cores) + HPC licenses for cores beyond 2
+            return 1.0 + max(0, cores - 2)
 
         else:  # Unlicensed or unknown
             return 0.0
@@ -166,9 +192,9 @@ class MetricsLA:
             return tokens * cost_per_token_sec * duration
 
         elif software_id == SOFTWARE_ID_ANSYS:
-            # MEBA (1 token) + Workgroup licenses (n-4 tokens)
+            # MEBA (1 token) + HPC licenses (n-2 tokens, Henkel anshpc)
             meba_cost = ANSYS_MEBA_COST_SEC * duration
-            workgroup_tokens = max(0, cores - 4)
+            workgroup_tokens = max(0, cores - 2)
             workgroup_cost = workgroup_tokens * ANSYS_WORKGROUP_COST_SEC * duration
             return meba_cost + workgroup_cost
 
@@ -310,14 +336,34 @@ class MetricsLA:
             if reason and reason in self.scale_up_failures_by_reason:
                 self.scale_up_failures_by_reason[reason] += 1
 
+    def recordNegotiationOutcome(self, outcome, requested=0, granted=0,
+                                 tokens_needed=0, tokens_available=0):
+        """
+        Record the outcome of one Stage 1 licence-gate evaluation.
+
+        Args:
+            outcome: 'approve', 'modify', 'deny_licence' or 'deny_compute'
+            requested: instance count asked for (used when outcome is 'modify')
+            granted: instance count actually granted (used when outcome is 'modify')
+            tokens_needed: f_l(s) for the requested allocation
+            tokens_available: avail(l, Sigma) at the moment of the test
+        """
+        if outcome in self.negotiation_outcomes:
+            self.negotiation_outcomes[outcome] += 1
+        if outcome == 'modify':
+            self.partial_allocations.append((requested, granted))
+        if outcome in ('approve', 'modify', 'deny_licence'):
+            self.licence_gate_samples.append((tokens_needed, tokens_available))
+
     def recordScaleDownAttempt(self, success, blocked_reason=None, instances_removed=0, cores_removed=0, licenses_released=0):
         """
         Record a scale-down attempt and its outcome.
 
         Args:
             success: True if scale-down succeeded, False if blocked
-            blocked_reason: Reason for blocking (if applicable): 'license_pool_saturated',
-                          'late_iteration', 'time_progress'
+            blocked_reason: Reason for blocking (if applicable), one of the keys of
+                          scale_down_blocked_by_reason. Unrecognised values are
+                          counted under 'other' rather than discarded.
             instances_removed: Number of instances freed
             cores_removed: Number of cores freed
             licenses_released: Number of license tokens released
@@ -331,8 +377,8 @@ class MetricsLA:
             self.total_licenses_released += licenses_released
         else:
             self.scale_down_blocked += 1
-            if blocked_reason and blocked_reason in self.scale_down_blocked_by_reason:
-                self.scale_down_blocked_by_reason[blocked_reason] += 1
+            key = blocked_reason if blocked_reason in self.scale_down_blocked_by_reason else 'other'
+            self.scale_down_blocked_by_reason[key] += 1
 
     def processInstances(self, instances, start_time, finish_time=None):
         """
@@ -745,6 +791,26 @@ class MetricsLA:
                 print(f'Resources allocated once at workflow start (no dynamic scaling)')
             else:
                 # Moldable schedulers (LAMF, DDM-EDF) - show full moldability report
+                print(f'\n--- Licence Gate (Stage 1 outcomes) ---')
+                _no = self.negotiation_outcomes
+                _gate = _no['approve'] + _no['modify'] + _no['deny_licence']
+                print(f'Gate evaluations: {_gate}')
+                print(f'  Approve: {_no["approve"]}')
+                print(f'  Modify (partial allocation): {_no["modify"]}')
+                print(f'  Deny (licence): {_no["deny_licence"]}')
+                print(f'Rejected by compute gate before licence test: {_no["deny_compute"]}')
+                if self.partial_allocations:
+                    _req = sum(r for r, _ in self.partial_allocations)
+                    _grn = sum(g for _, g in self.partial_allocations)
+                    _frac = (_grn / _req * 100) if _req else 0.0
+                    print(f'  Partial allocation depth: {_grn}/{_req} instances granted ({round(_frac, 1)}% of requested)')
+                if self.licence_gate_samples:
+                    _hr = [a - n for n, a in self.licence_gate_samples]
+                    _rt = [n / a for n, a in self.licence_gate_samples if a > 0]
+                    print(f'  Token headroom (available - needed): min {min(_hr)}, median {sorted(_hr)[len(_hr)//2]}')
+                    if _rt:
+                        print(f'  Peak need/available ratio: {round(max(_rt), 3)}')
+
                 print(f'\n--- Moldability Effectiveness ---')
                 print(f'Scheduler Type: {scheduler_type}')
                 print(f'Scale-up attempts: {self.scale_up_attempts}')
@@ -757,6 +823,7 @@ class MetricsLA:
                         print(f'    - Insufficient licenses: {self.scale_up_failures_by_reason["insufficient_licenses"]}')
                         print(f'    - Budget exhausted: {self.scale_up_failures_by_reason["budget_exhausted"]}')
                         print(f'    - Time exhausted: {self.scale_up_failures_by_reason["time_exhausted"]}')
+                        print(f'    - Unattributed: {self.scale_up_failures_by_reason["unattributed"]}')
                     print(f'  Total instances added: {self.total_instances_added}')
                     print(f'  Total cores added: {self.total_cores_added}')
                     print(f'  Total licenses acquired: {self.total_licenses_acquired}')
@@ -767,10 +834,17 @@ class MetricsLA:
                     print(f'  Successes: {self.scale_down_successes} ({success_rate}%)')
                     print(f'  Blocked: {self.scale_down_blocked}')
                     if self.scale_down_blocked > 0:
-                        print(f'    - License pool saturated: {self.scale_down_blocked_by_reason["license_pool_saturated"]}')
-                        print(f'    - Late iteration (>3): {self.scale_down_blocked_by_reason["late_iteration"]}')
-                        print(f'    - Time progress (>70%): {self.scale_down_blocked_by_reason["time_progress"]}')
-                        print(f'    - Budget or time progress (>50%): {self.scale_down_blocked_by_reason["budget_or_time_progress"]}')
+                        _labels = {
+                            'license_cost_adverse_saturated': 'Licence cost-adverse under pool saturation',
+                            'late_iteration': 'Late iteration',
+                            'deadline_proximity': 'Deadline proximity',
+                            'time_progress': 'Time progress',
+                            'budget_or_time_progress': 'Budget or time progress',
+                            'min_instance_limit': 'Minimum instance limit',
+                            'other': 'Other or unattributed',
+                        }
+                        for _k, _lab in _labels.items():
+                            print(f'    - {_lab}: {self.scale_down_blocked_by_reason[_k]}')
                     print(f'  Total instances removed: {self.total_instances_removed}')
                     print(f'  Total cores removed: {self.total_cores_removed}')
                     print(f'  Total licenses released: {self.total_licenses_released}')

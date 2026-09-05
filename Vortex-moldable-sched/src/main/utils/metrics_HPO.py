@@ -221,10 +221,29 @@ class MetricsHPO:
                     # Exact capacity = free IPs + allocated IPs
                     cloud_capacity += len(instance.free_slots) + len(instance.allocated_slots)
                 elif isinstance(instance, CloudOnDemandInstance):
-                    # On-demand: free_slots starts at 0, goes negative when allocated
-                    # Allocated instances = -free_slots (dynamic capacity, always in use)
-                    od_in_use = max(0, -instance.getFreeSlots())
-                    cloud_capacity += od_in_use
+                    # On-demand capacity and occupancy.
+                    #
+                    # BUG (found 2026-09-02, fixed here; results in the thesis
+                    # predate this fix). The previous code read:
+                    #     od_in_use = max(0, -instance.getFreeSlots())
+                    # on the assumption that free_slots starts at 0 and goes
+                    # negative as instances are allocated. It does not.
+                    # CloudOnDemandInstance.__init__ sets free_slots to the
+                    # declared on-demand-slots (3 per type in
+                    # resources_HPO.yaml) and allocate() decrements it, so the
+                    # value runs 3 -> 0 and is never negative. max(0, -x) was
+                    # therefore always 0, and the on-demand tier was silently
+                    # dropped from BOTH terms of the utilisation ratio: the
+                    # denominator stayed at on-prem + reserved (8 nodes) even
+                    # though on-demand carried 38-51% of campaign cost.
+                    #
+                    # Correct accounting, matching metrics.py: the on-demand
+                    # tier contributes its full provisionable quota to capacity,
+                    # and the busy portion of it to occupancy.
+                    od_capacity = getattr(instance, 'total_slots', 0)
+                    od_free = max(0, instance.getFreeSlots())
+                    cloud_capacity += od_capacity
+                    cloud_free += od_free
 
             timestamp = (sim and sim.now) or time.time()
             self.free_resources.append((timestamp, onprem_free, cloud_free, cloud_capacity))

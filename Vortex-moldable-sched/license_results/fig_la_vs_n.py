@@ -1,6 +1,9 @@
 """LA cost-structure trend figures (Group 1, plots 2 & 3): vs-N line plots.
 
-  LA_02  license-to-hardware cost ratio (%) vs N   (overhead = tot_lic/tot_hw)
+  LA_02  licence-to-hardware cost ratio (%) vs N, on the COMPLETED-WORK basis
+         (total_license_cost_eur / total_hardware_cost_eur), so it is consistent with
+         LA_01's licence share and with gamma-bar. Licence spend on workflows that did
+         not complete is reported separately as gamma^waste_lic (LA_05).
   LA_03  license cost per COMPLETED workflow (USD) vs N   (lic_per_done)
 
 Both follow the Plain chapter's `02_*_vs_n` grammar: figsize (10, 6.5),
@@ -27,6 +30,16 @@ import policy_names as PN  # noqa: E402
 OUT_DIR = HERE / 'plots'
 OUT_DIR.mkdir(exist_ok=True)
 CANON = json.loads((HERE / 'canonical_results.json').read_text())
+
+# Completed-work licence-to-hardware ratio (%). The stored `overhead` field is
+# tot_lic/tot_hw, which includes licence spend on workflows that never completed
+# and is therefore inconsistent with LA_01's licence share. Recompute on the
+# completed-work basis so the two panels agree.
+for _c in CANON.values():
+    try:
+        _c['overhead_done'] = 100.0 * _c['total_license_cost_eur'] / _c['total_hardware_cost_eur']
+    except (KeyError, TypeError, ZeroDivisionError):
+        pass
 
 NS = [150, 200, 300, 400, 500, 600, 700]
 EUR_TO_USD = 1.10
@@ -109,13 +122,13 @@ def plot_vs_n(key, ylabel, title, fname, scale=1.0):
 def main():
     out = {}
     out['LA_02_overhead'] = plot_vs_n(
-        'overhead',
-        'License-to-hardware cost ratio (%)',
+        'overhead_done',
+        'Licence-to-hardware cost ratio (%)',
         'License intensity vs batch size N',
         'LA_02_overhead_vs_n')
     out['LA_03_lic_per_done'] = plot_vs_n(
         'lic_per_done',
-        f'License cost per completed workflow ({CCY})',
+        f'$\\bar{{\\gamma}}_{{\\mathrm{{lic}}}}$ (license cost per completed workflow, {CCY})',
         'License spend per completed workflow vs N',
         'LA_03_lic_per_done_vs_n', scale=EUR_TO_USD)
     (HERE / 'data_la_vs_n.json').write_text(json.dumps(out, indent=2))

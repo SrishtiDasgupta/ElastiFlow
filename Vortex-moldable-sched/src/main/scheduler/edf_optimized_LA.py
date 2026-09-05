@@ -16,6 +16,7 @@ Key innovations:
 
 import heapq
 import math
+import os
 import threading
 import time
 from typing import List, Dict, Tuple, Optional
@@ -424,6 +425,9 @@ class EDF_Optimized_LA(Scheduler_LA):
         )
 
         if not alloc_instances:
+            # Compute gate rejected the request; the licence pool was never tested.
+            self._last_licence_outcome = 'deny_compute'
+            self.metrics.recordNegotiationOutcome('deny_compute')
             return ([], [])
 
         # If no license pool, return compute allocation as-is
@@ -454,6 +458,10 @@ class EDF_Optimized_LA(Scheduler_LA):
                 self.license_manager.commit(hold_id)
 
                 print(f"  ✓ Allocated {licenses_needed} licenses (available: {available_tokens})")
+                self._last_licence_outcome = 'approve'
+                self.metrics.recordNegotiationOutcome(
+                    'approve', tokens_needed=licenses_needed,
+                    tokens_available=available_tokens)
                 return (alloc_instances, [hold_id])
 
             else:
@@ -482,14 +490,27 @@ class EDF_Optimized_LA(Scheduler_LA):
                     self.license_manager.commit(hold_id)
 
                     print(f"  ✓ Partial allocation: {sum(c for _, c in feasible_instances)} instances, {licenses_feasible} licenses")
+                    self._last_licence_outcome = 'modify'
+                    self.metrics.recordNegotiationOutcome(
+                        'modify',
+                        requested=sum(c for _, c in alloc_instances),
+                        granted=sum(c for _, c in feasible_instances),
+                        tokens_needed=licenses_needed,
+                        tokens_available=available_tokens)
                     return (feasible_instances, [hold_id])
 
                 else:
                     print(f"  ✗ Cannot fit any allocation to available licenses")
+                    self._last_licence_outcome = 'deny_licence'
+                    self.metrics.recordNegotiationOutcome(
+                        'deny_licence', tokens_needed=licenses_needed,
+                        tokens_available=available_tokens)
                     return ([], [])
 
         except (InsufficientTokens, LicenseError) as e:
             print(f"  ✗ License error: {e}")
+            self._last_licence_outcome = 'deny_licence'
+            self.metrics.recordNegotiationOutcome('deny_licence')
             return ([], [])
 
     def findLicenseFeasibleAllocation(
@@ -762,7 +783,7 @@ class EDF_Optimized_LA(Scheduler_LA):
                     # No solver is hardcoded; the cost sign is computed per decision. SAT is the
                     # single saturation knob (was GUARD 1's 70%), configurable for sensitivity.
                     if license_pool:
-                        LA_GUARD_SAT = 0.70
+                        LA_GUARD_SAT = float(os.environ.get('LA_GUARD_SAT', '0.70'))
                         pool_status = self.license_manager.get_pool_status(license_pool)
                         pool_utilization = (pool_status['allocated'] / pool_status['total']
                                             if pool_status['total'] else 0.0)
@@ -984,12 +1005,19 @@ class EDF_Optimized_LA(Scheduler_LA):
         else:
             print(f"⏸ No scaling: insufficient resources or licenses")
             # Record scale-up failure
+            # Attribute to licences ONLY when the Stage 1 licence gate actually
+            # denied. This was previously the residual else-branch, so it absorbed
+            # every rejection the other three tests did not explain without ever
+            # consulting the pool, and reported phantom licence failures.
             free_compute = any(r.getFreeSlots() > 0 for r in free_resources)
-            if not free_compute:
-                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_compute', workflow_id=request['wf-id'])
+            if getattr(self, '_last_licence_outcome', None) == 'deny_licence':
+                _reason = 'insufficient_licenses'
+            elif not free_compute:
+                _reason = 'insufficient_compute'
             elif available_budget <= 0:
-                self.metrics.recordScaleUpAttempt(success=False, reason='budget_exhausted', workflow_id=request['wf-id'])
+                _reason = 'budget_exhausted'
             elif available_time <= 0:
-                self.metrics.recordScaleUpAttempt(success=False, reason='time_exhausted', workflow_id=request['wf-id'])
+                _reason = 'time_exhausted'
             else:
-                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_licenses', workflow_id=request['wf-id'])
+                _reason = 'unattributed'
+            self.metrics.recordScaleUpAttempt(success=False, reason=_reason, workflow_id=request['wf-id'])

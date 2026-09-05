@@ -76,6 +76,7 @@ class CloudReservedInstance(Instance):
 class CloudOnDemandInstance(Instance):
     def __init__(self, name, runtime, cost, slots, cores):
         self.free_slots = slots
+        self.total_slots = slots   # declared quota; used by utilisation accounting
         self.type = 'on-demand'
         self.cold_start_cost = COLD_START_TIME * cost
         super().__init__(name, runtime, cost + getConfig('fsx-cost'), cores)

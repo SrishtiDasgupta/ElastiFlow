@@ -23,3 +23,8 @@ crash.log
 .vscode/
 *.swp
 *.swo
+
+# Archives and scratch exports at the repository root
+/*.zip
+/*.tar.gz
+/claude-*.md

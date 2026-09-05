@@ -25,7 +25,7 @@ i = np.array([1, 2, 3, 4, 5])
 I_w = 5
 
 alpha = np.array([0.40, 0.55, 0.70, 0.88, 1.00])
-d_rem = np.array([10.0, 8.2, 6.5, 4.8, 3.2])
+d_rem = np.array([10.0, 9.0, 8.0, 7.0, 6.3])
 
 d_exposed = alpha * d_rem
 d_withheld = (1 - alpha) * d_rem
@@ -72,7 +72,7 @@ ax.plot(i, alpha, marker="o", linewidth=2.5, zorder=3)
 ax.fill_between(i, 0, alpha, alpha=0.18, zorder=1)
 ax.axhline(1.0, linestyle="--", linewidth=1.5, zorder=2)
 
-ax.set_title(r"Urgency weight schedule $\{\alpha_i^w\}$")
+ax.set_title(r"Urgency weight schedule" "\n" r"$\{\alpha_i^w\}$")
 ax.set_xlabel(r"iteration index $i$")
 ax.set_ylabel(r"$\alpha_i^w$", rotation=0, labelpad=18)
 
@@ -133,7 +133,7 @@ ax.text(
     "\n"
     "2  Monotone non-decreasing schedule"
     "\n"
-    "3  Full residual exposed at "
+    "3  Full remaining time exposed at "
     r"$i=I^w$",
     transform=ax.transAxes,
     fontsize=note_fs,
@@ -144,7 +144,7 @@ ax.text(
 )
 
 # ============================================================
-# Right panel: effect on residual slack
+# Right panel: effect on remaining slack
 # ============================================================
 ax = axes[1]
 
@@ -176,12 +176,12 @@ ax.plot(
     linestyle="--",
     linewidth=2,
     color="black",
-    label=r"$d_{\mathrm{rem}}^w(i)$: total residual",
+    label=r"$d_{\mathrm{rem}}^w(i)$: total remaining time",
     zorder=4,
 )
 
 ax.set_title(
-    r"Effect on urgency-weighted residual" "\n"
+    r"Effect on urgency-weighted remaining time" "\n"
     r"$\tilde{d}_{\mathrm{rem}}^w(i)=\alpha_i^w \cdot d_{\mathrm{rem}}^w(i)$",
 )
 
@@ -244,10 +244,10 @@ ax.text(
     0.08,
     "1  Early iterations withhold more slack"
     "\n"
-    "2  Dashed curve: total residual "
+    "2  Dashed curve: total remaining time "
     r"$d_{\mathrm{rem}}^w(i)$"
     "\n"
-    "3  Final iteration exposes full residual: "
+    "3  Final iteration exposes full remaining time: "
     r"$\alpha_{I^w}^w=1$",
     transform=ax.transAxes,
     fontsize=note_fs,

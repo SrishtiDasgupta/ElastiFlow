@@ -38,6 +38,10 @@ def _t(N, mode, ord_):
 def _b(N, mode, ord_, key):
     cell = _total[f"N{N}_{mode}_{ord_}"]
     return cell[key]["mean"]
+def _pw(N, mode, ord_):
+    """Per-workflow cost (cost_total / N): (mean, stdev)."""
+    m, s = _t(N, mode, ord_)
+    return (m / N, s / N)
 
 # Static = purple family; Elastic = teal family. EDF solid, FCFS dashed.
 COL = {
@@ -74,10 +78,10 @@ LS = {"STAT EDF": "-", "STAT FCFS": "--", "MAL EDF": "-", "MAL FCFS": "--"}
 MARKER = {"STAT EDF": "o", "STAT FCFS": "s", "MAL EDF": "o", "MAL FCFS": "s"}
 
 LABEL = {
-    "STAT EDF":  "EDF-ST$_c$",
-    "STAT FCFS": "FCFS-ST$_c$",
-    "MAL EDF":   "Elastic-EDF$_c$",
-    "MAL FCFS":  "Elastic-FCFS$_c$",
+    "STAT EDF":  "EDF-ST",
+    "STAT FCFS": "FCFS-ST",
+    "MAL EDF":   "Elastic-EDF",
+    "MAL FCFS":  "Elastic-FCFS",
 }
 
 CORNERS = ["STAT EDF", "STAT FCFS", "MAL EDF", "MAL FCFS"]
@@ -100,10 +104,10 @@ SUMFLOW = {
 }
 # Total submitter cost (slurm TCO + reserved cloud + on-demand cloud), USD.
 COST = {
-    "STAT EDF":  [_t(3, "static",   "edf"),  _t(5, "static",   "edf"),  _t(7, "static",   "edf")],
-    "STAT FCFS": [_t(3, "static",   "fcfs"), _t(5, "static",   "fcfs"), _t(7, "static",   "fcfs")],
-    "MAL EDF":   [_t(3, "moldable", "edf"),  _t(5, "moldable", "edf"),  _t(7, "moldable", "edf")],
-    "MAL FCFS":  [_t(3, "moldable", "fcfs"), _t(5, "moldable", "fcfs"), _t(7, "moldable", "fcfs")],
+    "STAT EDF":  [_pw(3, "static",   "edf"),  _pw(5, "static",   "edf"),  _pw(7, "static",   "edf")],
+    "STAT FCFS": [_pw(3, "static",   "fcfs"), _pw(5, "static",   "fcfs"), _pw(7, "static",   "fcfs")],
+    "MAL EDF":   [_pw(3, "moldable", "edf"),  _pw(5, "moldable", "edf"),  _pw(7, "moldable", "edf")],
+    "MAL FCFS":  [_pw(3, "moldable", "fcfs"), _pw(5, "moldable", "fcfs"), _pw(7, "moldable", "fcfs")],
 }
 # Paired difference (Malleable − Static), per ordering, per N: (mean, stdev)
 DIFF_MISS = {
@@ -203,10 +207,10 @@ def annot_cost(ax):
 
 line_plot(
     COST,
-    ylabel="Total cost (USD)",
+    ylabel="$\\bar{\\gamma}$ (cost per workflow, USD)",
     fname="01_cost_vs_n",
-    title="Total cost vs workload size",
-    ylim=(0, 25),
+    title="Cost per workflow vs workload size",
+    ylim=(0, 4),
     annotate=annot_cost,
     palette=PAL["cost_line"],
 )
@@ -231,7 +235,7 @@ x_pos = np.arange(len(corner_order))
 for ax, N in zip(axs, [3, 5, 7]):
     bottoms = np.zeros(len(corner_order))
     for tier_key, tier_label, tier_col in TIERS:
-        vals = np.array([_b(N, m, o, tier_key) for (m, o) in corner_order])
+        vals = np.array([_b(N, m, o, tier_key) / N for (m, o) in corner_order])
         ax.bar(x_pos, vals, bottom=bottoms, color=tier_col,
                edgecolor="black", linewidth=0.7,
                label=tier_label if N == 3 else None)
@@ -239,9 +243,9 @@ for ax, N in zip(axs, [3, 5, 7]):
     # error bar on the stack total + scatter of the 6 per-run totals
     for i, (m, o) in enumerate(corner_order):
         cell = _total[f"N{N}_{m}_{o}"]
-        total_mean = cell["cost_total"]["mean"]
-        total_std  = cell["cost_total"]["stdev"]
-        run_totals = [r["cost_total"] for r in cell["per_run"]]
+        total_mean = cell["cost_total"]["mean"] / N
+        total_std  = cell["cost_total"]["stdev"] / N
+        run_totals = [r["cost_total"] / N for r in cell["per_run"]]
         # ±σ bar centred on the mean
         ax.errorbar(i, total_mean, yerr=total_std, fmt="none",
                     ecolor="black", elinewidth=1.4, capsize=6,
@@ -251,7 +255,7 @@ for ax, N in zip(axs, [3, 5, 7]):
         ax.scatter(np.full(len(run_totals), i) + jitter, run_totals,
                    s=22, color="white", edgecolor="black",
                    linewidth=0.9, zorder=6)
-        ax.text(i, total_mean + total_std + 0.6, f"${total_mean:.1f}",
+        ax.text(i, total_mean + total_std + 0.08, f"${total_mean:.2f}",
                 ha="center", va="bottom",
                 fontsize=11, fontweight="bold")
     ax.set_xticks(x_pos)
@@ -265,12 +269,12 @@ for ax, N in zip(axs, [3, 5, 7]):
     ax.spines["right"].set_visible(False)
     ax.grid(True, axis="y", alpha=0.25)
 
-axs[0].set_ylabel("Total cost (USD)", fontsize=LABEL_FS)
+axs[0].set_ylabel("$\\bar{\\gamma}$ (cost per workflow, USD)", fontsize=LABEL_FS)
 fig.legend(loc="lower center", ncol=3, fontsize=LEG_FS, frameon=True,
            bbox_to_anchor=(0.5, -0.20), prop={"weight": "bold", "size": LEG_FS},
            markerscale=LEG_MARKER_SCALE, handlelength=LEG_HANDLE_LEN,
            handletextpad=0.8, columnspacing=2.0, borderpad=0.8)
-fig.suptitle("Cost breakdown by tier", fontsize=TITLE_FS, y=1.02,
+fig.suptitle("Per-workflow cost breakdown by tier", fontsize=TITLE_FS, y=1.02,
              fontweight="bold")
 fig.tight_layout()
 fig.savefig(OUT / "01b_cost_stack.png", dpi=300, bbox_inches="tight")

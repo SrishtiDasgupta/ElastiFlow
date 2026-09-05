@@ -4,38 +4,38 @@
   "by_policy": {
     "FCFS-ST-LA": {
       "hardware_usd": 48.1,
-      "license_usd": 104.25,
-      "total_usd": 152.35,
-      "total_std_usd": 8.1,
-      "license_pct": 68.4
+      "license_usd": 104.79,
+      "total_usd": 152.89,
+      "total_std_usd": 8.16,
+      "license_pct": 68.5
     },
     "EDF-ST-LA": {
-      "hardware_usd": 39.38,
-      "license_usd": 91.83,
-      "total_usd": 131.21,
-      "total_std_usd": 4.3,
-      "license_pct": 70.0
+      "hardware_usd": 38.91,
+      "license_usd": 91.68,
+      "total_usd": 130.59,
+      "total_std_usd": 5.22,
+      "license_pct": 70.2
     },
     "FCFS-LAMF": {
       "hardware_usd": 44.98,
-      "license_usd": 100.46,
-      "total_usd": 145.44,
-      "total_std_usd": 8.19,
-      "license_pct": 69.1
+      "license_usd": 100.86,
+      "total_usd": 145.84,
+      "total_std_usd": 8.21,
+      "license_pct": 69.2
     },
     "EDF-LAMF": {
-      "hardware_usd": 39.31,
-      "license_usd": 91.99,
-      "total_usd": 131.3,
-      "total_std_usd": 8.28,
-      "license_pct": 70.1
+      "hardware_usd": 39.17,
+      "license_usd": 92.54,
+      "total_usd": 131.71,
+      "total_std_usd": 8.27,
+      "license_pct": 70.3
     },
     "HSM": {
-      "hardware_usd": 41.93,
-      "license_usd": 94.13,
-      "total_usd": 136.06,
-      "total_std_usd": 5.97,
-      "license_pct": 69.2
+      "hardware_usd": 40.28,
+      "license_usd": 93.62,
+      "total_usd": 133.9,
+      "total_std_usd": 8.83,
+      "license_pct": 69.9
     }
   }
 }

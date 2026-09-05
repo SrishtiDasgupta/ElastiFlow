@@ -1,0 +1,2192 @@
+{
+ "FCFS-ST-LA__N300__seed7": {
+  "total_workflows": 300,
+  "executed_workflows": 223,
+  "incomplete_workflows": 77,
+  "avg_flowtime_s": 26684.9316,
+  "avg_cost_eur": 142.7485,
+  "avg_hardware_cost_eur": 44.3045,
+  "avg_license_cost_eur": 98.444,
+  "license_cost_pct": 68.96,
+  "avg_wait_time_s": 10097.0699,
+  "total_hardware_cost_eur": 9879.9,
+  "total_license_cost_eur": 21953.01,
+  "total_combined_cost_eur": 31832.91,
+  "avg_resource_util_pct": 40.8558,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.96,
+    "peak_tokens": 1217,
+    "pool_total": 1582,
+    "peak_util_pct": 76.93
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.83,
+    "peak_tokens": 4471,
+    "pool_total": 5832,
+    "peak_util_pct": 76.66
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.85,
+    "peak_tokens": 4440,
+    "pool_total": 6219,
+    "peak_util_pct": 71.39
+   }
+  },
+  "deadline_miss_rate": 0.2567,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.2833,
+  "tot_lic": 28235.599038278997,
+  "tot_hw": 9879.90196319636,
+  "waste_frac": 22.250596014393693,
+  "eff_lic_util": 77.7494039856063,
+  "lic_per_done": 98.44399087007852,
+  "overhead": 285.7882511735387,
+  "n_done": 223.0,
+  "n_miss": 77.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13706.0,
+    "n": 93,
+    "done": 65
+   },
+   "LSDYNA": {
+    "lic": 8469.7,
+    "n": 104,
+    "done": 80
+   },
+   "ABAQUS": {
+    "lic": 6059.9,
+    "n": 103,
+    "done": 78
+   }
+  },
+  "token_sec_total": 587775600.0,
+  "pool_tw_util": {
+   "ANSYS": 28.5,
+   "ABAQUS": 34.0,
+   "LSDYNA": 29.6
+  },
+  "_policy": "FCFS-ST-LA",
+  "_N": 300,
+  "_seed": 7,
+  "_exit": 0
+ },
+ "FCFS-ST-LA__N300__seed107": {
+  "total_workflows": 300,
+  "executed_workflows": 219,
+  "incomplete_workflows": 81,
+  "avg_flowtime_s": 26475.294,
+  "avg_cost_eur": 143.7029,
+  "avg_hardware_cost_eur": 45.8345,
+  "avg_license_cost_eur": 97.8685,
+  "license_cost_pct": 68.1,
+  "avg_wait_time_s": 9954.3506,
+  "total_hardware_cost_eur": 10037.75,
+  "total_license_cost_eur": 21433.19,
+  "total_combined_cost_eur": 31470.94,
+  "avg_resource_util_pct": 41.0134,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.83,
+    "peak_tokens": 1145,
+    "pool_total": 1582,
+    "peak_util_pct": 72.38
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.89,
+    "peak_tokens": 4408,
+    "pool_total": 5832,
+    "peak_util_pct": 75.58
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 5440,
+    "pool_total": 6219,
+    "peak_util_pct": 87.47
+   }
+  },
+  "deadline_miss_rate": 0.27,
+  "budget_miss_rate": 0.03,
+  "overall_miss_rate": 0.3,
+  "tot_lic": 28961.2977369461,
+  "tot_hw": 10037.750528805826,
+  "waste_frac": 25.99367647407977,
+  "eff_lic_util": 74.00632352592024,
+  "lic_per_done": 97.8684552534673,
+  "overhead": 288.5237848244429,
+  "n_done": 219.0,
+  "n_miss": 81.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14519.1,
+    "n": 93,
+    "done": 62
+   },
+   "LSDYNA": {
+    "lic": 9241.6,
+    "n": 104,
+    "done": 80
+   },
+   "ABAQUS": {
+    "lic": 5200.7,
+    "n": 103,
+    "done": 77
+   }
+  },
+  "token_sec_total": 619438800.0,
+  "pool_tw_util": {
+   "ANSYS": 29.3,
+   "ABAQUS": 29.9,
+   "LSDYNA": 32.2
+  },
+  "_policy": "FCFS-ST-LA",
+  "_N": 300,
+  "_seed": 107,
+  "_exit": 0
+ },
+ "FCFS-ST-LA__N300__seed207": {
+  "total_workflows": 300,
+  "executed_workflows": 220,
+  "incomplete_workflows": 80,
+  "avg_flowtime_s": 24556.8803,
+  "avg_cost_eur": 125.5713,
+  "avg_hardware_cost_eur": 39.3873,
+  "avg_license_cost_eur": 86.184,
+  "license_cost_pct": 68.63,
+  "avg_wait_time_s": 9681.2784,
+  "total_hardware_cost_eur": 8665.21,
+  "total_license_cost_eur": 18960.48,
+  "total_combined_cost_eur": 27625.69,
+  "avg_resource_util_pct": 41.2145,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.95,
+    "peak_tokens": 1458,
+    "pool_total": 1582,
+    "peak_util_pct": 92.16
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 4431,
+    "pool_total": 5832,
+    "peak_util_pct": 75.98
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.8,
+    "peak_tokens": 4480,
+    "pool_total": 6219,
+    "peak_util_pct": 72.04
+   }
+  },
+  "deadline_miss_rate": 0.2667,
+  "budget_miss_rate": 0.0333,
+  "overall_miss_rate": 0.3,
+  "tot_lic": 28615.690242434484,
+  "tot_hw": 8665.20521837086,
+  "waste_frac": 33.74095082136673,
+  "eff_lic_util": 66.25904917863326,
+  "lic_per_done": 86.18401941154558,
+  "overhead": 330.23672863242933,
+  "n_done": 220.0,
+  "n_miss": 80.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14662.0,
+    "n": 93,
+    "done": 62
+   },
+   "LSDYNA": {
+    "lic": 7949.9,
+    "n": 104,
+    "done": 81
+   },
+   "ABAQUS": {
+    "lic": 6003.8,
+    "n": 103,
+    "done": 77
+   }
+  },
+  "token_sec_total": 587148000.0,
+  "pool_tw_util": {
+   "ANSYS": 29.2,
+   "ABAQUS": 36.4,
+   "LSDYNA": 27.9
+  },
+  "_policy": "FCFS-ST-LA",
+  "_N": 300,
+  "_seed": 207,
+  "_exit": 0
+ },
+ "FCFS-ST-LA__N300__seed1007": {
+  "total_workflows": 300,
+  "executed_workflows": 223,
+  "incomplete_workflows": 77,
+  "avg_flowtime_s": 26374.5899,
+  "avg_cost_eur": 141.8851,
+  "avg_hardware_cost_eur": 43.2239,
+  "avg_license_cost_eur": 98.6612,
+  "license_cost_pct": 69.54,
+  "avg_wait_time_s": 10014.8167,
+  "total_hardware_cost_eur": 9638.94,
+  "total_license_cost_eur": 22001.44,
+  "total_combined_cost_eur": 31640.38,
+  "avg_resource_util_pct": 41.4926,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.97,
+    "peak_tokens": 1233,
+    "pool_total": 1582,
+    "peak_util_pct": 77.94
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.84,
+    "peak_tokens": 4974,
+    "pool_total": 5832,
+    "peak_util_pct": 85.29
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 4840,
+    "pool_total": 6219,
+    "peak_util_pct": 77.83
+   }
+  },
+  "deadline_miss_rate": 0.2567,
+  "budget_miss_rate": 0.03,
+  "overall_miss_rate": 0.2867,
+  "tot_lic": 29170.224906628326,
+  "tot_hw": 9638.939534737554,
+  "waste_frac": 24.575700141294142,
+  "eff_lic_util": 75.42429985870587,
+  "lic_per_done": 98.6611565158487,
+  "overhead": 302.62898528933005,
+  "n_done": 223.0,
+  "n_miss": 77.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13763.8,
+    "n": 93,
+    "done": 67
+   },
+   "LSDYNA": {
+    "lic": 9286.2,
+    "n": 104,
+    "done": 78
+   },
+   "ABAQUS": {
+    "lic": 6120.3,
+    "n": 103,
+    "done": 78
+   }
+  },
+  "token_sec_total": 616612800.0,
+  "pool_tw_util": {
+   "ANSYS": 30.0,
+   "ABAQUS": 33.9,
+   "LSDYNA": 32.5
+  },
+  "_policy": "FCFS-ST-LA",
+  "_N": 300,
+  "_seed": 1007,
+  "_exit": 0
+ },
+ "FCFS-ST-LA__N300__seed1107": {
+  "total_workflows": 300,
+  "executed_workflows": 215,
+  "incomplete_workflows": 85,
+  "avg_flowtime_s": 26117.0623,
+  "avg_cost_eur": 144.9345,
+  "avg_hardware_cost_eur": 47.1471,
+  "avg_license_cost_eur": 97.7874,
+  "license_cost_pct": 67.47,
+  "avg_wait_time_s": 9851.3372,
+  "total_hardware_cost_eur": 10136.62,
+  "total_license_cost_eur": 21024.3,
+  "total_combined_cost_eur": 31160.92,
+  "avg_resource_util_pct": 41.1485,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 1238,
+    "pool_total": 1582,
+    "peak_util_pct": 78.26
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.92,
+    "peak_tokens": 4423,
+    "pool_total": 5832,
+    "peak_util_pct": 75.84
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.83,
+    "peak_tokens": 4416,
+    "pool_total": 6219,
+    "peak_util_pct": 71.01
+   }
+  },
+  "deadline_miss_rate": 0.2833,
+  "budget_miss_rate": 0.03,
+  "overall_miss_rate": 0.3133,
+  "tot_lic": 29229.246182979456,
+  "tot_hw": 10136.622005923105,
+  "waste_frac": 28.07101903727464,
+  "eff_lic_util": 71.92898096272536,
+  "lic_per_done": 97.78743684885318,
+  "overhead": 288.3529263091788,
+  "n_done": 215.0,
+  "n_miss": 85.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15078.5,
+    "n": 93,
+    "done": 62
+   },
+   "LSDYNA": {
+    "lic": 8212.5,
+    "n": 104,
+    "done": 77
+   },
+   "ABAQUS": {
+    "lic": 5938.3,
+    "n": 103,
+    "done": 76
+   }
+  },
+  "token_sec_total": 606051600.0,
+  "pool_tw_util": {
+   "ANSYS": 31.7,
+   "ABAQUS": 32.6,
+   "LSDYNA": 28.2
+  },
+  "_policy": "FCFS-ST-LA",
+  "_N": 300,
+  "_seed": 1107,
+  "_exit": 0
+ },
+ "FCFS-ST-LA__N300__seed1207": {
+  "total_workflows": 300,
+  "executed_workflows": 219,
+  "incomplete_workflows": 81,
+  "avg_flowtime_s": 26149.0917,
+  "avg_cost_eur": 135.1106,
+  "avg_hardware_cost_eur": 42.4743,
+  "avg_license_cost_eur": 92.6362,
+  "license_cost_pct": 68.56,
+  "avg_wait_time_s": 10266.8814,
+  "total_hardware_cost_eur": 9301.88,
+  "total_license_cost_eur": 20287.33,
+  "total_combined_cost_eur": 29589.21,
+  "avg_resource_util_pct": 39.2833,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.99,
+    "peak_tokens": 1363,
+    "pool_total": 1582,
+    "peak_util_pct": 86.16
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.81,
+    "peak_tokens": 4082,
+    "pool_total": 5832,
+    "peak_util_pct": 69.99
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.81,
+    "peak_tokens": 4840,
+    "pool_total": 6219,
+    "peak_util_pct": 77.83
+   }
+  },
+  "deadline_miss_rate": 0.2733,
+  "budget_miss_rate": 0.0133,
+  "overall_miss_rate": 0.2867,
+  "tot_lic": 27685.006455674455,
+  "tot_hw": 9301.879913601795,
+  "waste_frac": 26.72087407125056,
+  "eff_lic_util": 73.27912592874944,
+  "lic_per_done": 92.63621344308731,
+  "overhead": 297.628078547775,
+  "n_done": 219.0,
+  "n_miss": 81.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13323.4,
+    "n": 93,
+    "done": 64
+   },
+   "LSDYNA": {
+    "lic": 8100.9,
+    "n": 104,
+    "done": 79
+   },
+   "ABAQUS": {
+    "lic": 6260.7,
+    "n": 103,
+    "done": 76
+   }
+  },
+  "token_sec_total": 571322400.0,
+  "pool_tw_util": {
+   "ANSYS": 28.7,
+   "ABAQUS": 34.8,
+   "LSDYNA": 27.8
+  },
+  "_policy": "FCFS-ST-LA",
+  "_N": 300,
+  "_seed": 1207,
+  "_exit": 0
+ },
+ "EDF-ST-LA__N300__seed7": {
+  "total_workflows": 300,
+  "executed_workflows": 272,
+  "incomplete_workflows": 28,
+  "avg_flowtime_s": 23842.9998,
+  "avg_cost_eur": 123.7502,
+  "avg_hardware_cost_eur": 35.868,
+  "avg_license_cost_eur": 87.8823,
+  "license_cost_pct": 71.02,
+  "avg_wait_time_s": 9005.292,
+  "total_hardware_cost_eur": 9756.08,
+  "total_license_cost_eur": 23903.97,
+  "total_combined_cost_eur": 33660.06,
+  "avg_resource_util_pct": 43.6089,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 1.03,
+    "peak_tokens": 1353,
+    "pool_total": 1582,
+    "peak_util_pct": 85.52
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.87,
+    "peak_tokens": 5305,
+    "pool_total": 5832,
+    "peak_util_pct": 90.96
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.93,
+    "peak_tokens": 4544,
+    "pool_total": 6219,
+    "peak_util_pct": 73.07
+   }
+  },
+  "deadline_miss_rate": 0.0933,
+  "budget_miss_rate": 0.0333,
+  "overall_miss_rate": 0.1267,
+  "tot_lic": 30061.247810226196,
+  "tot_hw": 9756.082636986957,
+  "waste_frac": 20.482431298655477,
+  "eff_lic_util": 79.51756870134452,
+  "lic_per_done": 87.88225507344866,
+  "overhead": 308.12826140134285,
+  "n_done": 272.0,
+  "n_miss": 28.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14364.1,
+    "n": 93,
+    "done": 84
+   },
+   "LSDYNA": {
+    "lic": 9256.5,
+    "n": 104,
+    "done": 96
+   },
+   "ABAQUS": {
+    "lic": 6440.6,
+    "n": 103,
+    "done": 92
+   }
+  },
+  "token_sec_total": 629458800.0,
+  "pool_tw_util": {
+   "ANSYS": 29.1,
+   "ABAQUS": 35.4,
+   "LSDYNA": 32.4
+  },
+  "_policy": "EDF-ST-LA",
+  "_N": 300,
+  "_seed": 7,
+  "_exit": 0
+ },
+ "EDF-ST-LA__N300__seed107": {
+  "total_workflows": 300,
+  "executed_workflows": 269,
+  "incomplete_workflows": 31,
+  "avg_flowtime_s": 22613.5056,
+  "avg_cost_eur": 121.0531,
+  "avg_hardware_cost_eur": 37.1062,
+  "avg_license_cost_eur": 83.9469,
+  "license_cost_pct": 69.35,
+  "avg_wait_time_s": 8776.4584,
+  "total_hardware_cost_eur": 9981.57,
+  "total_license_cost_eur": 22581.71,
+  "total_combined_cost_eur": 32563.29,
+  "avg_resource_util_pct": 44.0046,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 1.04,
+    "peak_tokens": 1272,
+    "pool_total": 1582,
+    "peak_util_pct": 80.4
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.87,
+    "peak_tokens": 5642,
+    "pool_total": 5832,
+    "peak_util_pct": 96.74
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.95,
+    "peak_tokens": 4640,
+    "pool_total": 6219,
+    "peak_util_pct": 74.61
+   }
+  },
+  "deadline_miss_rate": 0.1033,
+  "budget_miss_rate": 0.0433,
+  "overall_miss_rate": 0.1467,
+  "tot_lic": 30279.239215402766,
+  "tot_hw": 9981.573887947912,
+  "waste_frac": 25.421793400476062,
+  "eff_lic_util": 74.57820659952394,
+  "lic_per_done": 83.94689062761019,
+  "overhead": 303.35135075203857,
+  "n_done": 269.0,
+  "n_miss": 31.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14287.3,
+    "n": 93,
+    "done": 82
+   },
+   "LSDYNA": {
+    "lic": 9439.4,
+    "n": 104,
+    "done": 97
+   },
+   "ABAQUS": {
+    "lic": 6552.6,
+    "n": 103,
+    "done": 90
+   }
+  },
+  "token_sec_total": 636297600.0,
+  "pool_tw_util": {
+   "ANSYS": 29.2,
+   "ABAQUS": 36.3,
+   "LSDYNA": 32.8
+  },
+  "_policy": "EDF-ST-LA",
+  "_N": 300,
+  "_seed": 107,
+  "_exit": 0
+ },
+ "EDF-ST-LA__N300__seed207": {
+  "total_workflows": 300,
+  "executed_workflows": 273,
+  "incomplete_workflows": 27,
+  "avg_flowtime_s": 21946.5825,
+  "avg_cost_eur": 113.5563,
+  "avg_hardware_cost_eur": 31.5534,
+  "avg_license_cost_eur": 82.0029,
+  "license_cost_pct": 72.21,
+  "avg_wait_time_s": 8281.5534,
+  "total_hardware_cost_eur": 8614.08,
+  "total_license_cost_eur": 22386.8,
+  "total_combined_cost_eur": 31000.88,
+  "avg_resource_util_pct": 44.5909,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.89,
+    "peak_tokens": 1142,
+    "pool_total": 1582,
+    "peak_util_pct": 72.19
+   },
+   "ANSYS": {
+    "avg_util_pct": 1.12,
+    "peak_tokens": 5744,
+    "pool_total": 5832,
+    "peak_util_pct": 98.49
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.82,
+    "peak_tokens": 4896,
+    "pool_total": 6219,
+    "peak_util_pct": 78.73
+   }
+  },
+  "deadline_miss_rate": 0.09,
+  "budget_miss_rate": 0.03,
+  "overall_miss_rate": 0.12,
+  "tot_lic": 32265.861670747883,
+  "tot_hw": 8614.07591170996,
+  "waste_frac": 30.61768545460226,
+  "eff_lic_util": 69.38231454539775,
+  "lic_per_done": 82.00293639260524,
+  "overhead": 374.5713643745085,
+  "n_done": 273.0,
+  "n_miss": 27.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 18480.5,
+    "n": 93,
+    "done": 83
+   },
+   "LSDYNA": {
+    "lic": 8154.7,
+    "n": 104,
+    "done": 94
+   },
+   "ABAQUS": {
+    "lic": 5630.7,
+    "n": 103,
+    "done": 96
+   }
+  },
+  "token_sec_total": 659584800.0,
+  "pool_tw_util": {
+   "ANSYS": 37.5,
+   "ABAQUS": 31.3,
+   "LSDYNA": 28.1
+  },
+  "_policy": "EDF-ST-LA",
+  "_N": 300,
+  "_seed": 207,
+  "_exit": 0
+ },
+ "EDF-ST-LA__N300__seed1007": {
+  "total_workflows": 300,
+  "executed_workflows": 276,
+  "incomplete_workflows": 24,
+  "avg_flowtime_s": 23054.5512,
+  "avg_cost_eur": 116.0941,
+  "avg_hardware_cost_eur": 34.4283,
+  "avg_license_cost_eur": 81.6657,
+  "license_cost_pct": 70.34,
+  "avg_wait_time_s": 9228.0011,
+  "total_hardware_cost_eur": 9502.22,
+  "total_license_cost_eur": 22539.74,
+  "total_combined_cost_eur": 32041.96,
+  "avg_resource_util_pct": 43.4912,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.93,
+    "peak_tokens": 1247,
+    "pool_total": 1582,
+    "peak_util_pct": 78.82
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 5609,
+    "pool_total": 5832,
+    "peak_util_pct": 96.18
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.93,
+    "peak_tokens": 4488,
+    "pool_total": 6219,
+    "peak_util_pct": 72.17
+   }
+  },
+  "deadline_miss_rate": 0.08,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.1067,
+  "tot_lic": 29614.111106243636,
+  "tot_hw": 9502.221997363544,
+  "waste_frac": 23.88852377525016,
+  "eff_lic_util": 76.11147622474984,
+  "lic_per_done": 81.6657142528972,
+  "overhead": 311.65459104681275,
+  "n_done": 276.0,
+  "n_miss": 24.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14545.8,
+    "n": 93,
+    "done": 85
+   },
+   "LSDYNA": {
+    "lic": 9178.8,
+    "n": 104,
+    "done": 95
+   },
+   "ABAQUS": {
+    "lic": 5889.5,
+    "n": 103,
+    "done": 96
+   }
+  },
+  "token_sec_total": 624002400.0,
+  "pool_tw_util": {
+   "ANSYS": 29.3,
+   "ABAQUS": 33.5,
+   "LSDYNA": 32.0
+  },
+  "_policy": "EDF-ST-LA",
+  "_N": 300,
+  "_seed": 1007,
+  "_exit": 0
+ },
+ "EDF-ST-LA__N300__seed1107": {
+  "total_workflows": 300,
+  "executed_workflows": 274,
+  "incomplete_workflows": 26,
+  "avg_flowtime_s": 22829.9965,
+  "avg_cost_eur": 123.8408,
+  "avg_hardware_cost_eur": 38.6001,
+  "avg_license_cost_eur": 85.2407,
+  "license_cost_pct": 68.83,
+  "avg_wait_time_s": 9011.5036,
+  "total_hardware_cost_eur": 10576.44,
+  "total_license_cost_eur": 23355.95,
+  "total_combined_cost_eur": 33932.38,
+  "avg_resource_util_pct": 44.2014,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 1263,
+    "pool_total": 1582,
+    "peak_util_pct": 79.84
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 5625,
+    "pool_total": 5832,
+    "peak_util_pct": 96.45
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.86,
+    "peak_tokens": 4144,
+    "pool_total": 6219,
+    "peak_util_pct": 66.63
+   }
+  },
+  "deadline_miss_rate": 0.0867,
+  "budget_miss_rate": 0.05,
+  "overall_miss_rate": 0.1367,
+  "tot_lic": 29484.848397317743,
+  "tot_hw": 10576.43757927259,
+  "waste_frac": 20.78661870274561,
+  "eff_lic_util": 79.21338129725439,
+  "lic_per_done": 85.2406765908201,
+  "overhead": 278.778635777148,
+  "n_done": 274.0,
+  "n_miss": 26.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15475.8,
+    "n": 93,
+    "done": 85
+   },
+   "LSDYNA": {
+    "lic": 8483.5,
+    "n": 104,
+    "done": 93
+   },
+   "ABAQUS": {
+    "lic": 5525.6,
+    "n": 103,
+    "done": 96
+   }
+  },
+  "token_sec_total": 613201200.0,
+  "pool_tw_util": {
+   "ANSYS": 30.9,
+   "ABAQUS": 31.3,
+   "LSDYNA": 28.5
+  },
+  "_policy": "EDF-ST-LA",
+  "_N": 300,
+  "_seed": 1107,
+  "_exit": 0
+ },
+ "EDF-ST-LA__N300__seed1207": {
+  "total_workflows": 300,
+  "executed_workflows": 273,
+  "incomplete_workflows": 27,
+  "avg_flowtime_s": 21650.0169,
+  "avg_cost_eur": 114.0168,
+  "avg_hardware_cost_eur": 34.6704,
+  "avg_license_cost_eur": 79.3463,
+  "license_cost_pct": 69.59,
+  "avg_wait_time_s": 8558.1207,
+  "total_hardware_cost_eur": 9465.02,
+  "total_license_cost_eur": 21661.55,
+  "total_combined_cost_eur": 31126.57,
+  "avg_resource_util_pct": 43.1203,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 1237,
+    "pool_total": 1582,
+    "peak_util_pct": 78.19
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.84,
+    "peak_tokens": 5681,
+    "pool_total": 5832,
+    "peak_util_pct": 97.41
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.03,
+    "peak_tokens": 4712,
+    "pool_total": 6219,
+    "peak_util_pct": 75.77
+   }
+  },
+  "deadline_miss_rate": 0.09,
+  "budget_miss_rate": 0.0433,
+  "overall_miss_rate": 0.1333,
+  "tot_lic": 29656.674429867762,
+  "tot_hw": 9465.02094249102,
+  "waste_frac": 26.958927074811683,
+  "eff_lic_util": 73.04107292518832,
+  "lic_per_done": 79.34634870881091,
+  "overhead": 313.329200326763,
+  "n_done": 273.0,
+  "n_miss": 27.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13926.1,
+    "n": 93,
+    "done": 85
+   },
+   "LSDYNA": {
+    "lic": 10197.1,
+    "n": 104,
+    "done": 92
+   },
+   "ABAQUS": {
+    "lic": 5533.5,
+    "n": 103,
+    "done": 96
+   }
+  },
+  "token_sec_total": 639775200.0,
+  "pool_tw_util": {
+   "ANSYS": 28.0,
+   "ABAQUS": 31.2,
+   "LSDYNA": 34.3
+  },
+  "_policy": "EDF-ST-LA",
+  "_N": 300,
+  "_seed": 1207,
+  "_exit": 0
+ },
+ "LAMF__N300__seed7": {
+  "total_workflows": 300,
+  "executed_workflows": 222,
+  "incomplete_workflows": 78,
+  "avg_flowtime_s": 28378.7281,
+  "avg_cost_eur": 139.3271,
+  "avg_hardware_cost_eur": 41.8326,
+  "avg_license_cost_eur": 97.4945,
+  "license_cost_pct": 69.98,
+  "avg_wait_time_s": 8532.1848,
+  "total_hardware_cost_eur": 9286.85,
+  "total_license_cost_eur": 21643.77,
+  "total_combined_cost_eur": 30930.62,
+  "avg_resource_util_pct": 44.4711,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 1231,
+    "pool_total": 1582,
+    "peak_util_pct": 77.81
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.73,
+    "peak_tokens": 4358,
+    "pool_total": 5832,
+    "peak_util_pct": 74.73
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.12,
+    "peak_tokens": 5116,
+    "pool_total": 6219,
+    "peak_util_pct": 82.26
+   }
+  },
+  "deadline_miss_rate": 0.26,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.2867,
+  "tot_lic": 29137.38189493045,
+  "tot_hw": 9286.847085816857,
+  "waste_frac": 25.71820222079894,
+  "eff_lic_util": 74.28179777920106,
+  "lic_per_done": 97.49446440245856,
+  "overhead": 313.74891419747735,
+  "n_done": 222.0,
+  "n_miss": 78.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 12559.3,
+    "n": 93,
+    "done": 67
+   },
+   "LSDYNA": {
+    "lic": 11061.3,
+    "n": 104,
+    "done": 74
+   },
+   "ABAQUS": {
+    "lic": 5516.8,
+    "n": 103,
+    "done": 81
+   }
+  },
+  "token_sec_total": 635992800.0,
+  "pool_tw_util": {
+   "ANSYS": 32.8,
+   "ABAQUS": 30.8,
+   "LSDYNA": 37.9
+  },
+  "_policy": "LAMF",
+  "_N": 300,
+  "_seed": 7,
+  "_exit": 0
+ },
+ "LAMF__N300__seed107": {
+  "total_workflows": 300,
+  "executed_workflows": 220,
+  "incomplete_workflows": 80,
+  "avg_flowtime_s": 27988.0161,
+  "avg_cost_eur": 131.207,
+  "avg_hardware_cost_eur": 40.3462,
+  "avg_license_cost_eur": 90.8608,
+  "license_cost_pct": 69.25,
+  "avg_wait_time_s": 8843.3646,
+  "total_hardware_cost_eur": 8876.17,
+  "total_license_cost_eur": 19989.38,
+  "total_combined_cost_eur": 28865.55,
+  "avg_resource_util_pct": 42.2682,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.8,
+    "peak_tokens": 1122,
+    "pool_total": 1582,
+    "peak_util_pct": 70.92
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.81,
+    "peak_tokens": 3906,
+    "pool_total": 5832,
+    "peak_util_pct": 66.98
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.02,
+    "peak_tokens": 4641,
+    "pool_total": 6219,
+    "peak_util_pct": 74.63
+   }
+  },
+  "deadline_miss_rate": 0.2667,
+  "budget_miss_rate": 0.0167,
+  "overall_miss_rate": 0.2833,
+  "tot_lic": 28868.76723707585,
+  "tot_hw": 8876.167188019364,
+  "waste_frac": 30.757760232245097,
+  "eff_lic_util": 69.24223976775491,
+  "lic_per_done": 90.86082285586876,
+  "overhead": 325.23911081847984,
+  "n_done": 220.0,
+  "n_miss": 80.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13697.3,
+    "n": 93,
+    "done": 64
+   },
+   "LSDYNA": {
+    "lic": 10121.0,
+    "n": 104,
+    "done": 78
+   },
+   "ABAQUS": {
+    "lic": 5050.4,
+    "n": 103,
+    "done": 78
+   }
+  },
+  "token_sec_total": 618930000.0,
+  "pool_tw_util": {
+   "ANSYS": 27.5,
+   "ABAQUS": 28.2,
+   "LSDYNA": 34.7
+  },
+  "_policy": "LAMF",
+  "_N": 300,
+  "_seed": 107,
+  "_exit": 0
+ },
+ "LAMF__N300__seed207": {
+  "total_workflows": 300,
+  "executed_workflows": 216,
+  "incomplete_workflows": 84,
+  "avg_flowtime_s": 28223.9901,
+  "avg_cost_eur": 132.3912,
+  "avg_hardware_cost_eur": 41.171,
+  "avg_license_cost_eur": 91.2202,
+  "license_cost_pct": 68.9,
+  "avg_wait_time_s": 9228.6692,
+  "total_hardware_cost_eur": 8892.95,
+  "total_license_cost_eur": 19703.56,
+  "total_combined_cost_eur": 28596.5,
+  "avg_resource_util_pct": 43.7136,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.99,
+    "peak_tokens": 1302,
+    "pool_total": 1582,
+    "peak_util_pct": 82.3
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.79,
+    "peak_tokens": 4192,
+    "pool_total": 5832,
+    "peak_util_pct": 71.88
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.92,
+    "peak_tokens": 4546,
+    "pool_total": 6219,
+    "peak_util_pct": 73.1
+   }
+  },
+  "deadline_miss_rate": 0.28,
+  "budget_miss_rate": 0.0233,
+  "overall_miss_rate": 0.3033,
+  "tot_lic": 28890.407146094716,
+  "tot_hw": 8892.946637925666,
+  "waste_frac": 31.79896848538285,
+  "eff_lic_util": 68.20103151461714,
+  "lic_per_done": 91.22016519633942,
+  "overhead": 324.8687788464407,
+  "n_done": 216.0,
+  "n_miss": 84.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13458.0,
+    "n": 93,
+    "done": 63
+   },
+   "LSDYNA": {
+    "lic": 9166.8,
+    "n": 104,
+    "done": 76
+   },
+   "ABAQUS": {
+    "lic": 6265.6,
+    "n": 103,
+    "done": 77
+   }
+  },
+  "token_sec_total": 600414000.0,
+  "pool_tw_util": {
+   "ANSYS": 27.0,
+   "ABAQUS": 34.7,
+   "LSDYNA": 31.5
+  },
+  "_policy": "LAMF",
+  "_N": 300,
+  "_seed": 207,
+  "_exit": 0
+ },
+ "LAMF__N300__seed1007": {
+  "total_workflows": 300,
+  "executed_workflows": 225,
+  "incomplete_workflows": 75,
+  "avg_flowtime_s": 26743.4171,
+  "avg_cost_eur": 119.663,
+  "avg_hardware_cost_eur": 34.8166,
+  "avg_license_cost_eur": 84.8464,
+  "license_cost_pct": 70.9,
+  "avg_wait_time_s": 8565.3678,
+  "total_hardware_cost_eur": 7833.74,
+  "total_license_cost_eur": 19090.44,
+  "total_combined_cost_eur": 26924.17,
+  "avg_resource_util_pct": 42.7139,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.76,
+    "peak_tokens": 1079,
+    "pool_total": 1582,
+    "peak_util_pct": 68.2
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.91,
+    "peak_tokens": 4593,
+    "pool_total": 5832,
+    "peak_util_pct": 78.76
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.93,
+    "peak_tokens": 4972,
+    "pool_total": 6219,
+    "peak_util_pct": 79.95
+   }
+  },
+  "deadline_miss_rate": 0.25,
+  "budget_miss_rate": 0.0167,
+  "overall_miss_rate": 0.2667,
+  "tot_lic": 29414.702696056018,
+  "tot_hw": 7833.735072324744,
+  "waste_frac": 35.09900133935961,
+  "eff_lic_util": 64.9009986606404,
+  "lic_per_done": 84.84638134577187,
+  "overhead": 375.4875857363771,
+  "n_done": 225.0,
+  "n_miss": 75.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15426.9,
+    "n": 93,
+    "done": 67
+   },
+   "LSDYNA": {
+    "lic": 9243.5,
+    "n": 104,
+    "done": 73
+   },
+   "ABAQUS": {
+    "lic": 4744.4,
+    "n": 103,
+    "done": 85
+   }
+  },
+  "token_sec_total": 619143600.0,
+  "pool_tw_util": {
+   "ANSYS": 30.3,
+   "ABAQUS": 26.0,
+   "LSDYNA": 31.0
+  },
+  "_policy": "LAMF",
+  "_N": 300,
+  "_seed": 1007,
+  "_exit": 0
+ },
+ "LAMF__N300__seed1107": {
+  "total_workflows": 300,
+  "executed_workflows": 226,
+  "incomplete_workflows": 74,
+  "avg_flowtime_s": 29099.283,
+  "avg_cost_eur": 132.3237,
+  "avg_hardware_cost_eur": 42.2425,
+  "avg_license_cost_eur": 90.0812,
+  "license_cost_pct": 68.08,
+  "avg_wait_time_s": 9094.1737,
+  "total_hardware_cost_eur": 9546.81,
+  "total_license_cost_eur": 20358.35,
+  "total_combined_cost_eur": 29905.16,
+  "avg_resource_util_pct": 42.2544,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.99,
+    "peak_tokens": 1289,
+    "pool_total": 1582,
+    "peak_util_pct": 81.48
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.9,
+    "peak_tokens": 4185,
+    "pool_total": 5832,
+    "peak_util_pct": 71.76
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.91,
+    "peak_tokens": 4632,
+    "pool_total": 6219,
+    "peak_util_pct": 74.48
+   }
+  },
+  "deadline_miss_rate": 0.2467,
+  "budget_miss_rate": 0.0367,
+  "overall_miss_rate": 0.2833,
+  "tot_lic": 30581.24893340433,
+  "tot_hw": 9546.807707640486,
+  "waste_frac": 33.428655606827725,
+  "eff_lic_util": 66.57134439317227,
+  "lic_per_done": 90.08118826190226,
+  "overhead": 320.3295789537019,
+  "n_done": 226.0,
+  "n_miss": 74.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15340.3,
+    "n": 93,
+    "done": 67
+   },
+   "LSDYNA": {
+    "lic": 9010.1,
+    "n": 104,
+    "done": 80
+   },
+   "ABAQUS": {
+    "lic": 6230.8,
+    "n": 103,
+    "done": 79
+   }
+  },
+  "token_sec_total": 627781200.0,
+  "pool_tw_util": {
+   "ANSYS": 29.8,
+   "ABAQUS": 34.7,
+   "LSDYNA": 30.2
+  },
+  "_policy": "LAMF",
+  "_N": 300,
+  "_seed": 1107,
+  "_exit": 0
+ },
+ "LAMF__N300__seed1207": {
+  "total_workflows": 300,
+  "executed_workflows": 220,
+  "incomplete_workflows": 80,
+  "avg_flowtime_s": 28020.8157,
+  "avg_cost_eur": 140.603,
+  "avg_hardware_cost_eur": 44.9529,
+  "avg_license_cost_eur": 95.65,
+  "license_cost_pct": 68.03,
+  "avg_wait_time_s": 8119.6521,
+  "total_hardware_cost_eur": 9889.65,
+  "total_license_cost_eur": 21043.01,
+  "total_combined_cost_eur": 30932.66,
+  "avg_resource_util_pct": 42.1348,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.91,
+    "peak_tokens": 1339,
+    "pool_total": 1582,
+    "peak_util_pct": 84.64
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.74,
+    "peak_tokens": 4143,
+    "pool_total": 5832,
+    "peak_util_pct": 71.04
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.96,
+    "peak_tokens": 4892,
+    "pool_total": 6219,
+    "peak_util_pct": 78.66
+   }
+  },
+  "deadline_miss_rate": 0.2667,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.2933,
+  "tot_lic": 27865.30444619361,
+  "tot_hw": 9889.647543095894,
+  "waste_frac": 24.483119204419786,
+  "eff_lic_util": 75.51688079558022,
+  "lic_per_done": 95.65003973617071,
+  "overhead": 281.7623613456961,
+  "n_done": 220.0,
+  "n_miss": 80.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 12654.6,
+    "n": 93,
+    "done": 66
+   },
+   "LSDYNA": {
+    "lic": 9485.2,
+    "n": 104,
+    "done": 76
+   },
+   "ABAQUS": {
+    "lic": 5725.5,
+    "n": 103,
+    "done": 78
+   }
+  },
+  "token_sec_total": 590811600.0,
+  "pool_tw_util": {
+   "ANSYS": 26.0,
+   "ABAQUS": 31.2,
+   "LSDYNA": 32.6
+  },
+  "_policy": "LAMF",
+  "_N": 300,
+  "_seed": 1207,
+  "_exit": 0
+ },
+ "EDF-LAMF__N300__seed7": {
+  "total_workflows": 300,
+  "executed_workflows": 262,
+  "incomplete_workflows": 38,
+  "avg_flowtime_s": 26687.8108,
+  "avg_cost_eur": 119.0407,
+  "avg_hardware_cost_eur": 34.6866,
+  "avg_license_cost_eur": 84.3542,
+  "license_cost_pct": 70.86,
+  "avg_wait_time_s": 8983.0186,
+  "total_hardware_cost_eur": 9087.89,
+  "total_license_cost_eur": 22100.79,
+  "total_combined_cost_eur": 31188.68,
+  "avg_resource_util_pct": 46.3711,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 1264,
+    "pool_total": 1582,
+    "peak_util_pct": 79.9
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.93,
+    "peak_tokens": 4870,
+    "pool_total": 5832,
+    "peak_util_pct": 83.5
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.04,
+    "peak_tokens": 4267,
+    "pool_total": 6219,
+    "peak_util_pct": 68.61
+   }
+  },
+  "deadline_miss_rate": 0.1267,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.1533,
+  "tot_lic": 31870.677656551823,
+  "tot_hw": 9087.887275664374,
+  "waste_frac": 30.65479090885607,
+  "eff_lic_util": 69.34520909114393,
+  "lic_per_done": 84.35415289961963,
+  "overhead": 350.6940248026118,
+  "n_done": 262.0,
+  "n_miss": 38.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15672.0,
+    "n": 93,
+    "done": 78
+   },
+   "LSDYNA": {
+    "lic": 10273.4,
+    "n": 104,
+    "done": 88
+   },
+   "ABAQUS": {
+    "lic": 5925.2,
+    "n": 103,
+    "done": 96
+   }
+  },
+  "token_sec_total": 674004000.0,
+  "pool_tw_util": {
+   "ANSYS": 31.1,
+   "ABAQUS": 33.0,
+   "LSDYNA": 34.5
+  },
+  "_policy": "EDF-LAMF",
+  "_N": 300,
+  "_seed": 7,
+  "_exit": 0
+ },
+ "EDF-LAMF__N300__seed107": {
+  "total_workflows": 300,
+  "executed_workflows": 266,
+  "incomplete_workflows": 34,
+  "avg_flowtime_s": 26877.7485,
+  "avg_cost_eur": 127.0018,
+  "avg_hardware_cost_eur": 38.5387,
+  "avg_license_cost_eur": 88.4631,
+  "license_cost_pct": 69.65,
+  "avg_wait_time_s": 9478.1775,
+  "total_hardware_cost_eur": 10251.3,
+  "total_license_cost_eur": 23531.18,
+  "total_combined_cost_eur": 33782.48,
+  "avg_resource_util_pct": 45.4724,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.84,
+    "peak_tokens": 1207,
+    "pool_total": 1582,
+    "peak_util_pct": 76.3
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.98,
+    "peak_tokens": 5224,
+    "pool_total": 5832,
+    "peak_util_pct": 89.57
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.04,
+    "peak_tokens": 4423,
+    "pool_total": 6219,
+    "peak_util_pct": 71.12
+   }
+  },
+  "deadline_miss_rate": 0.1133,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.14,
+  "tot_lic": 32011.468777701724,
+  "tot_hw": 10251.299694496307,
+  "waste_frac": 26.49139355937168,
+  "eff_lic_util": 73.50860644062831,
+  "lic_per_done": 88.46309999874201,
+  "overhead": 312.2674171245619,
+  "n_done": 266.0,
+  "n_miss": 34.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 16336.1,
+    "n": 93,
+    "done": 80
+   },
+   "LSDYNA": {
+    "lic": 10343.6,
+    "n": 104,
+    "done": 91
+   },
+   "ABAQUS": {
+    "lic": 5331.8,
+    "n": 103,
+    "done": 95
+   }
+  },
+  "token_sec_total": 680113200.0,
+  "pool_tw_util": {
+   "ANSYS": 32.8,
+   "ABAQUS": 29.3,
+   "LSDYNA": 34.7
+  },
+  "_policy": "EDF-LAMF",
+  "_N": 300,
+  "_seed": 107,
+  "_exit": 0
+ },
+ "EDF-LAMF__N300__seed207": {
+  "total_workflows": 300,
+  "executed_workflows": 264,
+  "incomplete_workflows": 36,
+  "avg_flowtime_s": 27161.7983,
+  "avg_cost_eur": 118.2435,
+  "avg_hardware_cost_eur": 36.0526,
+  "avg_license_cost_eur": 82.1909,
+  "license_cost_pct": 69.51,
+  "avg_wait_time_s": 9600.4216,
+  "total_hardware_cost_eur": 9517.89,
+  "total_license_cost_eur": 21698.39,
+  "total_combined_cost_eur": 31216.28,
+  "avg_resource_util_pct": 47.151,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 1.1,
+    "peak_tokens": 1327,
+    "pool_total": 1582,
+    "peak_util_pct": 83.88
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.82,
+    "peak_tokens": 4552,
+    "pool_total": 5832,
+    "peak_util_pct": 78.05
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.03,
+    "peak_tokens": 4027,
+    "pool_total": 6219,
+    "peak_util_pct": 64.75
+   }
+  },
+  "deadline_miss_rate": 0.12,
+  "budget_miss_rate": 0.0367,
+  "overall_miss_rate": 0.1567,
+  "tot_lic": 30840.37959555858,
+  "tot_hw": 9517.885397607728,
+  "waste_frac": 29.642913356598765,
+  "eff_lic_util": 70.35708664340123,
+  "lic_per_done": 82.19088103485227,
+  "overhead": 324.0255404137368,
+  "n_done": 264.0,
+  "n_miss": 36.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13684.3,
+    "n": 93,
+    "done": 79
+   },
+   "LSDYNA": {
+    "lic": 10209.5,
+    "n": 104,
+    "done": 93
+   },
+   "ABAQUS": {
+    "lic": 6946.6,
+    "n": 103,
+    "done": 92
+   }
+  },
+  "token_sec_total": 651158400.0,
+  "pool_tw_util": {
+   "ANSYS": 27.4,
+   "ABAQUS": 38.3,
+   "LSDYNA": 35.6
+  },
+  "_policy": "EDF-LAMF",
+  "_N": 300,
+  "_seed": 207,
+  "_exit": 0
+ },
+ "EDF-LAMF__N300__seed1007": {
+  "total_workflows": 300,
+  "executed_workflows": 265,
+  "incomplete_workflows": 35,
+  "avg_flowtime_s": 26487.7222,
+  "avg_cost_eur": 106.5392,
+  "avg_hardware_cost_eur": 28.8713,
+  "avg_license_cost_eur": 77.6679,
+  "license_cost_pct": 72.9,
+  "avg_wait_time_s": 9515.1623,
+  "total_hardware_cost_eur": 7650.89,
+  "total_license_cost_eur": 20582.0,
+  "total_combined_cost_eur": 28232.89,
+  "avg_resource_util_pct": 45.0391,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.95,
+    "peak_tokens": 1294,
+    "pool_total": 1582,
+    "peak_util_pct": 81.8
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 4802,
+    "pool_total": 5832,
+    "peak_util_pct": 82.34
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.06,
+    "peak_tokens": 4272,
+    "pool_total": 6219,
+    "peak_util_pct": 68.69
+   }
+  },
+  "deadline_miss_rate": 0.1167,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.1433,
+  "tot_lic": 31238.045120313323,
+  "tot_hw": 7650.88568317451,
+  "waste_frac": 34.11238104055955,
+  "eff_lic_util": 65.88761895944046,
+  "lic_per_done": 77.66794014811374,
+  "overhead": 408.2931887089968,
+  "n_done": 265.0,
+  "n_miss": 35.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14770.3,
+    "n": 93,
+    "done": 79
+   },
+   "LSDYNA": {
+    "lic": 10509.0,
+    "n": 104,
+    "done": 93
+   },
+   "ABAQUS": {
+    "lic": 5958.8,
+    "n": 103,
+    "done": 93
+   }
+  },
+  "token_sec_total": 665262000.0,
+  "pool_tw_util": {
+   "ANSYS": 29.6,
+   "ABAQUS": 33.1,
+   "LSDYNA": 36.4
+  },
+  "_policy": "EDF-LAMF",
+  "_N": 300,
+  "_seed": 1007,
+  "_exit": 0
+ },
+ "EDF-LAMF__N300__seed1107": {
+  "total_workflows": 300,
+  "executed_workflows": 271,
+  "incomplete_workflows": 29,
+  "avg_flowtime_s": 28314.7831,
+  "avg_cost_eur": 126.9485,
+  "avg_hardware_cost_eur": 39.6197,
+  "avg_license_cost_eur": 87.3288,
+  "license_cost_pct": 68.79,
+  "avg_wait_time_s": 10059.5561,
+  "total_hardware_cost_eur": 10736.94,
+  "total_license_cost_eur": 23666.11,
+  "total_combined_cost_eur": 34403.05,
+  "avg_resource_util_pct": 46.2258,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 1.07,
+    "peak_tokens": 1160,
+    "pool_total": 1582,
+    "peak_util_pct": 73.32
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.9,
+    "peak_tokens": 4292,
+    "pool_total": 5832,
+    "peak_util_pct": 73.59
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.95,
+    "peak_tokens": 4478,
+    "pool_total": 6219,
+    "peak_util_pct": 72.01
+   }
+  },
+  "deadline_miss_rate": 0.0967,
+  "budget_miss_rate": 0.03,
+  "overall_miss_rate": 0.1267,
+  "tot_lic": 31233.962629553575,
+  "tot_hw": 10736.940347863281,
+  "waste_frac": 24.229576725338482,
+  "eff_lic_util": 75.77042327466151,
+  "lic_per_done": 87.3288032836249,
+  "overhead": 290.90189213698415,
+  "n_done": 271.0,
+  "n_miss": 29.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15055.6,
+    "n": 93,
+    "done": 82
+   },
+   "LSDYNA": {
+    "lic": 9409.3,
+    "n": 104,
+    "done": 95
+   },
+   "ABAQUS": {
+    "lic": 6769.1,
+    "n": 103,
+    "done": 94
+   }
+  },
+  "token_sec_total": 647068800.0,
+  "pool_tw_util": {
+   "ANSYS": 30.1,
+   "ABAQUS": 37.6,
+   "LSDYNA": 33.3
+  },
+  "_policy": "EDF-LAMF",
+  "_N": 300,
+  "_seed": 1107,
+  "_exit": 0
+ },
+ "EDF-LAMF__N300__seed1207": {
+  "total_workflows": 300,
+  "executed_workflows": 264,
+  "incomplete_workflows": 36,
+  "avg_flowtime_s": 27800.1068,
+  "avg_cost_eur": 120.6486,
+  "avg_hardware_cost_eur": 35.8979,
+  "avg_license_cost_eur": 84.7507,
+  "license_cost_pct": 70.25,
+  "avg_wait_time_s": 10010.1777,
+  "total_hardware_cost_eur": 9477.04,
+  "total_license_cost_eur": 22374.19,
+  "total_combined_cost_eur": 31851.23,
+  "avg_resource_util_pct": 46.5493,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 1.04,
+    "peak_tokens": 1345,
+    "pool_total": 1582,
+    "peak_util_pct": 85.02
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 4561,
+    "pool_total": 5832,
+    "peak_util_pct": 78.21
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.93,
+    "peak_tokens": 4402,
+    "pool_total": 6219,
+    "peak_util_pct": 70.78
+   }
+  },
+  "deadline_miss_rate": 0.12,
+  "budget_miss_rate": 0.0433,
+  "overall_miss_rate": 0.1633,
+  "tot_lic": 30552.600129135302,
+  "tot_hw": 9477.040395823096,
+  "waste_frac": 26.76829407517331,
+  "eff_lic_util": 73.23170592482668,
+  "lic_per_done": 84.75072075362343,
+  "overhead": 322.38545846655916,
+  "n_done": 264.0,
+  "n_miss": 36.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14759.8,
+    "n": 93,
+    "done": 75
+   },
+   "LSDYNA": {
+    "lic": 9238.2,
+    "n": 104,
+    "done": 96
+   },
+   "ABAQUS": {
+    "lic": 6554.6,
+    "n": 103,
+    "done": 93
+   }
+  },
+  "token_sec_total": 632420400.0,
+  "pool_tw_util": {
+   "ANSYS": 29.4,
+   "ABAQUS": 36.8,
+   "LSDYNA": 32.1
+  },
+  "_policy": "EDF-LAMF",
+  "_N": 300,
+  "_seed": 1207,
+  "_exit": 0
+ },
+ "EDF-HSM__N300__seed7": {
+  "total_workflows": 300,
+  "executed_workflows": 268,
+  "incomplete_workflows": 32,
+  "avg_flowtime_s": 26979.4021,
+  "avg_cost_eur": 119.6497,
+  "avg_hardware_cost_eur": 34.13,
+  "avg_license_cost_eur": 85.5197,
+  "license_cost_pct": 71.48,
+  "avg_wait_time_s": 9516.2809,
+  "total_hardware_cost_eur": 9146.84,
+  "total_license_cost_eur": 22919.29,
+  "total_combined_cost_eur": 32066.13,
+  "avg_resource_util_pct": 45.0876,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 1290,
+    "pool_total": 1582,
+    "peak_util_pct": 81.54
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.84,
+    "peak_tokens": 5564,
+    "pool_total": 5832,
+    "peak_util_pct": 95.4
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.07,
+    "peak_tokens": 4355,
+    "pool_total": 6219,
+    "peak_util_pct": 70.03
+   }
+  },
+  "deadline_miss_rate": 0.1067,
+  "budget_miss_rate": 0.0233,
+  "overall_miss_rate": 0.13,
+  "tot_lic": 30657.407863183522,
+  "tot_hw": 9146.844256284312,
+  "waste_frac": 25.24062511715458,
+  "eff_lic_util": 74.75937488284542,
+  "lic_per_done": 85.5197256485086,
+  "overhead": 335.1692343741443,
+  "n_done": 268.0,
+  "n_miss": 32.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 14058.2,
+    "n": 93,
+    "done": 83
+   },
+   "LSDYNA": {
+    "lic": 10707.7,
+    "n": 104,
+    "done": 93
+   },
+   "ABAQUS": {
+    "lic": 5891.5,
+    "n": 103,
+    "done": 92
+   }
+  },
+  "token_sec_total": 657643200.0,
+  "pool_tw_util": {
+   "ANSYS": 28.3,
+   "ABAQUS": 33.2,
+   "LSDYNA": 36.2
+  },
+  "_policy": "EDF-HSM",
+  "_N": 300,
+  "_seed": 7,
+  "_exit": 0
+ },
+ "EDF-HSM__N300__seed107": {
+  "total_workflows": 300,
+  "executed_workflows": 270,
+  "incomplete_workflows": 30,
+  "avg_flowtime_s": 27852.7159,
+  "avg_cost_eur": 127.8168,
+  "avg_hardware_cost_eur": 41.2435,
+  "avg_license_cost_eur": 86.5734,
+  "license_cost_pct": 67.73,
+  "avg_wait_time_s": 9959.3778,
+  "total_hardware_cost_eur": 11135.74,
+  "total_license_cost_eur": 23374.81,
+  "total_combined_cost_eur": 34510.55,
+  "avg_resource_util_pct": 46.3435,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 1.0,
+    "peak_tokens": 1304,
+    "pool_total": 1582,
+    "peak_util_pct": 82.43
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.9,
+    "peak_tokens": 5208,
+    "pool_total": 5832,
+    "peak_util_pct": 89.3
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.97,
+    "peak_tokens": 4125,
+    "pool_total": 6219,
+    "peak_util_pct": 66.33
+   }
+  },
+  "deadline_miss_rate": 0.1,
+  "budget_miss_rate": 0.0267,
+  "overall_miss_rate": 0.1267,
+  "tot_lic": 30885.198213932614,
+  "tot_hw": 11135.73767623503,
+  "waste_frac": 24.317109326268607,
+  "eff_lic_util": 75.68289067373139,
+  "lic_per_done": 86.57337332820694,
+  "overhead": 277.35206334686967,
+  "n_done": 270.0,
+  "n_miss": 30.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15037.0,
+    "n": 93,
+    "done": 81
+   },
+   "LSDYNA": {
+    "lic": 9546.1,
+    "n": 104,
+    "done": 93
+   },
+   "ABAQUS": {
+    "lic": 6302.1,
+    "n": 103,
+    "done": 96
+   }
+  },
+  "token_sec_total": 646888800.0,
+  "pool_tw_util": {
+   "ANSYS": 30.2,
+   "ABAQUS": 35.3,
+   "LSDYNA": 34.1
+  },
+  "_policy": "EDF-HSM",
+  "_N": 300,
+  "_seed": 107,
+  "_exit": 0
+ },
+ "EDF-HSM__N300__seed207": {
+  "total_workflows": 300,
+  "executed_workflows": 268,
+  "incomplete_workflows": 32,
+  "avg_flowtime_s": 26584.4379,
+  "avg_cost_eur": 115.8096,
+  "avg_hardware_cost_eur": 33.2747,
+  "avg_license_cost_eur": 82.5348,
+  "license_cost_pct": 71.27,
+  "avg_wait_time_s": 9819.0564,
+  "total_hardware_cost_eur": 8917.63,
+  "total_license_cost_eur": 22119.34,
+  "total_combined_cost_eur": 31036.96,
+  "avg_resource_util_pct": 44.8709,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.98,
+    "peak_tokens": 1288,
+    "pool_total": 1582,
+    "peak_util_pct": 81.42
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.82,
+    "peak_tokens": 4682,
+    "pool_total": 5832,
+    "peak_util_pct": 80.28
+   },
+   "LSDYNA": {
+    "avg_util_pct": 1.06,
+    "peak_tokens": 4704,
+    "pool_total": 6219,
+    "peak_util_pct": 75.64
+   }
+  },
+  "deadline_miss_rate": 0.1067,
+  "budget_miss_rate": 0.03,
+  "overall_miss_rate": 0.1367,
+  "tot_lic": 30442.004302152265,
+  "tot_hw": 8917.62516613322,
+  "waste_frac": 27.339424148561115,
+  "eff_lic_util": 72.66057585143889,
+  "lic_per_done": 82.53483442784935,
+  "overhead": 341.3689601774577,
+  "n_done": 268.0,
+  "n_miss": 32.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 13697.2,
+    "n": 93,
+    "done": 82
+   },
+   "LSDYNA": {
+    "lic": 10528.7,
+    "n": 104,
+    "done": 94
+   },
+   "ABAQUS": {
+    "lic": 6216.2,
+    "n": 103,
+    "done": 92
+   }
+  },
+  "token_sec_total": 651676800.0,
+  "pool_tw_util": {
+   "ANSYS": 27.3,
+   "ABAQUS": 34.7,
+   "LSDYNA": 36.2
+  },
+  "_policy": "EDF-HSM",
+  "_N": 300,
+  "_seed": 207,
+  "_exit": 0
+ },
+ "EDF-HSM__N300__seed1007": {
+  "total_workflows": 300,
+  "executed_workflows": 269,
+  "incomplete_workflows": 31,
+  "avg_flowtime_s": 27653.7857,
+  "avg_cost_eur": 127.3639,
+  "avg_hardware_cost_eur": 39.9504,
+  "avg_license_cost_eur": 87.4135,
+  "license_cost_pct": 68.63,
+  "avg_wait_time_s": 10167.7729,
+  "total_hardware_cost_eur": 10746.67,
+  "total_license_cost_eur": 23514.23,
+  "total_combined_cost_eur": 34260.89,
+  "avg_resource_util_pct": 47.4141,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 1.0,
+    "peak_tokens": 1230,
+    "pool_total": 1582,
+    "peak_util_pct": 77.75
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 5058,
+    "pool_total": 5832,
+    "peak_util_pct": 86.73
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.98,
+    "peak_tokens": 4359,
+    "pool_total": 6219,
+    "peak_util_pct": 70.09
+   }
+  },
+  "deadline_miss_rate": 0.1033,
+  "budget_miss_rate": 0.0333,
+  "overall_miss_rate": 0.1367,
+  "tot_lic": 31730.828946840058,
+  "tot_hw": 10746.665289295905,
+  "waste_frac": 25.894695221469938,
+  "eff_lic_util": 74.10530477853007,
+  "lic_per_done": 87.4134851294047,
+  "overhead": 295.26209379988035,
+  "n_done": 269.0,
+  "n_miss": 31.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 15798.1,
+    "n": 93,
+    "done": 81
+   },
+   "LSDYNA": {
+    "lic": 9666.7,
+    "n": 104,
+    "done": 95
+   },
+   "ABAQUS": {
+    "lic": 6266.1,
+    "n": 103,
+    "done": 93
+   }
+  },
+  "token_sec_total": 662196000.0,
+  "pool_tw_util": {
+   "ANSYS": 31.7,
+   "ABAQUS": 34.8,
+   "LSDYNA": 34.1
+  },
+  "_policy": "EDF-HSM",
+  "_N": 300,
+  "_seed": 1007,
+  "_exit": 0
+ },
+ "EDF-HSM__N300__seed1107": {
+  "total_workflows": 300,
+  "executed_workflows": 274,
+  "incomplete_workflows": 26,
+  "avg_flowtime_s": 28177.5952,
+  "avg_cost_eur": 130.0514,
+  "avg_hardware_cost_eur": 41.0292,
+  "avg_license_cost_eur": 89.0222,
+  "license_cost_pct": 68.45,
+  "avg_wait_time_s": 10438.3391,
+  "total_hardware_cost_eur": 11242.0,
+  "total_license_cost_eur": 24392.08,
+  "total_combined_cost_eur": 35634.08,
+  "avg_resource_util_pct": 46.7605,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.88,
+    "peak_tokens": 1280,
+    "pool_total": 1582,
+    "peak_util_pct": 80.91
+   },
+   "ANSYS": {
+    "avg_util_pct": 1.01,
+    "peak_tokens": 4593,
+    "pool_total": 5832,
+    "peak_util_pct": 78.76
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.98,
+    "peak_tokens": 4504,
+    "pool_total": 6219,
+    "peak_util_pct": 72.42
+   }
+  },
+  "deadline_miss_rate": 0.0867,
+  "budget_miss_rate": 0.0433,
+  "overall_miss_rate": 0.13,
+  "tot_lic": 32074.558406875054,
+  "tot_hw": 11241.997026025683,
+  "waste_frac": 23.95193414385814,
+  "eff_lic_util": 76.04806585614186,
+  "lic_per_done": 89.02219452674102,
+  "overhead": 285.3101484782565,
+  "n_done": 274.0,
+  "n_miss": 26.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 16868.7,
+    "n": 93,
+    "done": 83
+   },
+   "LSDYNA": {
+    "lic": 9667.3,
+    "n": 104,
+    "done": 96
+   },
+   "ABAQUS": {
+    "lic": 5538.5,
+    "n": 103,
+    "done": 95
+   }
+  },
+  "token_sec_total": 673580400.0,
+  "pool_tw_util": {
+   "ANSYS": 33.7,
+   "ABAQUS": 30.9,
+   "LSDYNA": 33.8
+  },
+  "_policy": "EDF-HSM",
+  "_N": 300,
+  "_seed": 1107,
+  "_exit": 0
+ },
+ "EDF-HSM__N300__seed1207": {
+  "total_workflows": 300,
+  "executed_workflows": 266,
+  "incomplete_workflows": 34,
+  "avg_flowtime_s": 26436.503,
+  "avg_cost_eur": 109.6976,
+  "avg_hardware_cost_eur": 30.0881,
+  "avg_license_cost_eur": 79.6095,
+  "license_cost_pct": 72.57,
+  "avg_wait_time_s": 9713.437,
+  "total_hardware_cost_eur": 8003.43,
+  "total_license_cost_eur": 21176.13,
+  "total_combined_cost_eur": 29179.56,
+  "avg_resource_util_pct": 44.9318,
+  "license_pools": {
+   "ABAQUS": {
+    "avg_util_pct": 0.9,
+    "peak_tokens": 1263,
+    "pool_total": 1582,
+    "peak_util_pct": 79.84
+   },
+   "ANSYS": {
+    "avg_util_pct": 0.96,
+    "peak_tokens": 4621,
+    "pool_total": 5832,
+    "peak_util_pct": 79.24
+   },
+   "LSDYNA": {
+    "avg_util_pct": 0.94,
+    "peak_tokens": 4469,
+    "pool_total": 6219,
+    "peak_util_pct": 71.86
+   }
+  },
+  "deadline_miss_rate": 0.1133,
+  "budget_miss_rate": 0.03,
+  "overall_miss_rate": 0.1433,
+  "tot_lic": 31014.641576925984,
+  "tot_hw": 8003.4285966307425,
+  "waste_frac": 31.722159753952223,
+  "eff_lic_util": 68.27784024604777,
+  "lic_per_done": 79.60950161194683,
+  "overhead": 387.5169398023046,
+  "n_done": 266.0,
+  "n_miss": 34.0,
+  "per_solver": {
+   "ANSYS": {
+    "lic": 16116.4,
+    "n": 93,
+    "done": 82
+   },
+   "LSDYNA": {
+    "lic": 9272.7,
+    "n": 104,
+    "done": 91
+   },
+   "ABAQUS": {
+    "lic": 5625.6,
+    "n": 103,
+    "done": 93
+   }
+  },
+  "token_sec_total": 649574400.0,
+  "pool_tw_util": {
+   "ANSYS": 31.9,
+   "ABAQUS": 30.9,
+   "LSDYNA": 32.6
+  },
+  "_policy": "EDF-HSM",
+  "_N": 300,
+  "_seed": 1207,
+  "_exit": 0
+ }
+}

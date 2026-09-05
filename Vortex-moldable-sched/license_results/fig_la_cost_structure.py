@@ -128,7 +128,7 @@ def main():
 
     ax.set_xticks(x)
     ax.set_xticklabels([PN.DISPLAY[p] for p in pols], rotation=35, ha='right')
-    ax.set_ylabel(f'Average cost per workflow ({CCY})', fontsize=LABEL_FS)
+    ax.set_ylabel(f'$\\bar{{\\gamma}}$ (cost per workflow, {CCY})', fontsize=LABEL_FS)
     ax.set_title(f'Cost structure at N = {HEADLINE_N}  (hardware + license)',
                  fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
