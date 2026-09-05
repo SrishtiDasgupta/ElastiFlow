@@ -40,15 +40,15 @@ elastiflow/scripts/deadline_plot.png
 
 # Raw per-cell sweep run outputs (large; reproducible from the sweep scripts,
 # the aggregated *_sweep.json / canonical_results.json are the data of record)
-license_results/sweep_runs/
-plain_results/sweep_runs/
-plain_results/k_sweep_runs/
+use_cases/licence/results/sweep_runs/
+use_cases/seissol/results/sweep_runs/
+use_cases/seissol/results/k_sweep_runs/
 
 # Stray simulation outputs / temp files at the repository root
 /EDF_HSM_*.csv
 /LAMF_*.csv
 *.tmp
-fsx/hyperparameter_test/error_log1.rtf
+use_cases/hpo/application/error_log1.rtf
 
 # Thesis sources and submission artefacts (kept out of the code repository)
 /Srishti Dasgupta Dissertation Final/
@@ -58,7 +58,7 @@ fsx/hyperparameter_test/error_log1.rtf
 /02-Henkel-GNSSystems-P.pdf
 
 # Superseded figure generations and editor backups
-license_results/plots_ansys_n4_backup/
+use_cases/licence/results/plots_ansys_n4_backup/
 *.BAK
 *.BAK_*
 

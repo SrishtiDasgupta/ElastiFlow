@@ -6,7 +6,7 @@ On reserved g4dn or on-prem slurm the actual cost rate is similar per epoch but
 mid-run cumulative cost can EXCEED yaml budget, causing the moldable scale-up
 budget gate (edf_optimized_HPO.py:571) to deny critical late-iter scale-ups.
 
-R1 modeled analysis (HPO/results/r1_moldable_edf_5/R1_R2_FINALIZED.md cross-effect)
+R1 modeled analysis (use_cases/hpo/results/r1_moldable_edf_5/R1_R2_FINALIZED.md cross-effect)
 showed data5's iter-3 scale-up could be denied if it lands on slurm at $0.84/h.
 ×1.5 budget bump gives moldable enough headroom to scale up reliably.
 

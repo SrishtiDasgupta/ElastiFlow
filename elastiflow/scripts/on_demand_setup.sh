@@ -34,7 +34,7 @@ sleep 384.136
 
 cd ~
 
-sudo cp -r /fsx/Vortex/ ~
+sudo cp -r /fsx/ElastiFlow/ ~
 
 cd ElastiFlow/elastiflow
 

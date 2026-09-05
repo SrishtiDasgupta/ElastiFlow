@@ -61,7 +61,7 @@ echo "HPO instance setup completed"
 cd ~
 
 # Copy Vortex codebase
-sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
+sudo cp -r /fsx/ElastiFlow/ ~
 
 # Verify codebase exists
 if [ ! -f ~/ElastiFlow/elastiflow/executor_HPO.py ]; then

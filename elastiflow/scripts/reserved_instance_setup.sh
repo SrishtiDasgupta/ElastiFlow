@@ -114,7 +114,7 @@ pip install numpy pandas filelock boto3 paramiko pyyaml redis scikit-learn
 echo "PyTorch + Ray venv created"
 
 # --- Copy Vortex codebase ---
-cp -r /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+cp -r /fsx/ElastiFlow ~/ElastiFlow
 echo "Vortex codebase copied"
 
 # --- Copy HPO scripts ---
@@ -189,7 +189,7 @@ echo "=== HPO Reserved Instance Setup completed at $(date) ==="
 echo ""
 echo "Summary:"
 echo "  Venv:     ~/rayenv"
-echo "  Vortex:   ~/Vortex-moldable-sched"
+echo "  Vortex:   ~/ElastiFlow"
 echo "  CIFAR-10: ~/cifar10"
 echo "  EFS:      /fsx"
 echo "  Executor: running (log: ~/executor.out)"

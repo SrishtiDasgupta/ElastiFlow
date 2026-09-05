@@ -47,7 +47,7 @@ from elastiflow.config.constants_HPO import (
 #   over 4-5 iters). Static is locked at chains₀; its longest iterations run at
 #   the worst allocation. Moldable claims freed always-on lanes when shorter
 #   siblings finish, scaling up to chains_k.
-#   See HPO/results/r1_moldable_edf_5/R1_R2_FINALIZED.md for the empirical analysis.
+#   See use_cases/hpo/results/r1_moldable_edf_5/R1_R2_FINALIZED.md for the empirical analysis.
 #
 # Model distribution: convnext=7 (47%), wide_resnet=4 (27%), vgg19=4 (27%)
 # ====================================================================================
@@ -203,7 +203,7 @@ def sample_workflow_generator(wf_id, budget, deadline, model,
                 'actions': [
                     {
                         'type': 'execute',
-                        'service': '/fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py',
+                        'service': '/fsx/ElastiFlow/deploy/runners/run_hpo.py',
                         'inputs': [
                             {
                                 'id': 'config',

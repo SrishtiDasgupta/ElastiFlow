@@ -6,7 +6,7 @@ actions:
     outputs:
     - id: config_out
       var: output_config
-    service: /fsx/Vortex-mid/Vortex-moldable-sched/service/run_hpo.py
+    service: /fsx/ElastiFlow/deploy/runners/run_hpo.py
     type: execute
   enumerator: i
   input: input_config

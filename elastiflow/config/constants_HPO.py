@@ -163,7 +163,7 @@ INSTANCE_COSTS = {
 # and moldable lane-allocation races. Empirically tuned from R1 (2026-05-06):
 # ×2 was too tight (3/5 wfs missed by <55s — near-binary on resource luck);
 # ×3 isolates the genuine race-loss case (1/5 missed at 1.29×). See
-# HPO/results/r1_moldable_edf_5/R1_FINALIZED.md.
+# use_cases/hpo/results/r1_moldable_edf_5/R1_FINALIZED.md.
 # ====================================================================================
 
 # Per-epoch runtime on slowest instance (g4dn, 1 worker) — pure compute, no cold start
@@ -251,7 +251,7 @@ Budget per workflow (epoch_cost × 3 × 20 × 4):
 - Wide_ResNet:  ~$1.49
 - ConvNeXt:    ~$1.54
 
-Profiling data sources: HPO/g4_img64.jsonl, HPO/g5_img64.jsonl (36 entries each)
+Profiling data sources: use_cases/hpo/g4_img64.jsonl, use_cases/hpo/g5_img64.jsonl (36 entries each)
 Runtime scales linearly with epochs (verified: CV < 5% across 3/6/9/12 epoch runs)
 """
 

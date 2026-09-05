@@ -224,6 +224,28 @@ fixed) and two standalone analysis scripts that act on import
 `speedup_plot_HPO.py` writes plots/speedup_HPO.*); both are excluded with the
 reason and get a `__main__` guard when they move in A5.
 
+A5 (2026-09-06): the use-case and deployment layout is in place. `plain_results/`
+is `use_cases/seissol/results/`, `analysis/sim_validation/` is
+`use_cases/seissol/validation/` (with `urgency_weights.py` and the Ch5 figure it
+draws), the TinyDA client/server from `Seis-Bridge/` is `use_cases/seissol/driver/`;
+`license_results/` is `use_cases/licence/results/`; `HPO/` is `use_cases/hpo/`
+(datasets, notes, `results/`), `fsx/hyperparameter_test/` is
+`use_cases/hpo/application/`, `analysis/decompose.py` is `use_cases/hpo/analysis/`;
+`service/`, `IaC_scripts/` and the node-side `fsx/` scripts are
+`deploy/runners/`, `deploy/aws/` and `deploy/nodes/` (the Seis-Bridge submodule
+moves with them); `experiments/manual_vs_auto/` is `motivation/manual_vs_auto/`;
+`src/test/` is `tests/fixtures/`. Each results directory moved whole rather
+than split into experiments/ and results/, so every intra-directory relative
+path stayed valid; only the 19 repository-root derivations changed depth (each
+verified to resolve to the root), plus the harness, smoke tests, `.gitignore`,
+the cross-workload figure's two dataset paths, the HPO profiling-data paths in
+the package, and the deploy scripts' checkout name (`/fsx/ElastiFlow`,
+`~/ElastiFlow`). The historical `yamls_used/` records under
+`use_cases/hpo/results/` keep the service paths they ran with. The dead
+`elastiflow/sample_workflows_HPO/` example pair is removed. Still inside the
+package for Phase B: `config/`, `scripts/` (dispatchers, generators, runtime
+models, provisioning) and the workload YAMLs, because the framework imports them.
+
 **Phase A, move without changing behaviour** (git mv, import rewrites, path fixes,
 deletions). The three runners and the three scheduler forks survive this phase
 untouched inside the new tree; `elastiflow.cli` simply dispatches to them.
