@@ -9,13 +9,9 @@ import numpy as np
 import sys
 from pathlib import Path
 
-# Add path to import from main Vortex codebase
-VORTEX_MAIN_PATH = Path(__file__).parent.parent.parent.parent / "src" / "main"
-sys.path.insert(0, str(VORTEX_MAIN_PATH))
-
 # Import runtime functions from existing speedup.py
 try:
-    from scripts.speedup import hpcOnpremRuntime, tinyDaOverhead
+    from elastiflow.scripts.speedup import hpcOnpremRuntime, tinyDaOverhead
 except ImportError:
     # Fallback: define locally if import fails
     tinyDaOverhead = {1000: 4.713, 750: 8.378, 500: 25.799}

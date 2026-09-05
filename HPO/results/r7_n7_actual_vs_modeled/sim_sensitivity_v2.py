@@ -24,7 +24,7 @@ N_TRIALS = 1000
 
 # -----------------------------------------------------------------------------
 # All 15 wf yamls — base specs (model, initial_chains, initial_epoch, n_iters, deadline_s)
-# Pulled from src/main/workflow/sample_workflows_HPO/data*.yaml
+# Pulled from elastiflow/workflow/sample_workflows_HPO/data*.yaml
 # -----------------------------------------------------------------------------
 WF_YAMLS = {
     'data0':  {'model': 'convnext_large',    'chains_initial': 2, 'tinyda': 20, 'iters': 4, 'deadline': 7003},

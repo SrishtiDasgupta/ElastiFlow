@@ -96,7 +96,7 @@ fi
 sudo -u ubuntu bash <<'USEREOF'
 set -ex
 source ~/rayenv/bin/activate
-cd ~/Vortex/src/main
+cd ~/ElastiFlow/elastiflow
 EXECUTOR_IP=$(hostname -I | awk '{print $1}')
 nohup python3 executor_HPO.py --ip ${EXECUTOR_IP} > ~/executor.out 2>&1 &
 echo "HPO_EXECUTOR_READY:$(date)" > ~/hpo_executor_ready.marker

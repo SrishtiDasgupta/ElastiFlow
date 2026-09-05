@@ -1,8 +1,8 @@
 """
 Sim-only scaling sweep harness for the SeisSol-Plain Vortex simulator.
 
-For each target N (workload size), patches `src/main/config/constants.py` to
-set TOTAL_WORKFLOWS=N, runs `src/main/simulate_main.py`, captures the
+For each target N (workload size), patches `elastiflow/config/constants.py` to
+set TOTAL_WORKFLOWS=N, runs `elastiflow/simulate_main.py`, captures the
 end-of-run metric line from stdout, and writes a tidy CSV.
 
 Requires Redis to be running locally (the simulator uses Redis as the
@@ -30,9 +30,9 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-CONSTANTS = REPO / "src/main/config/constants.py"
-SIM_MAIN  = REPO / "src/main/simulate_main.py"
-WORK_DIR  = REPO / "src/main"
+CONSTANTS = REPO / "elastiflow/config/constants.py"
+SIM_MAIN  = REPO / "elastiflow/simulate_main.py"
+WORK_DIR  = REPO / "elastiflow"
 
 METRIC_RX = {
     "Total workflows":         re.compile(r"Total workflows\s*=\s*([0-9.]+)"),

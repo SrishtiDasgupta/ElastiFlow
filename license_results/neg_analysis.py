@@ -1,7 +1,7 @@
 """Negotiation / licence-gate analysis for thesis Sec. 9.4, from the canonical dataset."""
 import json, collections, statistics as st
 from pathlib import Path
-H = Path('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/license_results')
+H = Path(__file__).resolve().parent
 d = json.loads((H/'canonical_results.json').read_text())
 ELASTIC = ['LAMF', 'EDF-LAMF', 'EDF-HSM']
 NS = [150, 200, 300, 400, 500, 600, 700]

@@ -23,7 +23,7 @@ def test_seissol_cell_reproduces(repo, python, tmp_path):
     out = tmp_path / 'seissol'
     out.mkdir()
     run([python, 'simulate_sweep.py', 'edf', 'moldable', '--sort-key', 'cost',
-         out, '--seed', '7', '--N', '100'], cwd=repo / 'src' / 'main')
+         out, '--seed', '7', '--N', '100'], cwd=repo / 'elastiflow')
 
     sweep = load_module(repo / 'plain_results' / 'sweep_PLAIN.py')
     out_files = sorted(out.glob('*.out'))
@@ -47,7 +47,7 @@ def test_licence_cell_reproduces(repo, python, tmp_path):
     out.mkdir()
     cp = run([python, 'simulate_main_LA.py', '--scheduler', scheduler,
               '--N', '150', '--seed', '7', '--output-dir', out],
-             cwd=repo / 'src' / 'main', env=la_env(scheduler))
+             cwd=repo / 'elastiflow', env=la_env(scheduler))
 
     parse_la_run = load_module(repo / 'license_results' / 'parse_la_run.py')
     LA = load_module(repo / 'license_results' / 'license_analysis.py')

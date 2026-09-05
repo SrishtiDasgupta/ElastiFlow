@@ -31,12 +31,12 @@ Base_results/
 
 # Generated result files
 *.out
-src/main/results*.csv
-src/main/resources.csv
-src/main/test_*.csv
-src/main/test_*.out
-src/main/data0.yaml
-src/main/scripts/deadline_plot.png
+elastiflow/results*.csv
+elastiflow/resources.csv
+elastiflow/test_*.csv
+elastiflow/test_*.out
+elastiflow/data0.yaml
+elastiflow/scripts/deadline_plot.png
 
 # Raw per-cell sweep run outputs (large; reproducible from the sweep scripts,
 # the aggregated *_sweep.json / canonical_results.json are the data of record)
@@ -69,3 +69,10 @@ license_results/plots_ansys_n4_backup/
 
 # Local tooling
 .claude/
+
+# HPO engine runtime log written into the source tree
+elastiflow/*.log
+
+# Python packaging artefacts (pip install -e .)
+build/
+*.egg-info/

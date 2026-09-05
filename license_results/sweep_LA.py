@@ -55,7 +55,7 @@ def run_cell(policy: str, N: int, seed: int) -> dict:
     stdout_path = out_dir / 'stdout.log'
 
     # Run from REPO_ROOT so internal imports (`scheduler.…`, `config.…`,
-    # `scripts.…`) resolve relative to src/main, which is on sys.path because
+    # `scripts.…`) resolve inside the installed elastiflow package, which replaces the old on-sys.path convention because
     # simulate_main_LA.py uses bare imports.
     cmd = [
         str(VENV_PY), str(SIM_SCRIPT),

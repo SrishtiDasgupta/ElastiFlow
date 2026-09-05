@@ -22,14 +22,13 @@ from pathlib import Path
 
 import pytest
 
-REPO = Path(__file__).resolve().parents[2]          # Vortex-moldable-sched/
-SRC_MAIN = REPO / 'src' / 'main'
+REPO = Path(__file__).resolve().parents[2]          # repository root
+PACKAGE = REPO / 'elastiflow'                       # installed editable: pip install -e .
 
 # license_analysis.py and parse_la_run.py live in license_results/ and are
 # imported by name in canonical_sweep.py; mirror its import environment.
-for p in (str(REPO / 'license_results'), str(SRC_MAIN)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+if str(REPO / 'license_results') not in sys.path:
+    sys.path.insert(0, str(REPO / 'license_results'))
 
 
 @pytest.fixture(scope='session')

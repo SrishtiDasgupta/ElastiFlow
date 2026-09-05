@@ -44,7 +44,7 @@ DST  = HERE / "modelled"
 DST.mkdir(exist_ok=True)
 
 # ---- BMW resource pool: actual rates from the BMW campaign config ----------
-# Source: src/main/config/resources.yaml at the BMW-era commit (1b03293).
+# Source: elastiflow/config/resources.yaml at the BMW-era commit (1b03293).
 # Each value is dollars per second per instance. Reserved discount is
 # per-family (NOT a flat percentage). Cost = sum over allocated segments of
 #   N_instances * rate. On-prem is priced per 48-core instance, not per core.

@@ -8,8 +8,6 @@ Tests core functionality of the new HPO dedicated executor system
 import sys
 import os
 
-# Add project paths
-sys.path.append('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main')
 
 def test_imports():
     """Test that all HPO components can be imported"""
@@ -17,20 +15,20 @@ def test_imports():
 
     try:
         # Test HPO constants
-        from config.constants_HPO import AVG_BUDGET, AVG_DEADLINE, SIMULATE
+        from elastiflow.config.constants_HPO import AVG_BUDGET, AVG_DEADLINE, SIMULATE
         print("  ✅ HPO constants imported")
 
         # Test HPO speedup functions
-        from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
+        from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
         print("  ✅ HPO speedup functions imported")
 
         # Test HPO schedulers
-        from scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
-        from scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
+        from elastiflow.scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
+        from elastiflow.scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
         print("  ✅ HPO schedulers imported")
 
         # Test instance creation
-        from scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
+        from elastiflow.scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
         print("  ✅ HPO instance creation imported")
 
         return True
@@ -44,7 +42,7 @@ def test_hpo_constants():
     print("\n🧪 Testing HPO Constants...")
 
     try:
-        from config.constants_HPO import AVG_BUDGET, AVG_DEADLINE, TOTAL_RESOURCES
+        from elastiflow.config.constants_HPO import AVG_BUDGET, AVG_DEADLINE, TOTAL_RESOURCES
 
         # Check budget values
         models = ['vgg19', 'wide_resnet101_2', 'convnext_large']
@@ -71,7 +69,7 @@ def test_speedup_functions():
     print("\n🧪 Testing HPO Speedup Functions...")
 
     try:
-        from scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
+        from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 
         # Test runtime calculations
         test_cases = [
@@ -114,7 +112,7 @@ def test_scheduler_creation():
                 return self.items.pop(0) if self.items else None
 
         # Test static scheduler
-        from scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
+        from elastiflow.scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
         static_scheduler = FCFS_Scheduler_HPO(
             queue=MockRedisQueue('test-queue'),
             finish_queue=MockRedisQueue('test-finish'),
@@ -123,7 +121,7 @@ def test_scheduler_creation():
         print("  ✅ Static HPO scheduler created")
 
         # Test moldable scheduler
-        from scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
+        from elastiflow.scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
         moldable_scheduler = FCFS_Optimized_HPO(
             queue=MockRedisQueue('test-queue'),
             finish_queue=MockRedisQueue('test-finish'),
@@ -148,7 +146,7 @@ def test_instance_functions():
     print("\n🧪 Testing HPO Instance Functions...")
 
     try:
-        from scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
+        from elastiflow.scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
 
         # Test simulation mode
         print("  Testing in simulation mode...")

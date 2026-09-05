@@ -8,7 +8,7 @@
             "name": "Python: Vortex",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/main/main.py",
+            "program": "${workspaceFolder}/elastiflow/main.py",
             "console": "integratedTerminal"
         }
     ]

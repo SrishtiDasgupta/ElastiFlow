@@ -127,7 +127,13 @@ use_cases/                          what a use case contributes: workload, drive
     workload.py, config/, workflows/
     models/                         the standalone analytical models (sim_n5, sim_n7, sim_4corners_calibrated):
                                     NOT the framework simulator; they import nothing from it. HPO thesis numbers
-                                    come from live AWS runs plus these models for the N sweep (Ch8:372)
+                                    come from live AWS runs plus these models for the N sweep (Ch8:372).
+                                    Confirmed by the author 2026-09-05: HPO runs live only; the simulated backend
+                                    serves SeisSol and licence. simulate_main_HPO.py is the AWS live driver
+                                    (SYNC_AND_REBUILD.md:240), not a simulator: as committed it crashes on
+                                    enable_smp=True under macOS, and with SIMULATE forced it still executes the
+                                    YAML's absolute /fsx/.../run_hpo.py service and sleeps in real time
+                                    (steep_actions_HPO.py:76,178; dispatcher_HPO.py:187). It goes to deploy/runners.
     results/                        HPO/results datasets, generators, plots/
   licence/
     driver.py                       getClientInputs_LA
@@ -177,6 +183,31 @@ scheduler code.** Licence awareness is a scheduler capability
 not a third copy of the scheduler.
 
 ## 3. Migration, in three phases, each gated by the regression harness
+
+### Status after A1 and A2 (2026-09-06)
+
+A1 (flatten, paths) and A2 (dead and duplicate files) are done on `refactoring`;
+harness 11/11 and all 16 simulated policies run after each. A "does it run" pass
+on 2026-09-05 also ran all 25 figure generators (25/25) and compiled every file.
+A2 removed 606 files: `workflow/temp/` (500 of 502 identical to the live LA set),
+the `old_bad/` and `plots_newHSM/` snapshots with their generator, dead
+`_old`/`_kavitha`/`_nisarg`/`hpc24x` modules and images, `old_helper_scripts/`,
+the stale `test_hpo_system.py` (imports a class that no longer exists), root
+scratch outputs, and two tracked `.pyc` files; renamed two shell scripts that had
+a `.py` extension and the YAML with a trailing space; fixed `VENV_PY` in both sweep
+drivers to `sys.executable` (pulled forward from A4 because the flatten had broken
+it); added the never-committed `F0SENS` outputs of a tracked generator; ignored
+`src/main/*.log`, which the HPO engine writes into the source tree.
+
+A3 (2026-09-06): `src/main` is now the package `elastiflow/` with `pyproject.toml`
+and an editable install (`pip install -e .`); 306 import lines in 56 files carry
+the `elastiflow.` prefix, every `sys.path` hack that reached into the package is
+gone, `config/paths.py` exposes `PACKAGE_DIR` and `REPO_ROOT`, and the drivers,
+harness, Ch7 sweep and deploy scripts point at the new location. The in-package
+`.gitignore` had been hiding `sample_workflows/`: the 400 SeisSol workflows the
+runner reads were never committed, so a clone could not run that campaign. They
+are tracked now, per the decision to keep generated workloads in the repository.
+`src/test/` (workload fixtures and one ad-hoc script) moves in A5.
 
 **Phase A, move without changing behaviour** (git mv, import rewrites, path fixes,
 deletions). The three runners and the three scheduler forks survive this phase

@@ -11,6 +11,7 @@ inferred from file existence in hpo_logs/) and record:
 Output: r7_actual_per_iter.json
 """
 import json
+_REPO = __import__('pathlib').Path(__file__).resolve().parents[3]
 import os
 import glob
 from collections import defaultdict
@@ -24,7 +25,7 @@ WFS = {
     'data12': ('hpo-ccb43739', 1778414218, 1778419947, 'vgg19'),
     'data1':  ('hpo-417bb2bd', 1778414224, 1778419419, 'vgg19'),
 }
-HPO_LOGS = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/results/r7_n7_edf_mold/hpo_logs'
+HPO_LOGS = str(_REPO / 'HPO/results/r7_n7_edf_mold/hpo_logs')
 
 # How many R7 iters per wf? Count iter files (skip FAILED/ERROR/attempt2).
 def count_iters(full_id):
@@ -101,7 +102,7 @@ for wf, (full_id, submit, deadline, model) in WFS.items():
     print(f"{wf:6}  {n:>5}  {durs}  total={total:.1f} min  vs deadline {actuals[wf]['deadline_min_from_submit']:.1f}")
 
 # Save
-out_path = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/results/r7_n7_actual_vs_modeled/r7_actual_per_iter.json'
+out_path = str(_REPO / 'HPO/results/r7_n7_actual_vs_modeled/r7_actual_per_iter.json')
 with open(out_path, 'w') as f:
     json.dump(actuals, f, indent=2, default=str)
 print(f"\nSaved → {out_path}")
