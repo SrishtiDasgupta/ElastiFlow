@@ -7,6 +7,7 @@ Uses the same logic as workflow_generator.py with proper 2x deadline buffer.
 
 import yaml
 import os
+_SRC_MAIN = __import__('pathlib').Path(__file__).resolve().parents[1]
 
 # Runtime estimates from speedup.py (worst-case on-prem for each mesh)
 WORST_RUNTIME_PER_ITERATION = {
@@ -76,7 +77,7 @@ def fix_workflow(filepath):
 
 def main():
     """Fix all LA sample workflows."""
-    workflow_dir = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA'
+    workflow_dir = f'{_SRC_MAIN}/workflow/sample_workflows_LA'
 
     print('=' * 70)
     print('FIXING LA WORKFLOW BUDGET & DEADLINE CONSTRAINTS')

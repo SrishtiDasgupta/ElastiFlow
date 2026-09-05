@@ -3,6 +3,7 @@ import json
 import numpy as np
 from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
+_REPO_ROOT = __import__('pathlib').Path(__file__).resolve().parents[3]
 
 MODEL_FACTORS = {
     'vgg19': 1.0,
@@ -103,8 +104,8 @@ def getRuntime_{instance_name}(workers, model, epochs):
 """
 
 if __name__ == "__main__":
-    g4_data = extract_runtime_data("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/g4_img64.jsonl")
-    g5_data = extract_runtime_data("/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/HPO/g5_img64.jsonl")
+    g4_data = extract_runtime_data(f"{_REPO_ROOT}/HPO/g4_img64.jsonl")
+    g5_data = extract_runtime_data(f"{_REPO_ROOT}/HPO/g5_img64.jsonl")
 
     best_g4 = fit_all_models(g4_data, "g4")
     best_g5 = fit_all_models(g5_data, "g5")

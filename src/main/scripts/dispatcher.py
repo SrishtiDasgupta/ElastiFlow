@@ -9,6 +9,7 @@ import yaml
 
 from config.constants import SEED, TOTAL_WORKFLOWS
 from utils.validate_workflow import validate_workflow
+from config.paths import SRC_MAIN
 
 # DEPRECATED
 def delay_generation(workflows):
@@ -57,7 +58,7 @@ def plotSubmitTimes(submitTimes):
 def delayGenerationFromSubmitTimes(workflows):
     np.random.seed(SEED)  # Seed lifted to config.constants.SEED so
                           # simulate_sweep.py can override per cell.
-    data = pd.read_csv('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv', sep="\t")
+    data = pd.read_csv(f'{SRC_MAIN}/scripts/submitTimes.csv', sep="\t")
     data['submit times'] = pd.to_datetime(data['submit times'])
     data['submit_time_only'] = data['submit times'].dt.time
     totalSubmitTimes = data['ID'].sum()
@@ -88,7 +89,7 @@ def delayGenerationFromSubmitTimes(workflows):
     # print(newSubmitTimesData['submit times'])
 
 
-def fetchWorkflow(i, path = "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/sample_workflows/data"):
+def fetchWorkflow(i, path = f"{SRC_MAIN}/sample_workflows/data"):
     file_name = path + str(i) + ".yaml"
     with open(file_name, 'r') as stream:
         try:
@@ -130,7 +131,7 @@ def dispatcher(sim, wf_mb):
 
     # Send END after all requests are complete
     sim.sleep(300000)
-    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/")))
+    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', f"{SRC_MAIN}/")))
 
 
 if __name__ == "__main__":

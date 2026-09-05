@@ -5,13 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: hpo_pipeline_verbose",
+            "name": "Python: Vortex",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": ["--hosts", "2", "--config-file", "/home/ubuntu/Vortex-mid/Vortex-moldable-sched/fsx/hyperparameter_test/config.json"],
-            "justMyCode": true
+            "program": "${workspaceFolder}/src/main/main.py",
+            "console": "integratedTerminal"
         }
     ]
 }

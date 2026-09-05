@@ -6,6 +6,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+_SRC_MAIN = __import__('pathlib').Path(__file__).resolve().parents[1]
 
 AVG_TINYDA_ITERATIONS = 7
 AVG_WORKFLOW_ITERATIONS = 4
@@ -194,7 +195,7 @@ def generate_all_workflows():
     for x in range(0,TOTAL_WORKFLOWS):
         wf_id = "test-" + str(uuid.uuid4()) 
         workflow = sample_workflow_generator(wf_id, budget_list[x],deadline_list[x], workflow_iteration_generation(), mesh_list[x])
-        file_name = "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/sample_workflows/data" + str(x) + ".yaml"
+        file_name = f"{_SRC_MAIN}/sample_workflows/data" + str(x) + ".yaml"
         with open(file_name, 'w') as file:
             yaml.dump(workflow, file)
         # print("Workflow generated for workflow" + str(x))

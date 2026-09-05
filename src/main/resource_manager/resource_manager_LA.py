@@ -10,6 +10,7 @@ from typing import List, Tuple, Optional
 from .resource_manager import ResourceManager
 from .license.manager import LicenseManager
 from .license.exceptions import LicenseError
+from config.paths import SRC_MAIN
 
 
 class ResourceManager_LA(ResourceManager):
@@ -20,7 +21,7 @@ class ResourceManager_LA(ResourceManager):
     Maintains license holds for each workflow and coordinates dual-resource lifecycle.
     """
 
-    def __init__(self, path_to_resources='/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/resources.yaml'):
+    def __init__(self, path_to_resources=f'{SRC_MAIN}/config/resources.yaml'):
         super().__init__(path_to_resources)
 
         # Initialize license manager
