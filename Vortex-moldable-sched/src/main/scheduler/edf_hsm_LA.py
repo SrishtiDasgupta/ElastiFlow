@@ -496,6 +496,9 @@ class EDF_HSM_LA(Scheduler_LA):
         )
 
         if not alloc_instances:
+            # Compute gate rejected the request; the licence pool was never tested.
+            self._last_licence_outcome = 'deny_compute'
+            self.metrics.recordNegotiationOutcome('deny_compute')
             return ([], [])
 
         # If no license pool, return compute allocation as-is
@@ -526,6 +529,10 @@ class EDF_HSM_LA(Scheduler_LA):
                 self.license_manager.commit(hold_id)
 
                 print(f"  ✓ Allocated {licenses_needed} licenses (available: {available_tokens})")
+                self._last_licence_outcome = 'approve'
+                self.metrics.recordNegotiationOutcome(
+                    'approve', tokens_needed=licenses_needed,
+                    tokens_available=available_tokens)
                 return (alloc_instances, [hold_id])
 
             else:
@@ -554,14 +561,27 @@ class EDF_HSM_LA(Scheduler_LA):
                     self.license_manager.commit(hold_id)
 
                     print(f"  ✓ Partial allocation: {sum(c for _, c in feasible_instances)} instances, {licenses_feasible} licenses")
+                    self._last_licence_outcome = 'modify'
+                    self.metrics.recordNegotiationOutcome(
+                        'modify',
+                        requested=sum(c for _, c in alloc_instances),
+                        granted=sum(c for _, c in feasible_instances),
+                        tokens_needed=licenses_needed,
+                        tokens_available=available_tokens)
                     return (feasible_instances, [hold_id])
 
                 else:
                     print(f"  ✗ Cannot fit any allocation to available licenses")
+                    self._last_licence_outcome = 'deny_licence'
+                    self.metrics.recordNegotiationOutcome(
+                        'deny_licence', tokens_needed=licenses_needed,
+                        tokens_available=available_tokens)
                     return ([], [])
 
         except (InsufficientTokens, LicenseError) as e:
             print(f"  ✗ License error: {e}")
+            self._last_licence_outcome = 'deny_licence'
+            self.metrics.recordNegotiationOutcome('deny_licence')
             return ([], [])
 
     def findLicenseFeasibleAllocation(
@@ -723,10 +743,12 @@ class EDF_HSM_LA(Scheduler_LA):
         """Licence-aware static -> moldable gate. Returns True if the workflow
         should remain in the STATIC phase (scale-down suppressed) this renegotiation.
 
-        Transition (one-way) STATIC -> MOLDABLE fires when EITHER:
+        Transition (one-way) STATIC -> MOLDABLE fires only when BOTH hold:
           safe  := projected deadline slack at the current allocation
-                   >= HSM_SLACK_TAU * (deadline - start_time), OR
+                   >= HSM_SLACK_TAU * (deadline - start_time), AND
           cheap := licence-pool pressure (allocated/total) < rho[pool].
+        (The implementation below is `floor_ok and safe and cheap`; an earlier
+        revision of this docstring said EITHER/OR and was never correct.)
         A workflow already in MOLDABLE stays there. STATIC_PHASE_ITERS is a hard
         floor: the gate cannot fire while ind <= STATIC_PHASE_ITERS.
         """
@@ -1145,12 +1167,19 @@ class EDF_HSM_LA(Scheduler_LA):
         else:
             print(f"⏸ No scaling: insufficient resources or licenses")
             # Record scale-up failure
+            # Attribute to licences ONLY when the Stage 1 licence gate actually
+            # denied. This was previously the residual else-branch, so it absorbed
+            # every rejection the other three tests did not explain without ever
+            # consulting the pool, and reported phantom licence failures.
             free_compute = any(r.getFreeSlots() > 0 for r in free_resources)
-            if not free_compute:
-                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_compute', workflow_id=request['wf-id'])
+            if getattr(self, '_last_licence_outcome', None) == 'deny_licence':
+                _reason = 'insufficient_licenses'
+            elif not free_compute:
+                _reason = 'insufficient_compute'
             elif available_budget <= 0:
-                self.metrics.recordScaleUpAttempt(success=False, reason='budget_exhausted', workflow_id=request['wf-id'])
+                _reason = 'budget_exhausted'
             elif available_time <= 0:
-                self.metrics.recordScaleUpAttempt(success=False, reason='time_exhausted', workflow_id=request['wf-id'])
+                _reason = 'time_exhausted'
             else:
-                self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_licenses', workflow_id=request['wf-id'])
+                _reason = 'unattributed'
+            self.metrics.recordScaleUpAttempt(success=False, reason=_reason, workflow_id=request['wf-id'])

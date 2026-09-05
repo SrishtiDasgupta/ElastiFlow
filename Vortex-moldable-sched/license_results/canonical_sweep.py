@@ -47,7 +47,17 @@ def run_cell(pol, N, sd):
     out_dir = RUN_ROOT / key(pol, N, sd)
     out_dir.mkdir(parents=True, exist_ok=True)
     sp = out_dir / 'stdout.log'
-    env = dict(os.environ); env.update(LA_DEPTH_MODE='cost', LA_MAX_DEPTH='8')
+    env = dict(os.environ); env.update(LA_DEPTH_MODE='cost', LA_MAX_DEPTH='8',
+                                       LA_PARTIAL_RELEASE='0.90')
+    if pol == 'EDF-HSM':
+        # The deployed code bakes PER-POOL pressure thresholds (ANSYS/ABAQUS 0.60,
+        # LSDYNA 0.95). The canonical dataset is the UNIFORM rho = 0.70 variant, so
+        # all three per-pool vars must be overridden as well as the default. Without
+        # this the sweep silently produces the per-pool variant, which the thesis
+        # rejected, and the EDF-HSM cells do not reproduce. See regen_hsm_uniform.py,
+        # which is how these cells were originally made.
+        env.update(LA_HSM_POOL_RHO='0.70', LA_HSM_POOL_RHO_ANSYS='0.70',
+                   LA_HSM_POOL_RHO_ABAQUS='0.70', LA_HSM_POOL_RHO_LSDYNA='0.70')
     cmd = [str(VENV_PY), str(SIM_SCRIPT), '--scheduler', pol,
            '--N', str(N), '--seed', str(sd), '--output-dir', str(out_dir)]
     t0 = time.time()

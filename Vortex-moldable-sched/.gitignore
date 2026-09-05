@@ -36,3 +36,18 @@ plain_results/k_sweep_runs/
 /LAMF_*.csv
 *.tmp
 fsx/hyperparameter_test/error_log1.rtf
+
+# Thesis sources and submission artefacts (kept out of the code repository)
+/Srishti Dasgupta Dissertation Final/
+/Srishti Dasgupta Dissertation Final*.zip
+/Srishti_Dasgupta_Dissertation_Final.pdf
+/merge_test.pdf
+/02-Henkel-GNSSystems-P.pdf
+
+# Superseded figure generations and editor backups
+license_results/plots_ansys_n4_backup/
+*.BAK
+*.BAK_*
+
+# Local tooling
+.claude/

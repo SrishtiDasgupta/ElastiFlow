@@ -51,7 +51,7 @@ class PerCoreSoftwareCalculations:
     Supported strategy types:
       - linear          : tokens = cores
       - powerlaw        : tokens = ceil(max(min_tokens, a * cores^b))
-      - ansys_workgroup : tokens = 1 (MEBA) + max(0, cores - 4)
+      - ansys_workgroup : tokens = 1 (MEBA) + max(0, cores - 2)  [Henkel anshpc]
       - ansys_packs     : tokens = 1 (MEBA) + ceil(log2(cores/4)) for cores > 4, else 1
     """
 
@@ -81,8 +81,8 @@ class PerCoreSoftwareCalculations:
     def _ansys_workgroup(self, cores: int, _: Dict[str, Any]) -> int:
         if cores <= 0:
             return 0
-        # 1 MEBA + per-core beyond 4
-        return 1 + max(0, int(cores) - 4)
+        # 1 MEBA + HPC per-core beyond 2 (Henkel anshpc: T_hpc = n-2)
+        return 1 + max(0, int(cores) - 2)
 
     def _ansys_packs(self, cores: int, _: Dict[str, Any]) -> int:
         if cores <= 0:

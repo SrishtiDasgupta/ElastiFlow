@@ -58,8 +58,8 @@ CORNERS = [("static", "edf"), ("static", "fcfs"),
            ("moldable", "edf"), ("moldable", "fcfs")]
 KEY = {("static","edf"):"STAT EDF", ("static","fcfs"):"STAT FCFS",
        ("moldable","edf"):"MAL EDF", ("moldable","fcfs"):"MAL FCFS"}
-LABEL = {"STAT EDF":"EDF-ST$_c$", "STAT FCFS":"FCFS-ST$_c$",
-         "MAL EDF":"Elastic-EDF$_c$", "MAL FCFS":"Elastic-FCFS$_c$"}
+LABEL = {"STAT EDF":"EDF-ST", "STAT FCFS":"FCFS-ST",
+         "MAL EDF":"Elastic-EDF", "MAL FCFS":"Elastic-FCFS"}
 short = {("static","edf"):"EDF-ST", ("static","fcfs"):"FCFS-ST",
          ("moldable","edf"):"E-EDF", ("moldable","fcfs"):"E-FCFS"}
 
@@ -376,10 +376,10 @@ def plot_cross_pareto_shared_axes():
     VARS = ["fcfs_static_r","fcfs_static_c","fcfs_moldable_r","fcfs_moldable_c",
             "edf_static_r","edf_static_c","edf_moldable_r","edf_moldable_c",
             "heft_static","rank_moldable_5050","rank_moldable_2575"]
-    LBL = {"fcfs_static_r":"FCFS-ST$_r$","fcfs_static_c":"FCFS-ST$_c$",
-           "fcfs_moldable_r":"Elastic-FCFS$_r$","fcfs_moldable_c":"Elastic-FCFS$_c$",
-           "edf_static_r":"EDF-ST$_r$","edf_static_c":"EDF-ST$_c$",
-           "edf_moldable_r":"Elastic-EDF$_r$","edf_moldable_c":"Elastic-EDF$_c$",
+    LBL = {"fcfs_static_r":"FCFS-ST$_r$","fcfs_static_c":"FCFS-ST",
+           "fcfs_moldable_r":"Elastic-FCFS$_r$","fcfs_moldable_c":"Elastic-FCFS",
+           "edf_static_r":"EDF-ST$_r$","edf_static_c":"EDF-ST",
+           "edf_moldable_r":"Elastic-EDF$_r$","edf_moldable_c":"Elastic-EDF",
            "heft_static":"HEFT-ST",
            "rank_moldable_5050":"Elastic-Rank[50,50]",
            "rank_moldable_2575":"Elastic-Rank[25,75]"}
@@ -411,7 +411,7 @@ def plot_cross_pareto_shared_axes():
     fpts = sorted([(pts_seis[v][0], pts_seis[v][1]) for v in SEIS_FRONT])
     ax.plot([p[0] for p in fpts], [p[1] for p in fpts],
             "k--", linewidth=1.8, alpha=0.7, zorder=2)
-    ax.set_xlabel("Cost per workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("$\\bar{\\gamma}$ (cost per workflow, USD)", fontsize=LABEL_FS)
     ax.set_ylabel("OMR  (budget OR deadline)", fontsize=LABEL_FS)
     ax.set_title("Plain SeisSol @ N = 400", fontsize=TITLE_FS - 2)
     ax.tick_params(labelsize=TICK_FS)
@@ -464,7 +464,7 @@ def plot_cross_pareto_shared_axes():
     if len(fp) >= 2:
         ax.plot([p[0] for p in fp], [p[1] for p in fp],
                 "k--", linewidth=1.8, alpha=0.7, zorder=2)
-    ax.set_xlabel("Cost per workflow (USD)", fontsize=LABEL_FS)
+    ax.set_xlabel("$\\bar{\\gamma}$ (cost per workflow, USD)", fontsize=LABEL_FS)
     ax.set_ylabel("OMR  (budget OR deadline)", fontsize=LABEL_FS)
     ax.set_title("HPO @ N = 7", fontsize=TITLE_FS - 2)
     ax.tick_params(labelsize=TICK_FS)

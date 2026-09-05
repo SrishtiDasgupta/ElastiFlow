@@ -49,10 +49,10 @@ HPO = {
                    5: dict(cost=(5.32, 0.97), miss=(1.8, 0.8), sf=(450.2, 54.0)),
                    7: dict(cost=(6.67, 0.88), miss=(3.3, 1.0), sf=(722.0, 103.9))},
 }
-HPO_LABEL = {"STAT EDF":  "EDF-ST$_c$",
-             "STAT FCFS": "FCFS-ST$_c$",
-             "MAL EDF":   "Elastic-EDF$_c$",
-             "MAL FCFS":  "Elastic-FCFS$_c$"}
+HPO_LABEL = {"STAT EDF":  "EDF-ST",
+             "STAT FCFS": "FCFS-ST",
+             "MAL EDF":   "Elastic-EDF",
+             "MAL FCFS":  "Elastic-FCFS"}
 HPO_COL = {"STAT EDF": "#B91C1C", "STAT FCFS": "#F59E0B",
            "MAL EDF":  "#1D4ED8", "MAL FCFS":  "#059669"}
 HPO_MARKER = {"STAT EDF": "o", "STAT FCFS": "s",
@@ -62,14 +62,42 @@ HPO_NS = [3, 5, 7]
 # ============================================================================
 # Plot 1 — HPO Pareto trajectory across N
 # ============================================================================
+def _hpo_pareto_data():
+    """Per-(corner, N) per-workflow cost (gamma-bar = cost_total / N, USD) and
+    overall miss rate (OMR = fraction of workflows missing deadline OR budget),
+    mean+std over the runs, read live from total_cost_per_run.json. This
+    replaces the earlier hard-coded table so the figure stays consistent with
+    the canonical data and with the (gamma-bar, OMR) framing of the prose."""
+    raw = json.loads(HPO_JSON.read_text())
+    suff = {"STAT EDF": "static_edf", "STAT FCFS": "static_fcfs",
+            "MAL EDF": "moldable_edf", "MAL FCFS": "moldable_fcfs"}
+    out = {}
+    for corner, sf in suff.items():
+        out[corner] = {}
+        for n in HPO_NS:
+            pr = raw[f"N{n}_{sf}"]["per_run"]
+            gbar = [r["cost_total"] / n for r in pr]
+            omr = []
+            for r in pr:
+                pw = r["per_wf"]
+                ov = sum(1 for w in pw.values()
+                         if w.get("miss") or w.get("budget_miss"))
+                omr.append(ov / len(pw))
+            out[corner][n] = dict(
+                cost=(mean(gbar), stdev(gbar)),
+                miss=(mean(omr), stdev(omr)))
+    return out
+
+
 def plot_hpo_pareto_trajectory():
+    P = _hpo_pareto_data()
     fig, ax = plt.subplots(figsize=(12, 7.5))
-    # Plot trajectories
+    # Plot trajectories in (per-workflow cost, OMR) space
     for corner in ["STAT EDF", "STAT FCFS", "MAL EDF", "MAL FCFS"]:
-        xs = [HPO[corner][n]["cost"][0] for n in HPO_NS]
-        ys = [HPO[corner][n]["miss"][0] for n in HPO_NS]
-        xe = [HPO[corner][n]["cost"][1] for n in HPO_NS]
-        ye = [HPO[corner][n]["miss"][1] for n in HPO_NS]
+        xs = [P[corner][n]["cost"][0] for n in HPO_NS]
+        ys = [P[corner][n]["miss"][0] for n in HPO_NS]
+        xe = [P[corner][n]["cost"][1] for n in HPO_NS]
+        ye = [P[corner][n]["miss"][1] for n in HPO_NS]
         ax.errorbar(xs, ys, xerr=xe, yerr=ye, fmt="none",
                     ecolor=HPO_COL[corner], alpha=0.4, capsize=3, lw=1.0)
         ax.plot(xs, ys, "-", color=HPO_COL[corner], linewidth=2.0, alpha=0.5,
@@ -77,37 +105,25 @@ def plot_hpo_pareto_trajectory():
         ax.scatter(xs, ys, s=180, color=HPO_COL[corner],
                    marker=HPO_MARKER[corner], edgecolor="black",
                    linewidth=1.5, label=HPO_LABEL[corner], zorder=5)
-        # Mark each N with a small label next to the marker
         for n, x, y in zip(HPO_NS, xs, ys):
             ax.annotate(f"N={n}", (x, y),
                         xytext=(8, 8), textcoords="offset points",
                         fontsize=10, color=HPO_COL[corner], alpha=0.9,
                         fontweight="bold")
-    # Frontier annotations per N (small text)
-    frontier_text = {
-        3: "N=3: Static wins\n(both axes)",
-        5: "N=5: Frontier splits\n(Static for cost,\n Elastic for misses)",
-        7: "N=7: Elastic dominates\n(both axes)",
-    }
-    # Compute average corner positions per N for label placement
-    label_pos = {
-        3: (1.5, 0.05),
-        5: (6.6, 2.45),
-        7: (5.6, 4.5),
-    }
-    for n, (px, py) in label_pos.items():
-        ax.text(px, py, frontier_text[n],
-                fontsize=11, fontstyle="italic", color="#4B5563",
-                bbox=dict(boxstyle="round,pad=0.4", fc="#F9FAFB",
-                          ec="#9CA3AF", linewidth=1.0, alpha=0.9))
-    ax.set_xlabel("Total batch cost (USD)", fontsize=LABEL_FS)
-    ax.set_ylabel("Deadline misses (count)", fontsize=LABEL_FS)
+    # Frontier composition per N (N=3 static-only, N=5 elastic-only,
+    # N=7 Elastic-EDF alone) is stated in the caption and in the prose of
+    # 9.3.3 rather than annotated here. The boxes were unanchored, so readers
+    # attached them to the nearest marker; the "N=3: Static-only" box in
+    # particular sat beside an ELASTIC marker. Interpretation belongs in the
+    # text, where "non-dominated" can be unpacked; the plot shows the trajectory.
+    ax.set_xlabel(r"$\bar{\gamma}$ (cost per workflow, USD)", fontsize=LABEL_FS)
+    ax.set_ylabel("Overall miss-rate (OMR)", fontsize=LABEL_FS)
     ax.set_title("HPO Pareto trajectory across batch size N",
                  fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
     ax.grid(True, alpha=0.3)
-    ax.set_xlim(0, 9.5)
-    ax.set_ylim(-0.3, 5.5)
+    ax.set_xlim(1.9, 3.9)
+    ax.set_ylim(0.45, 1.0)
     ax.legend(fontsize=LEG_FS, ncol=4, loc="upper center",
               bbox_to_anchor=(0.5, -0.12), framealpha=0.92)
     fig.tight_layout()
@@ -190,10 +206,10 @@ def plot_cross_chapter_pareto():
     VARS = ["fcfs_static_r","fcfs_static_c","fcfs_moldable_r","fcfs_moldable_c",
             "edf_static_r","edf_static_c","edf_moldable_r","edf_moldable_c",
             "heft_static","rank_moldable_5050","rank_moldable_2575"]
-    LBL = {"fcfs_static_r":"FCFS-ST$_r$","fcfs_static_c":"FCFS-ST$_c$",
-           "fcfs_moldable_r":"Elastic-FCFS$_r$","fcfs_moldable_c":"Elastic-FCFS$_c$",
-           "edf_static_r":"EDF-ST$_r$","edf_static_c":"EDF-ST$_c$",
-           "edf_moldable_r":"Elastic-EDF$_r$","edf_moldable_c":"Elastic-EDF$_c$",
+    LBL = {"fcfs_static_r":"FCFS-ST$_r$","fcfs_static_c":"FCFS-ST",
+           "fcfs_moldable_r":"Elastic-FCFS$_r$","fcfs_moldable_c":"Elastic-FCFS",
+           "edf_static_r":"EDF-ST$_r$","edf_static_c":"EDF-ST",
+           "edf_moldable_r":"Elastic-EDF$_r$","edf_moldable_c":"Elastic-EDF",
            "heft_static":"HEFT-ST",
            "rank_moldable_5050":"Elastic-Rank[50,50]",
            "rank_moldable_2575":"Elastic-Rank[25,75]"}
@@ -333,8 +349,8 @@ def plot_hpo_intent_satisfaction_n7():
 
     ax.set_xticks(x)
     ax.set_xticklabels([HPO_LABEL[k] for k, _ in moldable], fontsize=TICK_FS)
-    ax.set_ylabel("Share of WE-UP intents (%)", fontsize=LABEL_FS)
-    ax.set_title("Outcome of every Workflow-Engine UP intent at N = 7\n"
+    ax.set_ylabel("Share of scale-up requests (%)", fontsize=LABEL_FS)
+    ax.set_title("Outcome of every scale-up request at N = 7\n"
                  "(n = 6 averaged)", fontsize=TITLE_FS)
     ax.tick_params(labelsize=TICK_FS)
     ax.grid(True, axis="y", alpha=0.3)

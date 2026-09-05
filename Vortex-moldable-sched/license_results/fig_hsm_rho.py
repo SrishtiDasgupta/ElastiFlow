@@ -42,14 +42,14 @@ HSM_C = '#7C3AED'
 
 PANELS = [
     (lambda c: c.get('deadline_miss_rate'), 'Deadline miss rate',
-     r'Deadline misses vs $\rho$', False),
+     r'Deadline misses vs $P_{\mathrm{thresh}}$', False),
     (lambda c: c.get('overall_miss_rate'), 'Overall miss rate',
-     r'Overall misses vs $\rho$', False),
+     r'Overall misses vs $P_{\mathrm{thresh}}$', False),
     (lambda c: (c.get('avg_cost_eur') or 0) * EUR_TO_USD
      if c.get('avg_cost_eur') is not None else None,
-     'Avg cost per workflow (USD)', r'Cost vs $\rho$', False),
+     'Avg cost per workflow (USD)', r'Cost vs $P_{\mathrm{thresh}}$', False),
     (lambda c: c.get('eff_lic_util'), 'Effective license utilisation (%)',
-     r'Effective LU vs $\rho$', True),
+     r'Effective LU vs $P_{\mathrm{thresh}}$', True),
 ]
 
 
@@ -105,10 +105,10 @@ def main():
                        label='EDF-LAMF baseline')
         # Deployed rho marker.
         ax.axvline(DEPLOYED_RHO, color='#888888', ls=':', lw=1.6, zorder=0)
-        ax.text(0.03, 0.97, r'deployed' '\n' r'$\rho = 0.7$', transform=ax.transAxes,
+        ax.text(0.03, 0.97, r'deployed' '\n' r'$P_{\mathrm{thresh}} = 0.7$', transform=ax.transAxes,
                 fontsize=LEG_FS, color='#555555', ha='left', va='top', zorder=6,
                 bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='#cccccc', alpha=0.9))
-        ax.set_xlabel(r'Pool-pressure release threshold  $\rho$', fontsize=LABEL_FS)
+        ax.set_xlabel(r'Pool-pressure release threshold  $P_{\mathrm{thresh}}$', fontsize=LABEL_FS)
         ax.set_ylabel(ylabel, fontsize=LABEL_FS)
         ax.set_title(title, fontsize=TITLE_FS)
         ax.set_xticks(rs)
@@ -122,9 +122,9 @@ def main():
     handles, labels = axes.flat[0].get_legend_handles_labels()
     fig.legend(handles, labels, fontsize=LEG_FS, ncol=len(labels),
                loc='upper center', bbox_to_anchor=(0.5, 0.065), framealpha=0.92)
-    fig.suptitle(r'Licence-aware HSM gate: pool-pressure release threshold $\rho$'
+    fig.suptitle(r'Licence-aware HSM gate: pool-pressure release threshold $P_{\mathrm{thresh}}$'
                  '\n'
-                 r'(N = 300, r = 0.90) — lower $\rho$ holds longer: more deadline '
+                 r'(N = 300, r = 0.90) — lower $P_{\mathrm{thresh}}$ holds longer: more deadline '
                  r'protection at a cost premium',
                  fontsize=TITLE_FS, y=0.999)
     fig.tight_layout(rect=[0, 0.06, 1, 0.94])

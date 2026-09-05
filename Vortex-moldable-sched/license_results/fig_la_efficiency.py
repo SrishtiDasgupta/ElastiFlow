@@ -122,13 +122,13 @@ def main():
         lambda c: (c['tot_lic'] * c['waste_frac'] / 100 / c['_N'] * 1.10)
         if c.get('tot_lic') is not None and c.get('waste_frac') is not None
         and c.get('_N') else None,
-        'Wasted license cost per workflow (USD)',
+        '$\\gamma^{\\mathrm{waste}}_{\\mathrm{lic}}$ (license waste per workflow, USD)',
         'License spend on incomplete work vs N',
         'LA_05_waste_usd_vs_n')
     out['LA_06_tokensec_per_done'] = plot_vs_n(
-        lambda c: (c['token_sec_total'] / c['n_done'] / 1e6)
+        lambda c: (c['token_sec_total'] / c['n_done'] / 3600.0)
         if c.get('token_sec_total') and c.get('n_done') else None,
-        'Token-seconds per completed workflow\n(millions)',
+        'Token-hours per completed workflow',
         'License-time per completed workflow vs N',
         'LA_06_tokensec_per_done_vs_n')
     (HERE / 'data_la_efficiency.json').write_text(json.dumps(out, indent=2))

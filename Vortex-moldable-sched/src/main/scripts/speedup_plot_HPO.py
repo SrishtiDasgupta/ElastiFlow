@@ -94,9 +94,9 @@ def plot_instance(ax, runtimes, title):
                 label=f'{MODEL_LABELS[m]} (factor = {mf})')
 
     title_eq = (f'{title}   (R² = {r2:.4f})\n'
-                r'$T_{epoch} = $' + f'{a:.3f}' +
-                r' $\cdot$ workers$^{-' + f'{b:.3f}' + r'} \cdot$ model_factor')
-    ax.set_title(title_eq, fontsize=AXIS_LABEL_FS, fontweight='bold')
+                r'$T_{epoch}\,(\hat{\theta}_{\mathrm{e}}) = $' + f'{a:.3f}' +
+                r' $\cdot$ workers$\,(\nu)^{-' + f'{b:.3f}' + r'} \cdot$ model factor $(f(m^{w}))$')
+    ax.set_title(title_eq, fontsize=13, fontweight='bold')
     ax.set_xticks([1, 2, 4])
     ax.tick_params(axis='both', labelsize=TICK_FS)
     for lbl in ax.get_xticklabels() + ax.get_yticklabels():
@@ -111,7 +111,7 @@ plot_instance(axs[0], g4_xlarge, 'g4dn.xlarge (Tesla T4)')
 plot_instance(axs[1], g5_xlarge, 'g5.xlarge (NVIDIA A10G)')
 
 # Shared figure-level axis labels (match speedup_plot.py)
-fig.supxlabel('Number of workers (GPUs)', fontsize=AXIS_LABEL_FS,
+fig.supxlabel(r'Number of workers ($\nu$, GPUs)', fontsize=AXIS_LABEL_FS,
               fontweight='bold', y=0.055)
 fig.supylabel('Runtime per epoch (seconds)', fontsize=AXIS_LABEL_FS,
               fontweight='bold', x=0.045)
