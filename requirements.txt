@@ -1,0 +1,16 @@
+# Pinned runtime environment (Python 3.13, macOS/Linux), as used for the results in
+# the dissertation. The unpinned dependency list lives in pyproject.toml; install the
+# framework itself with `pip install -e .` after these. See docs/INSTALL.md.
+simulus==1.2.1
+numpy==2.3.3
+pandas==2.3.3
+scipy==1.16.2
+scikit-learn==1.7.2
+matplotlib==3.10.6
+seaborn==0.13.2
+PyYAML==6.0.3
+redis==7.0.1
+requests==2.32.5
+paramiko==4.0.0
+boto3==1.40.72
+botocore==1.40.72

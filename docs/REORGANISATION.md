@@ -209,6 +209,21 @@ runner reads were never committed, so a clone could not run that campaign. They
 are tracked now, per the decision to keep generated workloads in the repository.
 `src/test/` (workload fixtures and one ad-hoc script) moves in A5.
 
+A4 (2026-09-06): `requirements.txt` is a pinned freeze of the environment that
+produced the results (the old file held shell commands and omitted simulus);
+`docs/INSTALL.md` carries the Redis and venv steps. Two test layers were added:
+`tests/unit/test_imports.py` imports every framework module, including the
+live-mode entry points (main, main_LA, main_HPO, the executors, AWS
+provisioning), each in a fresh interpreter with a time limit, which is the
+composition check live mode can get without infrastructure; and
+`tests/smoke/` (`pytest -m smoke`, about seven minutes) runs all 11 SeisSol and 5
+licence policies once plus the Ch7 runner. The import test found one defect of
+A3 (`audit_workflows.py` referenced a name whose definition had been removed;
+fixed) and two standalone analysis scripts that act on import
+(`speedup_HPO.py` reads g4/g5.jsonl from the working directory,
+`speedup_plot_HPO.py` writes plots/speedup_HPO.*); both are excluded with the
+reason and get a `__main__` guard when they move in A5.
+
 **Phase A, move without changing behaviour** (git mv, import rewrites, path fixes,
 deletions). The three runners and the three scheduler forks survive this phase
 untouched inside the new tree; `elastiflow.cli` simply dispatches to them.
