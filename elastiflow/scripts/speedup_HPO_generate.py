@@ -104,8 +104,8 @@ def getRuntime_{instance_name}(workers, model, epochs):
 """
 
 if __name__ == "__main__":
-    g4_data = extract_runtime_data(f"{_REPO_ROOT}/HPO/g4_img64.jsonl")
-    g5_data = extract_runtime_data(f"{_REPO_ROOT}/HPO/g5_img64.jsonl")
+    g4_data = extract_runtime_data(f"{_REPO_ROOT}/use_cases/hpo/g4_img64.jsonl")
+    g5_data = extract_runtime_data(f"{_REPO_ROOT}/use_cases/hpo/g5_img64.jsonl")
 
     best_g4 = fit_all_models(g4_data, "g4")
     best_g5 = fit_all_models(g5_data, "g5")

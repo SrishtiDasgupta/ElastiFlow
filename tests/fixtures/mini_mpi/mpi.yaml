@@ -1,0 +1,10 @@
+api: 4.7.0                            # ideally, we use the same api values as Steep, with minimal documented modifications
+
+environment:
+  - slots: 8                          # this is not standard within steep. It should be equivalent to how one submits a workflow to SLURM
+
+actions:
+  - type: execute                     # check types in Steep. We would at least add type simulate-runtime and simulate-instant
+    service: ~/ElastiFlow/tests/fixtures/mini_mpi/mpi-test.out             # develop such as services.yaml is not optional for refactoring reasons
+    inputs:
+    outputs:

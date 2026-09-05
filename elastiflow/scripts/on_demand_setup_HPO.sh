@@ -30,7 +30,7 @@ echo "Setup complete"
 
 cd ~
 
-sudo cp -r /fsx/Vortex-mid/Vortex-moldable-sched/ ~
+sudo cp -r /fsx/ElastiFlow/ ~
 
 cd ElastiFlow/elastiflow
 

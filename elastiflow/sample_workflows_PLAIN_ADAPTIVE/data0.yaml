@@ -6,7 +6,7 @@ actions:
     outputs:
     - id: tinyda_output
       var: output_coh
-    service: Seis-Bridge/tinyda_client_adaptive.py
+    service: use_cases/seissol/driver/tinyda_client_adaptive.py
     type: execute
   enumerator: i
   input: input_coh

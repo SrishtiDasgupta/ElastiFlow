@@ -9,7 +9,7 @@ reproduces exactly; floats are compared to a 1e-12 relative tolerance only
 because the HPO aggregation differs by one ulp in some standard deviations.
 
 Nothing here writes into the datasets of record. The sweep drivers
-(`plain_results/sweep_PLAIN.py`, `license_results/canonical_sweep.py`) merge
+(`use_cases/seissol/results/sweep_PLAIN.py`, `use_cases/licence/results/canonical_sweep.py`) merge
 results in place into those files, so the tests call the underlying runners
 directly and parse their output with the same functions the drivers use.
 """
@@ -25,10 +25,10 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]          # repository root
 PACKAGE = REPO / 'elastiflow'                       # installed editable: pip install -e .
 
-# license_analysis.py and parse_la_run.py live in license_results/ and are
+# license_analysis.py and parse_la_run.py live in use_cases/licence/results/ and are
 # imported by name in canonical_sweep.py; mirror its import environment.
-if str(REPO / 'license_results') not in sys.path:
-    sys.path.insert(0, str(REPO / 'license_results'))
+if str(REPO / 'use_cases' / 'licence' / 'results') not in sys.path:
+    sys.path.insert(0, str(REPO / 'use_cases' / 'licence' / 'results'))
 
 
 @pytest.fixture(scope='session')

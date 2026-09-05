@@ -14,8 +14,8 @@ import pytest
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'regression'))
 from conftest import REPO, la_env, load_module, run  # noqa: E402
 
-sweep = load_module(REPO / 'plain_results' / 'sweep_PLAIN.py')
-parse_la_run = load_module(REPO / 'license_results' / 'parse_la_run.py')
+sweep = load_module(REPO / 'use_cases' / 'seissol' / 'results' / 'sweep_PLAIN.py')
+parse_la_run = load_module(REPO / 'use_cases' / 'licence' / 'results' / 'parse_la_run.py')
 
 pytestmark = pytest.mark.smoke
 

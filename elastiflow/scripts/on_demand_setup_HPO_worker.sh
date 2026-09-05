@@ -151,9 +151,9 @@ echo "PyTorch + Ray venv created at ~/rayenv"
 cd ~
 
 # Symlink Vortex codebase to EFS (single source of truth, no stale copy)
-if [ ! -L ~/Vortex-moldable-sched ]; then
-    rm -rf ~/Vortex-moldable-sched
-    ln -s /fsx/Vortex-mid/Vortex-moldable-sched ~/Vortex-moldable-sched
+if [ ! -L ~/ElastiFlow ]; then
+    rm -rf ~/ElastiFlow
+    ln -s /fsx/ElastiFlow ~/ElastiFlow
 fi
 
 # Verify codebase exists
