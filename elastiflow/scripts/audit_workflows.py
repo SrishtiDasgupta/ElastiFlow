@@ -14,14 +14,16 @@ from collections import defaultdict
 
 import yaml
 
+from elastiflow.config.paths import PACKAGE_DIR
+
 from elastiflow.utils.validate_workflow import validate_workflow  # noqa: E402
 
 
 # (workflow_type, absolute_directory_path)
 DIRS = [
-    ('PLAIN', os.path.join(_SRC_MAIN, 'sample_workflows')),
-    ('LA',    os.path.join(_SRC_MAIN, 'workflow', 'sample_workflows_LA')),
-    ('HPO',   os.path.join(_SRC_MAIN, 'workflow', 'sample_workflows_HPO')),
+    ('PLAIN', os.path.join(str(PACKAGE_DIR), 'sample_workflows')),
+    ('LA',    os.path.join(str(PACKAGE_DIR), 'workflow', 'sample_workflows_LA')),
+    ('HPO',   os.path.join(str(PACKAGE_DIR), 'workflow', 'sample_workflows_HPO')),
 ]
 
 
