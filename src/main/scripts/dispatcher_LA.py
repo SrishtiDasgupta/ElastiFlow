@@ -25,6 +25,7 @@ from config.constants_LA import (
     SUBMISSION_JITTER_MINUTES
 )
 from utils.validate_workflow import validate_workflow
+from config.paths import SRC_MAIN
 
 
 def plotSubmitTimes(submitTimes):
@@ -55,7 +56,7 @@ def delayGenerationFromSubmitTimes(workflows):
 
     Returns: List of delays (in seconds) between consecutive workflow submissions
     """
-    data = pd.read_csv('/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv', sep="\t")
+    data = pd.read_csv(f'{SRC_MAIN}/scripts/submitTimes.csv', sep="\t")
     data['submit times'] = pd.to_datetime(data['submit times'])
     data['submit_time_only'] = data['submit times'].dt.time
 
@@ -226,7 +227,7 @@ def dispatcher_LA(sim, wf_mb):
     print(f'[{sim.now:8.1f}s] All workflows dispatched, waiting for completion...')
     sim.sleep(5_000_000)  # generous: ~58 simulated days
     print(f'[{sim.now:8.1f}s] Sending END signal')
-    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main")))
+    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', f"{SRC_MAIN}")))
 
 
 if __name__ == "__main__":

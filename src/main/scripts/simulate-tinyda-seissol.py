@@ -6,9 +6,10 @@ import heapq
 import numpy as np
 
 from speedup import getRuntime
+_SRC_MAIN = __import__('pathlib').Path(__file__).resolve().parents[1]
 
 def fetchWorkflow(i):
-    file_name= "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/sample_workflows/data"+ str(i) + ".yaml"
+    file_name= f"{_SRC_MAIN}/sample_workflows/data"+ str(i) + ".yaml"
     with open(file_name, 'r') as stream:
         try:
             workflow = yaml.safe_load(stream)

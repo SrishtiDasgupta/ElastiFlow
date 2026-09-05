@@ -18,6 +18,7 @@ from .exceptions import (
     LicenseError, UnknownPool, InsufficientTokens,
     InvalidHold, HoldExpired, AlreadyCommitted
 )
+from config.paths import SRC_MAIN
 
 
 class LicenseManager:
@@ -36,7 +37,7 @@ class LicenseManager:
     - Picklable for multiprocessing
     """
 
-    def __init__(self, config_path: str = "/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml"):
+    def __init__(self, config_path: str = f"{SRC_MAIN}/config/licenses.yaml"):
         """
         Initialize license manager from YAML config
 

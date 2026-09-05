@@ -12,10 +12,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
+_SRC_MAIN = __import__('pathlib').Path(__file__).resolve().parents[1]
 
-CSV = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/scripts/submitTimes.csv'
-OUT_PNG = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/plots/submit_times.png'
-OUT_PDF = '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/plots/submit_times.pdf'
+CSV = f'{_SRC_MAIN}/scripts/submitTimes.csv'
+OUT_PNG = f'{_SRC_MAIN}/plots/submit_times.png'
+OUT_PDF = f'{_SRC_MAIN}/plots/submit_times.pdf'
 
 
 def sample_submission_times(N, seed=0):

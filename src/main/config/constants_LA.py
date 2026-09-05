@@ -6,6 +6,7 @@ Extends base constants with LA-specific settings for simulation mode.
 
 # Import all base constants
 from .constants import *
+from config.paths import SRC_MAIN
 
 # ============================================================================
 # SIMULATION MODE SETTINGS
@@ -72,7 +73,7 @@ LICENSE_SOFTWARE_ID = {
     'LSDYNA': 3
 }
 
-# License pool capacities (must match /Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/config/licenses.yaml)
+# License pool capacities (must match src/main/config/licenses.yaml)
 # Sized to 1.15x the BASELINE STATIC (EDF-ST-LA) peak token demand at N=400, measured
 # buffer-free across 6 seeds (max-seed peak: ANSYS=5071, ABAQUS=1376, LSDYNA=5408).
 # => static at ~87% peak occupancy. Policy-independent reference (static never buffers),
@@ -116,7 +117,7 @@ WORKFLOWS_DIR_LA = 'sample_workflows_LA'
 import os as _os
 WORKFLOW_OUTPUT_DIR_LA = _os.environ.get(
     'LA_WORKFLOW_DIR',
-    '/Users/srishtidasgupta/PhD/PhD/PhD_Codebase/Vortex-mid/Vortex-moldable-sched/src/main/workflow/sample_workflows_LA')
+    f'{SRC_MAIN}/workflow/sample_workflows_LA')
 
 # ============================================================================
 # MOLDABLE SCHEDULING PARAMETERS (inherited from base)
