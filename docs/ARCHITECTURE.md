@@ -23,24 +23,26 @@ The target layout and the plan are in `docs/REORGANISATION.md`.
 ## Execution modes
 
 The dissertation (Fig. 7.1) describes one execution-backend interface with a
-mode flag. In the code today the mode is a constant per use case
-(`config/constants.py`, `constants_LA.py`: `SIMULATE = True`; `constants_HPO.py`:
-`SIMULATE = False`) plus a `sim` object threaded through method signatures, and
-about a hundred call sites in some thirty files branch on it individually. The
-simulated backend is realised at four places:
+mode flag; since Phase B (`docs/PHASE_B_BACKEND.md`) the code has it. The
+interface is `elastiflow/execution/backend.py`: clock (`now`, `sleep`), the
+three message channels (`workflows`, `completions`, `resource_requests`), the
+scheduler-to-executor messages (`start_workflow`, `notify_resources`), process
+spawning, provisioning (`provision`, `release`), iteration execution
+(`run_iteration`) and on-premises port leases. Two implementations:
 
-* `workflow/steep/steep_actions.py` (execute action): runs the workflow's
-  `service` script, which in simulated mode is `scripts/simulate-tinyda-seissol.py`
-  returning the modelled runtime from `speedup.getRuntime`, then
-  `(sim or time).sleep(min(runtime, remaining) + 7.7)`; the 7.7 s is the
-  measured executor overhead (Ch. 7, Table 7.x);
-* `scripts/create_instance.py`: provisioning becomes a simulated delay of
-  `COLD_START_TIME` (400.5 s SeisSol, 530 s HPO);
-* `scripts/dispatcher*.py`: the arrival process as a simulus process;
-* `executor.py`: the completion event goes to a simulus mailbox instead of an
-  HTTP request.
+* `SimulatedBackend`: simulus clock and mailboxes; provisioning is a delay of
+  `COLD_START_TIME` (400.5 s SeisSol, 530 s HPO) and a synthetic IP; an
+  iteration takes the modelled runtime from `scripts/tinyda_runtime.py`
+  (in process, the same functions the stub `scripts/simulate-tinyda-seissol.py`
+  wraps) plus the measured 7.7 s executor overhead (Ch. 7);
+* `LiveBackend`: wall clock, Redis queues filled by the Gateway's HTTP servers,
+  HTTP to the executor nodes, boto3 provisioning, the service subprocess.
 
-Even simulated runs use a live Redis for the three queues.
+The entry point constructs one backend and passes it down (`--mode` of
+`python -m elastiflow run`, or the runner scripts directly); every component
+receives it as `backend`, and `backend.simulated` is the only mode test left.
+Even simulated runs construct the three Redis queues at start-up, as the
+submitted code did.
 
 HPO has no working simulated backend: `simulate_main_HPO.py` is the live driver
 that was run on AWS (it wraps the live engine in simulus); the batch-size sweep

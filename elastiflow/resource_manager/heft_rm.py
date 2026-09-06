@@ -5,7 +5,6 @@ from elastiflow.scripts.speedup import getRuntime
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.resource_manager import ResourceManager
-from elastiflow.execution.backend import backend_for
 
 class HEFTResourceManager(ResourceManager):
 
@@ -75,8 +74,7 @@ class HEFTResourceManager(ResourceManager):
                 print('HEAP ERROR')
                 print(self.resource_request_heap)
 
-    def processWorkflowsByPriority(self, workflows: List[any], sim):
-        backend = backend_for(sim)
+    def processWorkflowsByPriority(self, workflows: List[any], backend):
         for wf in workflows:
             wf_plan = eval(wf)
             # Priority rank = a * budget + b * deadline
@@ -91,8 +89,7 @@ class HEFTResourceManager(ResourceManager):
                 heapq.heappush(self.workflow_heap, (priority, wf_plan['id'], wf_plan)) 
                 # print(budget_factor * wf_plan['constraints']['budget'], deadline_factor * (wf_plan['submit_time'] + wf_plan['constraints']['deadline'] - backend.now()), priority)
 
-    def processResourceRequestsByPriority(self, workflows: List[any], metrics_obj, sim):
-        backend = backend_for(sim)
+    def processResourceRequestsByPriority(self, workflows: List[any], metrics_obj, backend):
         for req in workflows:
             req = eval(req)
             if req['request'] == ExecutorRequest.REQUEST_RESOURCE.value:

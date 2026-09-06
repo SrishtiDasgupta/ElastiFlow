@@ -147,16 +147,17 @@ sim_sched = simulus.simulator("scheduler")
 wf_mb = sim_sched.mailbox("wf_mb", 1)
 completed_jobs_mb = sim_sched.mailbox("completed_jobs_mb", 1)
 resource_request_mb = sim_sched.mailbox("resource_request_mb", 1)
-from elastiflow.execution.backend import SimulatedBackend, register
+from elastiflow.execution.backend import SimulatedBackend
 from elastiflow.executor import executeWorklow, processNewResources
 from elastiflow.config.constants import COLD_START_TIME
 from elastiflow.scripts.create_instance import simulated_ip
-register(sim_sched, SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorklow, on_resources=processNewResources, cold_start=COLD_START_TIME, fake_ip=simulated_ip))
-register(sim_dispatcher, SimulatedBackend(sim_dispatcher))   # sends by mailbox name from its own simulator
+from elastiflow.scripts.tinyda_runtime import iteration_runtime
+backend_sched = SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorklow, on_resources=processNewResources, cold_start=COLD_START_TIME, fake_ip=simulated_ip, executor_overhead=7.7, runtime_model=iteration_runtime)
+backend_disp = SimulatedBackend(sim_dispatcher)   # sends by mailbox name from its own simulator
 
-sim_dispatcher.process(dispatcher, sim_dispatcher, "wf_mb")
-sim_sched.process(sched.run, sim_sched, wf_mb, resource_request_mb, name=f"{ALGO}_sched")
-sim_sched.process(sched.processJobCompletion, sim_sched, completed_jobs_mb, name="job_completion_sched")
+sim_dispatcher.process(dispatcher, backend_disp)
+sim_sched.process(sched.run, backend_sched, name=f"{ALGO}_sched")
+sim_sched.process(sched.processJobCompletion, backend_sched, name="job_completion_sched")
 
 g = simulus.sync([sim_dispatcher, sim_sched], enable_smp=False)
 g.run(show_runtime_report=True)

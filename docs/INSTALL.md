@@ -38,8 +38,8 @@ the launcher embeds an absolute path.
 ## Checking the installation
 
 ```
-vortex_venv/bin/python3 -m pytest            # unit + regression: about one minute
-vortex_venv/bin/python3 -m pytest -m smoke   # every simulated policy once, compared exactly with the recorded baseline: about seven minutes
+vortex_venv/bin/python3 -m pytest            # unit + regression: about half a minute
+vortex_venv/bin/python3 -m pytest -m smoke   # every simulated policy once, compared exactly with the recorded baseline: about half a minute
 ```
 
 The regression tests re-run one committed cell per campaign and compare every
@@ -59,6 +59,17 @@ cd elastiflow
 python simulate_sweep.py edf moldable --sort-key cost /tmp/out --seed 7 --N 100      # SeisSol--TinyDA
 python simulate_main_LA.py --scheduler EDF-LAMF --N 150 --seed 7 --output-dir /tmp/la  # licence-constrained
 ```
+
+or, from anywhere, through the one-switch entry point (`--mode` selects the
+execution backend; everything after `--use-case` goes to the runner unchanged):
+
+```
+python -m elastiflow run --mode simulated --use-case seissol edf moldable --sort-key cost /tmp/out --seed 7 --N 100
+python -m elastiflow run --mode simulated --use-case licence --scheduler EDF-LAMF --N 150 --seed 7 --output-dir /tmp/la
+python -m elastiflow run --mode live --use-case seissol        # the live scheduler process (Redis, AWS); executor nodes run elastiflow/executor.py
+```
+
+`pip install -e .` also installs the same command as `elastiflow`.
 
 Whole campaigns: `use_cases/seissol/results/sweep_PLAIN.py` and `use_cases/licence/results/canonical_sweep.py`
 (both merge results into the dataset files in place; run them on a branch).

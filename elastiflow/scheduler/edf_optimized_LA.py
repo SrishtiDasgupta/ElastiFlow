@@ -35,7 +35,6 @@ from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
 from elastiflow.resource_manager.license.exceptions import LicenseError, InsufficientTokens
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow, getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
-from elastiflow.execution.backend import backend_for
 
 
 class EDF_Optimized_LA(Scheduler_LA):
@@ -72,11 +71,10 @@ class EDF_Optimized_LA(Scheduler_LA):
         # Link license manager from resource manager (required for license-aware operations)
         self.license_manager = self.resource_manager.license_manager
 
-    def run(self, sim=None, wf_mb=None, resource_request_mb=None):
+    def run(self, backend):
         """
         Main scheduler loop with EDF ordering
         """
-        backend = backend_for(sim)
         print(f'Starting EDF-ordered LAMF scheduler...')
         print(f'  - EDF heap ordering: Deadline-based priority queue')
         print(f'  - LAMF moldability: Iteration-based progress triggers')
@@ -85,7 +83,7 @@ class EDF_Optimized_LA(Scheduler_LA):
         print(f'  - License-aware guards: Pool saturation, late iteration, time/budget progress')
 
         # Start resource utilization monitoring (including license pools)
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager, self.license_manager)
 
         rejected_workflows = set()  # Track impossible workflows
         loop_counter = 0  # Track loop iterations for debugging
@@ -95,8 +93,8 @@ class EDF_Optimized_LA(Scheduler_LA):
             loop_counter += 1
 
             # Advance the license ledger clock so every token hold/release this cycle
-            # is billed at the correct sim timestamp (honest Token-Hours billing).
-            if sim is not None:
+            # is billed at the correct backend timestamp (honest Token-Hours billing).
+            if backend.simulated:
                 self.license_manager.set_sim_time(backend.now())
 
             # Progress indicator every 1000 iterations (reduced frequency)
@@ -125,7 +123,7 @@ class EDF_Optimized_LA(Scheduler_LA):
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            backend.now() if sim is not None else self.license_manager.sim_now))
+                            backend.now() if backend.simulated else self.license_manager.sim_now))
                     break
                 elif idle_loop_count == 1:
                     print(f"\n[INFO] No active workflows detected. Waiting for termination (idle_count={idle_loop_count}/10)...")
@@ -151,7 +149,7 @@ class EDF_Optimized_LA(Scheduler_LA):
                         backend.resource_requests.pop()
                         continue
 
-                    self.processFreeRequestWithLicenses(sim, wf_mb, resource_request)
+                    self.processFreeRequestWithLicenses(backend, resource_request)
                     print(f"  Resource request overhead: {time.time() - start:.3f}s")
 
                     self.popWorkflow(self.resource_request_heap)
@@ -184,7 +182,7 @@ class EDF_Optimized_LA(Scheduler_LA):
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            backend.now() if sim is not None else self.license_manager.sim_now))
+                            backend.now() if backend.simulated else self.license_manager.sim_now))
                     break
 
                 # Skip rejected workflows
@@ -220,7 +218,7 @@ class EDF_Optimized_LA(Scheduler_LA):
 
                         # Send to executor
                         self.sendWorkflowForExecution(
-                            wf_plan, ips, sim, constraints['deadline'], license_holds
+                            wf_plan, ips, backend, constraints['deadline'], license_holds
                         )
 
                         # Track workflow with licenses
@@ -552,7 +550,7 @@ class EDF_Optimized_LA(Scheduler_LA):
 
         return feasible if feasible else None
 
-    def freeResourcesWithLicenses(self, instances, request, sim, license_pool: Optional[str]):
+    def freeResourcesWithLicenses(self, instances, request, backend, license_pool: Optional[str]):
         """
         Free resources AND licenses
 
@@ -652,7 +650,7 @@ class EDF_Optimized_LA(Scheduler_LA):
         # Send freed resources notification
         self.sendFreedResources(
             request['wf-id'], to_free_instances, instances,
-            response_instances, sim, request.get('client-ip', None)
+            response_instances, backend, request.get('client-ip', None)
         )
 
         return actual_licenses_released
@@ -661,7 +659,7 @@ class EDF_Optimized_LA(Scheduler_LA):
     # DDM-EDF RESOURCE REQUEST PROCESSING (with urgency-based scaling)
     # =========================================================================
 
-    def processFreeRequestWithLicenses(self, sim, wf_mb, request):
+    def processFreeRequestWithLicenses(self, backend, request):
         """
         EDF-ordered LAMF: Iteration-based moldability with EDF queue ordering
 
@@ -671,7 +669,6 @@ class EDF_Optimized_LA(Scheduler_LA):
         3. Progress-based triggers for scale-up (from LAMF)
         4. License-aware scale-down guards (from LAMF)
         """
-        backend = backend_for(sim)
         # LA workflows always return 7-value tuples
         instances, budget, deadline, start_time, mesh, software_id, license_holds = \
             self.resource_manager.getWorkflow(request['wf-id'])
@@ -855,7 +852,7 @@ class EDF_Optimized_LA(Scheduler_LA):
                         )
 
                         cores_freed = cur_instance.cores * request['count']
-                        actual_licenses_released = self.freeResourcesWithLicenses(instances, request, sim, license_pool)
+                        actual_licenses_released = self.freeResourcesWithLicenses(instances, request, backend, license_pool)
 
                         # Record scale-down success
                         self.metrics.recordScaleDownAttempt(
@@ -980,7 +977,7 @@ class EDF_Optimized_LA(Scheduler_LA):
 
             # Send to executor with new licenses
             self.sendNewResources(
-                request['wf-id'], ips, alloc_resources, sim,
+                request['wf-id'], ips, alloc_resources, backend,
                 request.get('client-ip', None), license_holds_new
             )
 

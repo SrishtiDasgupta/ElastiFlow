@@ -15,7 +15,7 @@ def test_imports():
 
     try:
         # Test HPO constants
-        from elastiflow.config.constants_HPO import AVG_BUDGET, AVG_DEADLINE, SIMULATE
+        from elastiflow.config.constants_HPO import AVG_BUDGET, AVG_DEADLINE
         print("  ✅ HPO constants imported")
 
         # Test HPO speedup functions
@@ -148,11 +148,25 @@ def test_instance_functions():
     try:
         from elastiflow.scripts.create_instance_HPO import createExecutorInstance, createWorkerInstances
 
-        # Test simulation mode
+        import simulus
+        from elastiflow.execution.backend import SimulatedBackend
+        from elastiflow.scripts.create_instance_HPO import simulated_worker_ip
+        from elastiflow.config.constants_HPO import COLD_START_TIME
+
+        # Test simulation mode: provisioning sleeps on the simulated clock, so run it inside a process
         print("  Testing in simulation mode...")
+        sim = simulus.simulator('hpo_basic_check')
+        backend = SimulatedBackend(sim, cold_start=COLD_START_TIME, fake_ip=simulated_worker_ip)
+        out = {}
+
+        def provision():
+            out['executor'] = createExecutorInstance('g4dn.2xlarge', backend)
+            out['workers'] = createWorkerInstances('g5.2xlarge', 3, backend)
+        sim.process(provision)
+        sim.run()
 
         # Test executor creation
-        executor_ip = createExecutorInstance('g4dn.2xlarge', sim=True)
+        executor_ip = out.get('executor')
         if executor_ip and executor_ip.startswith('10.19.'):
             print(f"  ✅ Executor instance simulation: {executor_ip}")
         else:
@@ -160,7 +174,7 @@ def test_instance_functions():
             return False
 
         # Test worker creation
-        worker_ips = createWorkerInstances('g5.2xlarge', 3, sim=True)
+        worker_ips = out.get('workers')
         if worker_ips and len(worker_ips) == 3:
             print(f"  ✅ Worker instances simulation: {worker_ips}")
         else:

@@ -7,12 +7,10 @@ import subprocess
 import yaml 
 import numpy as np
 
-from elastiflow.config.constants import SIMULATE
 from elastiflow.utils.exec_sched import getClientInputs, getWorkflowConfig, setWorkflowComplete
 
 from .steep_variables import Variable
 from elastiflow.config.paths import PACKAGE_DIR
-from elastiflow.execution.backend import backend_for
 
 class ActionType(Enum):
     ForEach = auto()
@@ -91,38 +89,24 @@ class ExecuteAction(Action):
         result = None
         ind = self.workflow_iterator # workflow iterations
         try:
-            args, hosts, sim = getClientInputs(self.wf_id, input, ind)
-            backend = backend_for(sim)
+            args, hosts, backend = getClientInputs(self.wf_id, input, ind)
             # print(f'Executing Action with input {args}')
             start = time.time()
             #args["prior_output"] = self.output_parameters[-1]
             print(f"{self.wf_id} Workflow iteration {self.workflow_iterator} started at {start}")
-            result = subprocess.run([sys.executable, self.service, str(args)], check=True, capture_output=True, text=True)           
-            if sim or SIMULATE:
-                result = eval(result.stdout)
-                runtime = float(result['runtime'])
-                deadline = getWorkflowConfig(self.wf_id)['deadline']
-                sleep_time = min(runtime, max(deadline - backend.now(), 0))
-                backend.sleep(sleep_time + 7.7) # NOTE: Executor overhead
-                if sleep_time < runtime:
-                    print(f'Killing workflow {self.wf_id}')
-                    return
-            else:
-                print(f"{self.wf_id} Workflow iteration {self.workflow_iterator} started at {time.time()}")
-                output_lines = result.stdout.splitlines()  # Split the output into lines
-                input_value = output_lines[0]
-                print(input_value)
-                result = eval(input_value)
+            # The backend runs the iteration: in simulation the runtime-model stub reports the
+            # modelled runtime and simulated time advances by it (capped at the deadline) plus the
+            # executor overhead; live, the real service runs. Either way `result` is what the
+            # service returned, as before.
+            deadline = getWorkflowConfig(self.wf_id)['deadline']
+            res = backend.run_iteration(self.wf_id, self.service, args, deadline, self.workflow_iterator)
+            if not res.completed:
+                print(f'Killing workflow {self.wf_id}')
+                return
+            result = res.output
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
-            if not SIMULATE and len(args['hosts'].get('on-prem', [])) != 0:
-                port = args['port']
-                with open(f"{PACKAGE_DIR}/config/ports.yaml", "r") as f:
-                    data = yaml.safe_load(f)
-                ports = data.get("onprem_ports", [])
-                ports.append(port)
-                data["onprem_ports"] = ports
-                with open(f"{PACKAGE_DIR}/config/ports.yaml", "w") as f:
-                    yaml.safe_dump(data, f) 
+            if len(args['hosts'].get('on-prem', [])) != 0:
+                backend.return_port(args['port'])
             self.workflow_iterator = self.workflow_iterator + 1 # increment the iterator for the workflow
             print(f"[DEBUG] {self.wf_id}: iteration {self.workflow_iterator}/{self.workflow_iterations}")
             workflow_type_now = getWorkflowConfig(self.wf_id).get('workflow_type', 'PLAIN')

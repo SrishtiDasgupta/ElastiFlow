@@ -2,14 +2,13 @@ from abc import ABC, abstractmethod
 import time
 from typing import List
 
-from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT, SIMULATE
+from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT
 from elastiflow.scripts.create_instance_HPO import deleteInstanceFromIp
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 from elastiflow.utils.metrics_HPO import MetricsHPO as Metrics
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.instance import Instance, OnPremInstance
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
-from elastiflow.execution.backend import backend_for
 
 class Scheduler_HPO(ABC):
     """
@@ -24,7 +23,7 @@ class Scheduler_HPO(ABC):
         self.metrics = Metrics()
 
     @abstractmethod
-    def run(self, queue):
+    def run(self, backend):
         pass
 
     def allocateResources(self, constraints):
@@ -35,12 +34,11 @@ class Scheduler_HPO(ABC):
             ips, alloc_resources = self.resource_manager.allocateResources(instances)
         return ips, alloc_resources
 
-    def sendWorkflowForExecution(self, wf_plan, ips, sim, deadline):
+    def sendWorkflowForExecution(self, wf_plan, ips, backend, deadline):
         """
         Note: HPO schedulers should override this with sendWorkflowForExecutionHPO
         This base implementation is for compatibility but should not be called directly
         """
-        backend = backend_for(sim)
         # Send to the executor node - workflow parsing must be handled there
         request = {
             "initial-alloc": True,
@@ -49,13 +47,12 @@ class Scheduler_HPO(ABC):
             "deadline": deadline
         }
 
-        executor, on_demand_type = getExecutor(ips, sim)
+        executor, on_demand_type = getExecutor(ips, backend)
         # TODO: What if executor is not created
         if on_demand_type:
             request['hosts']['on-demand'][on_demand_type] =  (request['hosts']['on-demand'][on_demand_type][0], [executor])
         backend.start_workflow(request, executor)
-    def processJobCompletion(self, sim=None, mb=None):
-        backend = backend_for(sim)
+    def processJobCompletion(self, backend):
         print('HPO Scheduler started listening to completed jobs...')
         while True:
             try:
@@ -77,7 +74,7 @@ class Scheduler_HPO(ABC):
                     # The executor's finally block should have done this already,
                     # but if the executor crashed or never reached cleanup, this
                     # ensures on-demand instances don't run forever.
-                    self._terminate_ondemand_instances(wf_id, data.get('hosts'), sim)
+                    self._terminate_ondemand_instances(wf_id, data.get('hosts'), backend)
 
                     self.resource_manager.returnResources(wf_id)
                     self.metrics.updateDataframe(wf_id, {'exec_start_time': data.get('start-time'), 'finish_time': data.get('finish-time'), 'complete': data.get('complete')})
@@ -96,14 +93,14 @@ class Scheduler_HPO(ABC):
                     pass
             backend.sleep(60) # NOTE: polling interval
 
-    def _terminate_ondemand_instances(self, wf_id, hosts, sim):
+    def _terminate_ondemand_instances(self, wf_id, hosts, backend):
         """
         Safety-net termination of on-demand instances.
         Called from processJobCompletion before returnResources pops the workflow.
         Uses hosts dict from the completion message; falls back to stored workflow data.
         Idempotent: if executor already terminated them, deleteInstanceFromIp finds nothing.
         """
-        if sim or SIMULATE:
+        if backend.simulated:
             return
 
         # Collect on-demand IPs from completion message hosts
@@ -125,13 +122,12 @@ class Scheduler_HPO(ABC):
         if ondemand_ips:
             print(f"[SAFETY-NET] Terminating on-demand instances for {wf_id}: {ondemand_ips}")
             try:
-                deleteInstanceFromIp(ondemand_ips, sim)
+                deleteInstanceFromIp(ondemand_ips, backend)
             except Exception as e:
                 print(f"[ERROR] Safety-net termination failed for {wf_id}: {e}")
 
     # request = {"wf-id", "count", "iteration": ind, "tinyda-iterations", "client-ip", "request-time"}
-    def allocateNewResources(self, request, sim):
-        backend = backend_for(sim)
+    def allocateNewResources(self, request, backend):
         if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
 
@@ -141,12 +137,11 @@ class Scheduler_HPO(ABC):
         available_budget = max(0, budget - used_budget) / max((AVG_WORKFLOW_ITERATIONS - request['iteration']), 1)
         alloc_instances = self.checkNewResources(free_resources, instances, available_budget, request, model) # {obj: count}
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances) # alloc_resource = {obj: (count, [ips])}
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
+        self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None))
 
-    def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip):
+    def sendNewResources(self, wf_id, ips, alloc_resources, backend, client_ip):
 
         # Send to the executor node
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -161,8 +156,7 @@ class Scheduler_HPO(ABC):
 
 
     # request = {"wf-id", "count", "request-time", "client-ip"}
-    def freeResources(self, request, sim):
-        backend = backend_for(sim)
+    def freeResources(self, request, backend):
         if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
         (instances, _, deadline, _, _) = self.resource_manager.getWorkflow(request['wf-id'])
@@ -186,21 +180,20 @@ class Scheduler_HPO(ABC):
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
 
             # Terminate freed on-demand EC2 instances immediately (don't wait for workflow end)
-            if not sim and not SIMULATE:
+            if not backend.simulated:
                 for instance, count, ips in to_free_instances:
                     if instance.type == 'on-demand' and ips:
                         print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
                         try:
-                            deleteInstanceFromIp(ips, sim)
+                            deleteInstanceFromIp(ips, backend)
                         except Exception as e:
                             print(f"[ERROR] Scale-down termination failed: {e}")
 
         # Free resources
-        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
+        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None))
 
-    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip):
+    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, backend, client_ip):
         # Send hosts to be freed to executor
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
             "initial-alloc": False,
@@ -288,9 +281,8 @@ class Scheduler_HPO(ABC):
         return acquired_instances
 
     # Purge and return if workflow has been purged
-    def purgeWorkflow(self, wf_plan, sim) -> bool:
+    def purgeWorkflow(self, wf_plan, backend) -> bool:
         # NOTE: We can have 2 workflow iterations at the least
-        backend = backend_for(sim)
         runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
         if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
             print(f"HPO Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")

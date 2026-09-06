@@ -5,7 +5,6 @@ from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.heft_rm import HEFTResourceManager
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler import Scheduler
-from elastiflow.execution.backend import backend_for
 
 # Workflows are sorted based on computation and communication cost
 # Workflow with the highest cost is allocated to fastest available instance
@@ -18,13 +17,11 @@ class HEFT_HEFT_REQ(Scheduler):
         super().__init__(queue, finish_queue, resource_request_queue)
 
 
-    def run(self, sim = None, wf_mb = None, resource_request_mb = None):
-       
-        backend = backend_for(sim)
+    def run(self, backend):
         print(f'Starting scheduler...')
 
         # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
 
         while True:
 
@@ -37,9 +34,9 @@ class HEFT_HEFT_REQ(Scheduler):
             if resource_request:
                 # Moldable scale-up / scale-down via rich base-class
                 # negotiation (processFreeRequest decides internally).
-                self.processFreeRequest(resource_request, sim)
+                self.processFreeRequest(resource_request, backend)
                 self.resource_manager.popWorkflow(self.resource_manager.resource_request_heap)
-                sim and backend.sleep(0.2) # NOTE: scheduler overhead
+                backend.simulated and backend.sleep(0.2) # NOTE: scheduler overhead
                 continue
 
             # Retrieve all new jobs in the queue
@@ -59,7 +56,7 @@ class HEFT_HEFT_REQ(Scheduler):
                     break 
 
                 # If workflow cannot be executed, pop it to prevent stagnation
-                if self.purgeWorkflow(wf_plan, sim): 
+                if self.purgeWorkflow(wf_plan, backend): 
                     self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
                     continue
 
@@ -73,7 +70,7 @@ class HEFT_HEFT_REQ(Scheduler):
                     self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
                     # NOTE: We start billing at this point
                     start_time = backend.now()
-                    self.sendWorkflowForExecution(wf_plan, ips, sim, constraints['deadline'])
+                    self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
                     wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                     self.metrics.addToDataframe(wf_plan['id'], wf, submit_time=wf_plan['submit_time'])
 

@@ -46,7 +46,6 @@ from elastiflow.utils.resource_LA import getConstraintsFromWorkflow, getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
 
 import os
-from elastiflow.execution.backend import backend_for
 
 # ---------------------------------------------------------------------------
 # HSM phase-transition policy (licence-aware static -> moldable gate)
@@ -136,11 +135,10 @@ class EDF_HSM_LA(Scheduler_LA):
         # Link license manager from resource manager (required for license-aware operations)
         self.license_manager = self.resource_manager.license_manager
 
-    def run(self, sim=None, wf_mb=None, resource_request_mb=None):
+    def run(self, backend):
         """
         Main scheduler loop with EDF ordering
         """
-        backend = backend_for(sim)
         print(f'Starting HSM (Hybrid Static-Moldable) scheduler...')
         print(f'  - Iteration 0: STATIC allocation (no scaling)')
         print(f'  - Iterations 1-5: MOLDABLE (EDF-LAMF triggers + guards)')
@@ -150,7 +148,7 @@ class EDF_HSM_LA(Scheduler_LA):
         print(f'  - License-aware guards: Pool saturation, late iteration, deadline proximity')
 
         # Start resource utilization monitoring (including license pools)
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager, self.license_manager)
 
         rejected_workflows = set()  # Track impossible workflows
         loop_counter = 0  # Track loop iterations for debugging
@@ -160,8 +158,8 @@ class EDF_HSM_LA(Scheduler_LA):
             loop_counter += 1
 
             # Advance the license ledger clock so every token hold/release this cycle
-            # is billed at the correct sim timestamp (honest Token-Hours billing).
-            if sim is not None:
+            # is billed at the correct backend timestamp (honest Token-Hours billing).
+            if backend.simulated:
                 self.license_manager.set_sim_time(backend.now())
 
             # Progress indicator every 1000 iterations (reduced frequency)
@@ -190,7 +188,7 @@ class EDF_HSM_LA(Scheduler_LA):
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            backend.now() if sim is not None else self.license_manager.sim_now))
+                            backend.now() if backend.simulated else self.license_manager.sim_now))
                     break
                 elif idle_loop_count == 1:
                     print(f"\n[INFO] No active workflows detected. Waiting for termination (idle_count={idle_loop_count}/10)...")
@@ -216,7 +214,7 @@ class EDF_HSM_LA(Scheduler_LA):
                         backend.resource_requests.pop()
                         continue
 
-                    self.processFreeRequestWithLicenses(sim, wf_mb, resource_request)
+                    self.processFreeRequestWithLicenses(backend, resource_request)
                     print(f"  Resource request overhead: {time.time() - start:.3f}s")
 
                     self.popWorkflow(self.resource_request_heap)
@@ -249,7 +247,7 @@ class EDF_HSM_LA(Scheduler_LA):
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            backend.now() if sim is not None else self.license_manager.sim_now))
+                            backend.now() if backend.simulated else self.license_manager.sim_now))
                     break
 
                 # Skip rejected workflows
@@ -285,7 +283,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
                         # Send to executor
                         self.sendWorkflowForExecution(
-                            wf_plan, ips, sim, constraints['deadline'], license_holds
+                            wf_plan, ips, backend, constraints['deadline'], license_holds
                         )
 
                         # Track workflow with licenses
@@ -623,7 +621,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
         return feasible if feasible else None
 
-    def freeResourcesWithLicenses(self, instances, request, sim, license_pool: Optional[str]):
+    def freeResourcesWithLicenses(self, instances, request, backend, license_pool: Optional[str]):
         """
         Free resources AND licenses
 
@@ -723,7 +721,7 @@ class EDF_HSM_LA(Scheduler_LA):
         # Send freed resources notification
         self.sendFreedResources(
             request['wf-id'], to_free_instances, instances,
-            response_instances, sim, request.get('client-ip', None)
+            response_instances, backend, request.get('client-ip', None)
         )
 
         return actual_licenses_released
@@ -733,7 +731,7 @@ class EDF_HSM_LA(Scheduler_LA):
     # =========================================================================
 
     def _hsm_in_static_phase(self, request, instances, deadline, start_time, mesh,
-                             license_pool, software_id, ind, sim):
+                             license_pool, software_id, ind, backend):
         """Licence-aware static -> moldable gate. Returns True if the workflow
         should remain in the STATIC phase (scale-down suppressed) this renegotiation.
 
@@ -746,7 +744,6 @@ class EDF_HSM_LA(Scheduler_LA):
         A workflow already in MOLDABLE stays there. STATIC_PHASE_ITERS is a hard
         floor: the gate cannot fire while ind <= STATIC_PHASE_ITERS.
         """
-        backend = backend_for(sim)
         wf_id = request['wf-id']
         if self.hsm_phase.get(wf_id, 'STATIC') == 'MOLDABLE':
             return False  # already moldable -- stay moldable
@@ -801,7 +798,7 @@ class EDF_HSM_LA(Scheduler_LA):
               f"floor_ok={floor_ok})")
         return True
 
-    def processFreeRequestWithLicenses(self, sim, wf_mb, request):
+    def processFreeRequestWithLicenses(self, backend, request):
         """
         HSM: Hybrid Static-Moldable resource allocation
 
@@ -814,7 +811,6 @@ class EDF_HSM_LA(Scheduler_LA):
         4. Urgency-based boost factors (1.2× → 2.0×)
         5. Smart scale-down guards (license pool, late iteration, deadline proximity)
         """
-        backend = backend_for(sim)
         # LA workflows always return 7-value tuples
         instances, budget, deadline, start_time, mesh, software_id, license_holds = \
             self.resource_manager.getWorkflow(request['wf-id'])
@@ -832,7 +828,7 @@ class EDF_HSM_LA(Scheduler_LA):
         # the full EDF-LAMF logic below runs unchanged.
         hsm_static = self._hsm_in_static_phase(
             request, instances, deadline, start_time, mesh, license_pool,
-            software_id, ind, sim)
+            software_id, ind, backend)
 
         # === HSM: MOLDABLE PHASE (logic below; scale-down gated by hsm_static) ===
         available_time = max(0, deadline - DEADLINE_BUFFER - backend.now()) * OPTIM_FCFS_DFACTOR[ind]
@@ -1018,7 +1014,7 @@ class EDF_HSM_LA(Scheduler_LA):
                         )
 
                         cores_freed = cur_instance.cores * request['count']
-                        actual_licenses_released = self.freeResourcesWithLicenses(instances, request, sim, license_pool)
+                        actual_licenses_released = self.freeResourcesWithLicenses(instances, request, backend, license_pool)
 
                         # Record scale-down success
                         self.metrics.recordScaleDownAttempt(
@@ -1143,7 +1139,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
             # Send to executor with new licenses
             self.sendNewResources(
-                request['wf-id'], ips, alloc_resources, sim,
+                request['wf-id'], ips, alloc_resources, backend,
                 request.get('client-ip', None), license_holds_new
             )
 

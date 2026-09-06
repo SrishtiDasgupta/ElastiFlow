@@ -2,7 +2,7 @@ import threading
 import time
 import math
 
-from elastiflow.config.constants_HPO import WORKFLOW_POLLING, SIMULATE, COLD_START_TIME
+from elastiflow.config.constants_HPO import WORKFLOW_POLLING, COLD_START_TIME
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 from elastiflow.scripts.create_instance_HPO import createWorkerInstances
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
@@ -13,7 +13,6 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, OnPremIn
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
-from elastiflow.execution.backend import backend_for
 
 # HPO-specific FCFS Scheduler with Dedicated Executor Design
 # Static version - no moldable resource allocation
@@ -28,13 +27,11 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         self.resource_manager.sortResourcesByFunction(func)
         super().__init__(queue, finish_queue, resource_request_queue)
 
-    def run(self, sim = None, wf_mb = None, resource_request_mb = None):
-
-        backend = backend_for(sim)
+    def run(self, backend):
         print(f'Starting HPO FCFS scheduler at {backend.now()}...')
 
         # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
 
         while True:
 
@@ -64,7 +61,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
                 if self.resource_manager.getResourcesAvailable():
 
                     constraints = getConstraintsFromWorkflow(wf_plan)
-                    ips, alloc_resources = self.allocateResourcesHPO(constraints, sim)
+                    ips, alloc_resources = self.allocateResourcesHPO(constraints, backend)
                     print(f"{wf_plan['id']} allocated at {backend.now()}:", ips)
 
                     # Remove the element if we found the resources needed.
@@ -72,7 +69,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
                         backend.workflows.pop()
                         # NOTE: We start billing at this point
                         start_time = backend.now()
-                        self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
+                        self.sendWorkflowForExecutionHPO(wf_plan, ips, backend, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
                     else:
@@ -82,7 +79,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
             backend.sleep(WORKFLOW_POLLING)
 
-    def allocateResourcesHPO(self, constraints, sim=None):
+    def allocateResourcesHPO(self, constraints, backend=None):
         """
         HPO-specific resource allocation with resilient fallback
         Tries to allocate optimal number of hosts, degrades gracefully if unavailable
@@ -177,7 +174,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
         # Allocate and create instances
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)
-        ips = self.createOnDemandWorkers(ips, sim)
+        ips = self.createOnDemandWorkers(ips, backend)
 
         return ips, alloc_resources
 
@@ -269,7 +266,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         else:
             return 'unknown'
 
-    def createOnDemandWorkers(self, ips, sim):
+    def createOnDemandWorkers(self, ips, backend):
         """
         Create actual on-demand worker instances for allocated virtual slots
         ResourceManager.allocateResources() returns empty IP lists for on-demand,
@@ -286,7 +283,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
         def _create(instance_type, count):
             print(f"Creating {count} on-demand {instance_type} worker instances...")
-            worker_ips = createWorkerInstances(instance_type, count, sim)
+            worker_ips = createWorkerInstances(instance_type, count, backend)
             print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
             return instance_type, count, worker_ips
 
@@ -298,7 +295,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
         return ips
 
-    def sendWorkflowForExecutionHPO(self, wf_plan, ips, sim, deadline):
+    def sendWorkflowForExecutionHPO(self, wf_plan, ips, backend, deadline):
         """
         HPO-specific workflow execution with dedicated executor design
         Routes to on-prem executor OR creates cloud executor based on worker allocation

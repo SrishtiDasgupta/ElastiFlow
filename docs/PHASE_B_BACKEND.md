@@ -145,18 +145,68 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   `COLD_START_TIME`; the HPO module keeps them for its CLI-only helpers
   (`createExecutorInstance`, `getInstanceRole`, `listHPOInstances`). Gate:
   regression 11/11, smoke against the B0 baseline.
-* **B4. Iteration execution.** `run_iteration` replaces the execute action's
-  branch. First as a move that keeps the subprocess call to the service stub in
-  the simulated implementation (so the numbers cannot move), then, as a separate
-  gated step, the stub's runtime lookup becomes an in-process call.
-* **B5. In-memory channels for simulated mode.** Simulated runs stop needing
-  Redis. Gate: the default suite with Redis stopped.
-* **B6. One switch.** The `SIMULATE` constants and the `sim` parameters go;
-  `python -m elastiflow run --mode simulated|live --use-case ... --policy ...`
-  builds the backend once and hands it to the scheduler, engine and dispatcher.
+* **B4. Iteration execution**, first half (done 2026-09-06). `run_iteration(wf_id,
+  service, args, deadline, iteration) -> IterationResult(output, runtime,
+  completed)` on the backend. `SimulatedBackend` keeps the subprocess call to the
+  runtime-model stub, sleeps `min(runtime, remaining) + executor_overhead`
+  (7.7 s, now a registration parameter) and reports `completed`; `LiveBackend`
+  runs the service and takes the first output line. The SeisSol/licence execute
+  action in `steep_actions.py` calls it and no longer branches on the mode; the
+  on-premise port lease is `lease_port` / `return_port` (simulated: the constant
+  4242 and a no-op, as before; live: `ports.yaml`). `SIMULATE` is gone from the
+  workflow engine and from `utils/exec_sched.py`. One thing the move exposed: the
+  engine's `eval` of the stub's output relied on `numpy` being imported in the
+  engine module (the licence runtime model prints `np.float64(...)`); the backend
+  passes the name explicitly. Deferred: `steep_actions_HPO.py` keeps its own
+  iteration runner (a retry loop and JSON parsing around the live service, no
+  overhead injection); it is the HPO driver and folds in with the use-case
+  protocol. The second half (B4b, 2026-09-06): the stub's functions moved verbatim into
+  `elastiflow/scripts/tinyda_runtime.py` (`iteration_runtime(request) ->
+  {'cohesion', 'runtime'}`, pure functions over the fitted speedup curves);
+  `SimulatedBackend` takes `runtime_model` at registration and calls it
+  in-process, so a simulated run no longer spawns a subprocess per iteration or
+  round-trips the request and the result through `str()`/`eval()`. The stub
+  remains as a CLI over the same functions (live mode, and the equivalence test
+  `tests/unit/test_runtime_model_inprocess.py`, which compares both paths on a
+  grid of requests). Gate: regression, smoke against the B0 baseline.
+* **B5. In-memory channels for simulated mode.** Dropped by the author's
+  decision (2026-09-06): the simulated runs keep constructing the three Redis
+  queues at start-up exactly as the submitted code did, and carry their
+  messages over simulus mailboxes as before. Nothing about Redis changed in
+  Phase B.
+* **B6. One switch** (done 2026-09-06). The three `SIMULATE` constants and every
+  `sim` parameter are gone. The entry points construct one backend and pass it
+  down: the simulated runners build `SimulatedBackend(sim_sched, mailboxes,
+  execute=..., on_resources=..., cold_start=..., fake_ip=..., runtime_model=...)`
+  for the scheduler's simulator and a bare `SimulatedBackend(sim_dispatcher)`
+  for the dispatcher's; the live entry points (`main*.py`, and the executor
+  node processes `executor*.py`) build a `LiveBackend`. Schedulers now run as
+  `run(backend)` and `processJobCompletion(backend)`, dispatchers as
+  `dispatcher(backend)`, and the workflow registry stores the backend instead
+  of the simulator. The 39 remaining mode branches read `backend.simulated`
+  (a class attribute, `True`/`False`), the registry `register`/`backend_for`
+  is deleted, and `sim` survives only as the simulator attribute inside
+  `SimulatedBackend`. `python -m elastiflow run --mode simulated|live
+  --use-case seissol|licence|hpo [runner options]` (`elastiflow/cli.py`, also
+  installed as the `elastiflow` console script) selects the entry point and
+  hands the runner its own options unchanged. Two live-only paths were corrected
+  on the way: the executor node processes now receive a `LiveBackend` explicitly
+  (before B6 they resolved the live backend through the registry; the HPO
+  executor node keeps HPO's own termination path), and `executor_LA.py`
+  branched on the licence fork's `SIMULATE = True` even on a live node. One
+  timestamp changed: the utilisation sampler's first row at simulated time 0
+  now reads 0 (the `(sim and now) or time.time()` idiom fell through to the
+  wall clock at 0); no recorded number depends on it because the utilisation
+  average starts at the first busy sample. Gate: regression, smoke against
+  the B0 baseline, `tests/regression/test_cli_entry.py` (the same SeisSol and
+  licence cells through the CLI reproduce the datasets of record), and the
+  import composition of every live module. HPO is unchanged in behaviour:
+  `simulate_main_HPO.py` gets a `SimulatedBackend` (it was the hybrid driver,
+  simulus clock over live services, see decision 3), `main_HPO.py` a
+  `LiveBackend`.
 * **B7. Merge the scheduler forks.** With `sim` out of every signature, the
   three abstract bases differ only in their licence and HPO extension points;
-  that merge is planned as its own document once B6 is in.
+  that merge is planned as its own document now that B6 is in.
 
 ## What does not change
 
@@ -176,3 +226,10 @@ reverted, not tuned.
    HPO is live-only by the author's decision, and its scheduler gets the live
    backend only, which also removes the misleading `simulate_main_HPO.py` name
    in B6 (it becomes the live HPO driver).
+   *Correction (B6):* the tagged `simulate_main_HPO.py` was not a plain live
+   driver but a hybrid, simulus processes and mailboxes with `SIMULATE = False`,
+   so its schedulers slept on the simulated clock while the services ran live.
+   B6 preserves that wiring exactly (`SimulatedBackend` for
+   `simulate_main_HPO.py`, `LiveBackend` for `main_HPO.py`) rather than
+   deciding it away; renaming or retiring the hybrid driver is a separate
+   decision for the author.

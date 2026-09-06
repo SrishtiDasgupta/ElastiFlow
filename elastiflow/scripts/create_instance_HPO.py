@@ -9,9 +9,8 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import HPO-specific constants
-from elastiflow.config.constants_HPO import SIMULATE, COLD_START_TIME
+from elastiflow.config.constants_HPO import COLD_START_TIME
 from elastiflow.scripts import cold_start_log
-from elastiflow.execution.backend import backend_for
 
 region = 'eu-north-1'  # Stockholm region for HPO testing
 
@@ -36,15 +35,14 @@ INSTANCE_AZ_EXCLUSIONS = {
     'g5.4xlarge':  {'eu-north-1a'},
 }
 
-def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', sim=None) -> str:
+def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', backend=None) -> str:
     """
     Create a dedicated executor instance for HPO workflows
     Returns single IP address for the executor
     """
-    backend = backend_for(sim)
     print(f'Creating dedicated executor instance: {instance_type}')
 
-    if sim or SIMULATE:
+    if backend is not None and backend.simulated:
         backend.sleep(COLD_START_TIME)
         # Generate simulated IP for executor
         digits = [10, 19] + random.choices(range(200, 255), k=2)
@@ -55,27 +53,28 @@ def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', sim=None) -> str
         ips = launchInstanceHPO(instance_type, 1, 'executor')
         return ips[0] if ips else None
 
-def createWorkerInstances(instance_type: str, count: int, sim=None) -> List[str]:
+def createWorkerInstances(instance_type: str, count: int, backend=None) -> List[str]:
     """
     Create homogeneous worker instances for HPO workflows
     Returns list of IP addresses for workers
     """
-    backend = backend_for(sim)
     if count < 1:
         return []
 
     print(f'Creating {count} worker instances of {instance_type}')
 
+    if backend is None:                      # the CLI helpers below: live, no backend
+        return launchInstanceHPO(instance_type, count, 'worker')
     ips = backend.provision(instance_type, count)
-    if sim or SIMULATE:
+    if backend.simulated:
         print(f'Simulated worker IPs: {ips}')
     return ips
 
-def createInstance(name: str, count: int = 1, sim=None) -> List[str]:
+def createInstance(name: str, count: int = 1, backend=None) -> List[str]:
     """
     Backward compatibility function - routes to worker instance creation
     """
-    return createWorkerInstances(name, count, sim)
+    return createWorkerInstances(name, count, backend)
 
 def _terminate_failed_instance(instance, private_ip, reason):
     """Terminate an EC2 instance that failed setup to prevent leaking.
@@ -339,17 +338,14 @@ def launch_workers(instance_type: str, count: int) -> List[str]:
     return launchInstanceHPO(instance_type, count, 'worker')
 
 
-def deleteInstanceFromIp(instances: List[str], sim=None):
+def deleteInstanceFromIp(instances: List[str], backend=None):
     """
     Terminate instances by IP addresses
     """
     print(f'Terminating HPO instances: {instances}')
 
-    if sim is not None:
-        return backend_for(sim).release(instances)
-    if SIMULATE:   # live entry points pass no sim; the constant still guards the CLI helpers below
-        print(f'Simulated termination of {instances}')
-        return
+    if backend is not None:
+        return backend.release(instances)
 
     try:
         filters = [
@@ -391,11 +387,11 @@ def terminate_live(instance_ips: List[str]):
     return deleteInstanceFromIp(instance_ips)
 
 
-def terminateInstance(instance_ips: List[str], sim=None):
+def terminateInstance(instance_ips: List[str], backend=None):
     """
     Backward compatibility function
     """
-    deleteInstanceFromIp(instance_ips, sim)
+    deleteInstanceFromIp(instance_ips, backend)
 
 # Additional HPO-specific utility functions
 
@@ -403,13 +399,6 @@ def getInstanceRole(instance_ip: str) -> str:
     """
     Get the role of an instance by its IP address
     """
-    if SIMULATE:
-        # In simulation, determine role by IP pattern
-        if instance_ip.startswith('10.19.2'):
-            return 'executor'
-        else:
-            return 'worker'
-
     try:
         filters = [
             {'Name': 'private-ip-address', 'Values': [instance_ip]},
@@ -433,9 +422,6 @@ def listHPOInstances():
     """
     List all HPO instances with their roles and states
     """
-    if SIMULATE:
-        print("Simulation mode - no real instances to list")
-        return
 
     try:
         filters = [

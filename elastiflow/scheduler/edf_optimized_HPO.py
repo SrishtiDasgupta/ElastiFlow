@@ -20,7 +20,7 @@ import threading
 import time
 from typing import List
 
-from elastiflow.config.constants_HPO import (COLD_START_TIME, WORKFLOW_POLLING, SIMULATE, MIN_TRIALS, MAX_TRIALS,
+from elastiflow.config.constants_HPO import (COLD_START_TIME, WORKFLOW_POLLING, MIN_TRIALS, MAX_TRIALS,
                                   DEADLINE_BUFFER, MIN_INSTANCE_COST, SPEEDUP_THRESHOLD,
                                   OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR)
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
@@ -34,7 +34,6 @@ from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 from elastiflow.utils import negotiation_log
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
-from elastiflow.execution.backend import backend_for
 
 
 class EDF_Optimized_HPO(Scheduler_HPO):
@@ -64,16 +63,14 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         """Get cost per hour for HPO instances (from resources YAML)"""
         return instance.cost_per_second  # $/hour from YAML (field is misnamed)
 
-    def run(self, sim=None, wf_mb=None, resource_request_mb=None):
-
-        backend = backend_for(sim)
+    def run(self, backend):
         print(f'Starting HPO Moldable EDF scheduler...')
         print(f'  - EDF ordering: Workflows prioritized by earliest deadline')
         print(f'  - Moldable: Dynamic resource reallocation between iterations')
         print(f'  - Deadline urgency boost: CRITICAL 2.0x, WARNING 1.5x, Regular 1.2x')
 
         # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
 
         while True:
 
@@ -104,7 +101,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                     # NOTE: do NOT pop from resource_request_queue. getAllElements
                     # already drained it when we heap-pushed (same data5-bug pattern).
                     continue
-                self.processMoldableRequestHPO(resource_request, sim)
+                self.processMoldableRequestHPO(resource_request, backend)
                 print(f"  HPO EDF Moldable resource processing overhead: {time.time() - start}")
                 self.popWorkflow(self.resource_request_heap)
                 # NOTE: see above — queue was already drained, do not LPOP here.
@@ -141,7 +138,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 if self.resource_manager.getResourcesAvailable():
 
                     constraints = getConstraintsFromWorkflow(wf_plan)
-                    ips, alloc_resources = self.allocateResourcesMoldableHPO(constraints, sim)
+                    ips, alloc_resources = self.allocateResourcesMoldableHPO(constraints, backend)
                     print(f"{wf_plan['id']} EDF moldable allocation (deadline={constraints['deadline']:.1f}s): ", ips)
 
                     if ips:
@@ -150,7 +147,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                         # silently discard any newly-arrived wf. The wf was already
                         # drained from the queue when it landed in the heap.
                         start_time = backend.now()
-                        self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
+                        self.sendWorkflowForExecutionHPO(wf_plan, ips, backend, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
                     else:
@@ -211,7 +208,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
     # HPO MOLDABLE RESOURCE ALLOCATION (from fcfs_optimized_HPO.py)
     # =========================================================================
 
-    def allocateResourcesMoldableHPO(self, constraints, sim=None):
+    def allocateResourcesMoldableHPO(self, constraints, backend=None):
         """
         Moldable HPO resource allocation with resilient fallback
         """
@@ -362,7 +359,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             return None, None
 
         ips, alloc_resources = self.resource_manager.allocateResources(selected_instances)
-        ips = self.createOnDemandWorkers(ips, sim)
+        ips = self.createOnDemandWorkers(ips, backend)
         self._syncOnDemandIPs(ips, alloc_resources)
 
         # Verify we have usable IPs (on-demand creation may have failed)
@@ -507,7 +504,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
     # MOLDABLE REQUEST PROCESSING WITH DEADLINE URGENCY BOOST
     # =========================================================================
 
-    def processMoldableRequestHPO(self, request, sim):
+    def processMoldableRequestHPO(self, request, backend):
         """
         Process moldable resource requests between HPO optimization rounds.
         Adds deadline-urgency-based graduated scaling from LA EDF pattern.
@@ -517,7 +514,6 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         - WARNING (<50% time remaining): 1.5x budget boost
         - Regular (falling behind): 1.2x budget boost
         """
-        backend = backend_for(sim)
         wf_id = request['wf-id']
         (instances, budget, deadline, start_time, model) = self.resource_manager.getWorkflow(wf_id)
 
@@ -587,7 +583,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 min_needed_instances = min_needed_trials // trials_per_instance + bool(min_needed_trials % trials_per_instance)
                 if current_trials > min_needed_instances:
                     request['count'] = current_trials - min_needed_instances
-                    self.freeResources(instances, request, sim)
+                    self.freeResources(instances, request, backend)
                     return
                 else:
                     break
@@ -648,13 +644,13 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             request,
             model,
             current_instance_type,
-            sim
+            backend
         )
 
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
 
         if ips:
-            ips = self.createOnDemandWorkers(ips, sim)
+            ips = self.createOnDemandWorkers(ips, backend)
             self._syncOnDemandIPs(ips, alloc_resources)
             # If all on-demand creation failed, return the slots
             total_ips = sum(len(ip_list) for _, (_, ip_list) in ips.get('on-demand', {}).items())
@@ -687,9 +683,9 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             else:
                 self.metrics.recordScaleUpAttempt(success=False, reason='insufficient_compute', workflow_id=wf_id)
 
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None), iter_idx=request.get('iteration'))
+        self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None), iter_idx=request.get('iteration'))
 
-    def checkNewResourcesHPO(self, resources, current_resources, budget, available_runtime, request, model, instance_type_filter, sim):
+    def checkNewResourcesHPO(self, resources, current_resources, budget, available_runtime, request, model, instance_type_filter, backend):
         """
         Allocate additional resources for moldable HPO with cluster isolation.
         Identical to fcfs_optimized_HPO version.
@@ -771,7 +767,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         return acquired_instances
 
-    def freeResources(self, instances, request, sim):
+    def freeResources(self, instances, request, backend):
         """Free excess resources when deadline allows (LIFO strategy)"""
         response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
         freed_count = 0
@@ -801,23 +797,22 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         # Notify executor FIRST so it stops using freed IPs immediately.
         # Instance termination happens AFTER to avoid blocking the response
         # (termination can take 5+ minutes, exceeding executor's 210s timeout).
-        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None), iter_idx=request.get('iteration'))
+        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None), iter_idx=request.get('iteration'))
 
         # Terminate freed on-demand EC2 instances AFTER notifying executor
-        if request['count'] > 0 and not sim and not SIMULATE:
+        if request['count'] > 0 and not backend.simulated:
             for instance, count, ips in to_free_instances:
                 if instance.type == 'on-demand' and ips:
                     print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
                     try:
-                        deleteInstanceFromIp(ips, sim)
+                        deleteInstanceFromIp(ips, backend)
                     except Exception as e:
                         print(f"[ERROR] Scale-down termination failed: {e}")
 
-    def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip, iter_idx=None):
+    def sendNewResources(self, wf_id, ips, alloc_resources, backend, client_ip, iter_idx=None):
         """Send new resources to executor.
         If send fails (executor dead/unreachable), terminate any on-demand instances
         that were just created to prevent leaks."""
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -833,7 +828,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                             granted_count=negotiation_log.count_hosts(ips),
                             t_scheduler_reply_sent=time.time())
 
-        if not send_ok and not sim and not SIMULATE:
+        if not send_ok and not backend.simulated:
             # Executor is dead — terminate any on-demand instances we just created
             leaked_ips = []
             for name, val in ips.get('on-demand', {}).items():
@@ -842,7 +837,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             if leaked_ips:
                 print(f"[CLEANUP] Send to executor failed for {wf_id}, terminating on-demand scale-up instances: {leaked_ips}")
                 try:
-                    deleteInstanceFromIp(leaked_ips, sim)
+                    deleteInstanceFromIp(leaked_ips, backend)
                 except Exception as e:
                     print(f"[CLEANUP] Failed to terminate leaked scale-up instances: {e}")
             # Return allocated slots to resource manager
@@ -854,9 +849,8 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
             self.metrics.updateResources(wf_id, alloc_resources, backend.now())
 
-    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip, iter_idx=None):
+    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, backend, client_ip, iter_idx=None):
         """Send freed resources notification to executor"""
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
             "initial-alloc": False,
@@ -874,7 +868,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             self.resource_manager.updateFreedResources(wf_id, instances)
             self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())
 
-    def createOnDemandWorkers(self, ips, sim):
+    def createOnDemandWorkers(self, ips, backend):
         """Create actual on-demand worker instances for allocated virtual slots.
         Multiple instance types are created in parallel.
         Terminates any successfully created instances if other threads fail.
@@ -889,7 +883,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         def _create(instance_type, count):
             print(f"Creating {count} on-demand {instance_type} worker instances...")
-            worker_ips = createWorkerInstances(instance_type, count, sim)
+            worker_ips = createWorkerInstances(instance_type, count, backend)
             print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
             return instance_type, count, worker_ips
 
@@ -904,10 +898,10 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         except Exception as e:
             print(f"[ERROR] On-demand instance creation failed: {e}")
             # Terminate any instances that were successfully created
-            if created_ips and not sim and not SIMULATE:
+            if created_ips and not backend.simulated:
                 print(f"[CLEANUP] Rolling back {len(created_ips)} successfully created instances: {created_ips}")
                 try:
-                    deleteInstanceFromIp(created_ips, sim)
+                    deleteInstanceFromIp(created_ips, backend)
                 except Exception as cleanup_err:
                     print(f"[CLEANUP] Rollback termination failed: {cleanup_err}")
             # Zero out all on-demand IPs so caller sees creation failed
@@ -916,7 +910,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         return ips
 
-    def sendWorkflowForExecutionHPO(self, wf_plan, ips, sim, deadline):
+    def sendWorkflowForExecutionHPO(self, wf_plan, ips, backend, deadline):
         """
         HPO-specific workflow execution with dedicated executor design
         """

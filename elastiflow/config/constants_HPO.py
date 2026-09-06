@@ -225,7 +225,6 @@ MOLDABLE_INITIAL_CAP = 1.0  # Start at full chain count (== static initial). Mol
 # SIMULATION PARAMETERS
 # ====================================================================================
 
-SIMULATE = False  # False for real execution; True for simulation only
 MOLDABLE = True  # False for static scheduler; True for moldable (fcfs_optimized_HPO)
 FREE_RESOURCES = True  # Allow resource deallocation
 TOTAL_WORKFLOWS = PRIMARY_WORKFLOWS  # Default to 10 workflows

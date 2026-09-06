@@ -32,7 +32,6 @@ from elastiflow.resource_manager.license.exceptions import InsufficientTokens, L
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.utils.resource import getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
-from elastiflow.execution.backend import backend_for
 
 
 class FCFS_Optimized_LA(Scheduler_LA):
@@ -59,22 +58,20 @@ class FCFS_Optimized_LA(Scheduler_LA):
         # LAMF is moldable (dynamic resource scaling)
         self.is_moldable = True
 
-    def run(self, sim=None, wf_mb=None, resource_request_mb=None):
-
-        backend = backend_for(sim)
+    def run(self, backend):
         print(f'Starting LAMF (License-Aware Moldable FCFS) Scheduler...')
 
         # Track workflows that are impossible to allocate (prevent infinite retries)
         rejected_workflows = set()
 
         # Start resource utilization collection (including license pools)
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager, self.license_manager)
 
         while True:
 
-            # Advance the license ledger clock to current sim time so every token
-            # hold/release this cycle is billed at the correct sim timestamp.
-            if sim is not None:
+            # Advance the license ledger clock to current backend time so every token
+            # hold/release this cycle is billed at the correct backend timestamp.
+            if backend.simulated:
                 self.license_manager.set_sim_time(backend.now())
 
             # Check queue for resource requests (moldable requests from executors)
@@ -90,7 +87,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     continue
 
                 # Process moldable request (with license awareness)
-                self.processFreeRequestWithLicenses(resource_request, sim)
+                self.processFreeRequestWithLicenses(resource_request, backend)
 
                 print(f"⏱ Resource request overhead: {time.time() - start:.3f}s")
                 backend.resource_requests.pop()
@@ -107,9 +104,9 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     backend.workflows.pop()
                     from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
                     # Honest billing verification: ledger (Token-Hours) per pool.
-                    _fs = backend.now() if sim is not None else self.license_manager.sim_now
+                    _fs = backend.now() if backend.simulated else self.license_manager.sim_now
                     _bp = self.license_manager.license_cost_by_pool(_fs)
-                    print(f"[HONEST-BILL] ledger license cost by pool @sim={_fs:.0f}: "
+                    print(f"[HONEST-BILL] ledger license cost by pool @backend={_fs:.0f}: "
                           f"LSDYNA €{_bp.get('LSDYNA',0):.0f}  ABAQUS €{_bp.get('ABAQUS',0):.0f}  "
                           f"ANSYS €{_bp.get('ANSYS',0):.0f}  TOTAL €{sum(_bp.values()):.0f}")
                     self.metrics.computeMetrics(
@@ -143,7 +140,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
                         # Send to executor
                         self.sendWorkflowForExecution(
-                            wf_plan, ips, sim, constraints['deadline'], license_holds
+                            wf_plan, ips, backend, constraints['deadline'], license_holds
                         )
 
                         # Track workflow with licenses
@@ -229,7 +226,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
             backend.sleep(WORKFLOW_POLLING)
 
-    def processFreeRequestWithLicenses(self, request, sim):
+    def processFreeRequestWithLicenses(self, request, backend):
         """
         Process moldable resource request WITH license awareness
 
@@ -239,7 +236,6 @@ class FCFS_Optimized_LA(Scheduler_LA):
         3. If not, check if should scale up (allocate compute + licenses)
         4. Account for license availability in all decisions
         """
-        backend = backend_for(sim)
         # LA workflows always return 7-value tuples
         instances, budget, deadline, start_time, mesh, software_id, license_holds = \
             self.resource_manager.getWorkflow(request['wf-id'])
@@ -382,7 +378,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     # === OLD CODE (unconditional scale-down): ===
                     # request['count'] = cur_count - min_needed_count
                     # print(f"⬇ Scaling down: freeing {request['count']} instances")
-                    # self.freeResourcesWithLicenses(instances, request, sim, license_pool)
+                    # self.freeResourcesWithLicenses(instances, request, backend, license_pool)
                     # return
 
                     # === NEW CODE (conditional scale-down with guards): ===
@@ -400,7 +396,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                         cores_freed = cur_instance.cores * request['count']
 
                         # Free compute AND licenses (get ACTUAL licenses released)
-                        actual_licenses_released = self.freeResourcesWithLicenses(instances, request, sim, license_pool)
+                        actual_licenses_released = self.freeResourcesWithLicenses(instances, request, backend, license_pool)
 
                         # Record scale-down success with ACTUAL values (BUG FIX #3)
                         self.metrics.recordScaleDownAttempt(
@@ -501,7 +497,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
             # Send to executor with new licenses
             self.sendNewResources(
-                request['wf-id'], ips, alloc_resources, sim,
+                request['wf-id'], ips, alloc_resources, backend,
                 request.get('client-ip', None), license_holds_new
             )
 
@@ -703,7 +699,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
         return feasible if feasible else None
 
-    def freeResourcesWithLicenses(self, instances, request, sim, license_pool: Optional[str]):
+    def freeResourcesWithLicenses(self, instances, request, backend, license_pool: Optional[str]):
         """
         Free resources AND licenses
 
@@ -813,7 +809,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
         # Send freed resources notification
         self.sendFreedResources(
             request['wf-id'], to_free_instances, instances,
-            response_instances, sim, request.get('client-ip', None)
+            response_instances, backend, request.get('client-ip', None)
         )
 
         return actual_licenses_released  # Return actual amount released (BUG FIX #3)

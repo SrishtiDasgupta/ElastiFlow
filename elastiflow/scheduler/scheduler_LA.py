@@ -33,7 +33,6 @@ from elastiflow.resource_manager.instance import Instance, OnPremInstance, Cloud
 from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
-from elastiflow.execution.backend import backend_for
 
 
 class Scheduler_LA(ABC):
@@ -56,7 +55,7 @@ class Scheduler_LA(ABC):
         self.license_holds = {}  # {wf_id: [hold_ids]}
 
     @abstractmethod
-    def run(self, queue):
+    def run(self, backend):
         pass
 
     def allocateResources(self, constraints):
@@ -232,13 +231,12 @@ class Scheduler_LA(ABC):
         # For now, return infinity (no shadow time calculation)
         return (float('inf'), float('inf'), float('inf'))
 
-    def sendWorkflowForExecution(self, wf_plan, ips, sim, deadline, license_holds=None):
+    def sendWorkflowForExecution(self, wf_plan, ips, backend, deadline, license_holds=None):
         """
         Send workflow to executor with license information
 
         Extended to include license hold IDs in the request
         """
-        backend = backend_for(sim)
         request = {
             "initial-alloc": True,
             "wf-plan": wf_plan,
@@ -247,7 +245,7 @@ class Scheduler_LA(ABC):
             "license-holds": license_holds or []  # NEW: Include license holds
         }
 
-        executor, on_demand_type = getExecutor(ips, sim)
+        executor, on_demand_type = getExecutor(ips, backend)
         if on_demand_type:
             request['hosts']['on-demand'][on_demand_type] = (
                 request['hosts']['on-demand'][on_demand_type][0],
@@ -255,11 +253,10 @@ class Scheduler_LA(ABC):
             )
 
         backend.start_workflow(request, executor)
-    def processJobCompletion(self, sim=None, mb=None):
+    def processJobCompletion(self, backend):
         """
         Process workflow completions and release BOTH compute and licenses
         """
-        backend = backend_for(sim)
         print('Scheduler started listening to completed jobs...')
         while True:
             data = backend.completions.peek()
@@ -316,13 +313,12 @@ class Scheduler_LA(ABC):
 
             backend.sleep(60)
 
-    def allocateNewResources(self, request, sim):
+    def allocateNewResources(self, request, backend):
         """
         Allocate new resources for moldable workflows
 
         Base implementation (extended in child classes with license checks)
         """
-        backend = backend_for(sim)
         if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
 
@@ -342,15 +338,14 @@ class Scheduler_LA(ABC):
         alloc_instances = self.checkNewResources(free_resources, instances, available_budget, available_runtime, request, mesh)
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
 
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
+        self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None))
 
-    def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip, license_holds=None):
+    def sendNewResources(self, wf_id, ips, alloc_resources, backend, client_ip, license_holds=None):
         """
         Send new resource allocation to executor
 
         Extended to include license hold IDs
         """
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -370,13 +365,12 @@ class Scheduler_LA(ABC):
             # Metrics tracking now happens in fcfs_optimized_LA.py before calling sendNewResources()
             # self.metrics.updateResources(wf_id, alloc_resources, backend.now())  # OLD signature - removed
 
-    def freeResources(self, request, sim):
+    def freeResources(self, request, backend):
         """
         Free resources (compute only in base class)
 
         Override in child classes to handle license freeing
         """
-        backend = backend_for(sim)
         if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
 
@@ -403,13 +397,12 @@ class Scheduler_LA(ABC):
 
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
 
-        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
+        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None))
 
-    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip):
+    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, backend, client_ip):
         """
         Send freed resources notification to executor
         """
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
             "initial-alloc": False,
@@ -705,13 +698,12 @@ class Scheduler_LA(ABC):
         closeness = lambda x: math.isclose(runtime, x, rel_tol=0.15)
         return any(map(closeness, runtimes_list))
 
-    def purgeWorkflow(self, wf_plan, sim) -> bool:
+    def purgeWorkflow(self, wf_plan, backend) -> bool:
         """
         Check if workflow should be purged
 
         Same as base scheduler
         """
-        backend = backend_for(sim)
         runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
         if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
             print(f"Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")

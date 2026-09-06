@@ -14,7 +14,6 @@ import time
 from elastiflow.config.constants_LA import RESOURCE_UTILIZATION_POLLING, TOTAL_WORKFLOWS
 from elastiflow.resource_manager.instance import CloudReservedInstance, OnPremInstance
 from elastiflow.resource_manager.resource_manager import ResourceManager
-from elastiflow.execution.backend import backend_for
 
 # ============================================================================
 # License Cost Constants (based on Henkel & Treiber 2015 and JSSPP 2025)
@@ -906,16 +905,15 @@ class MetricsLA:
 
         exit()
 
-    def collectResourceUtilization(self, sim, rm: ResourceManager, license_manager=None):
+    def collectResourceUtilization(self, backend, rm: ResourceManager, license_manager=None):
         """
         Continuously collect resource utilization data and license pool utilization.
 
         Args:
-            sim: Simulus simulator instance
+            backend: Simulus simulator instance
             rm: ResourceManager instance
             license_manager: LicenseManager instance (optional)
         """
-        backend = backend_for(sim)
         while self.collectFlag:
             resources = rm.getResources()
             onprem_free, cloud_free = 0, 0
@@ -927,7 +925,7 @@ class MetricsLA:
                 elif isinstance(instance, CloudReservedInstance):
                     cloud_free += instance.getFreeSlots()
 
-            timestamp = (sim and backend.now()) or time.time()
+            timestamp = backend.now()
             self.free_resources.append((timestamp, onprem_free, cloud_free))
 
             # Collect license pool utilization if license_manager available

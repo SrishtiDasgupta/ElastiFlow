@@ -10,7 +10,6 @@ import yaml
 from elastiflow.config.constants import SEED, TOTAL_WORKFLOWS
 from elastiflow.utils.validate_workflow import validate_workflow
 from elastiflow.config.paths import PACKAGE_DIR
-from elastiflow.execution.backend import backend_for
 
 # DEPRECATED
 def delay_generation(workflows):
@@ -119,8 +118,7 @@ def send_workflow(workflow):
         print('Error:', response.status_code, response.text)
 
 
-def dispatcher(sim, wf_mb):
-    backend = backend_for(sim)
+def dispatcher(backend):
     delays = delayGenerationFromSubmitTimes(TOTAL_WORKFLOWS)
     # delays = [1, 60, 60, 80, 100, 250, 300, 40, 120, 200, 150, 100, 1000]
     print(f'Starting dispatcher for {TOTAL_WORKFLOWS} workflows at {backend.now()}...')

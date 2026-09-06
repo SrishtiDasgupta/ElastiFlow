@@ -6,9 +6,9 @@ from .steep.steep_parser import *
 
 class Steep_Workflow(Workflow):
 
-    def __init__(self, wf_plan, sim, deadline):
+    def __init__(self, wf_plan, backend, deadline):
         super().__init__(wf_plan)
-        setWorkflowConfig(self.id, self.plan, sim, deadline)
+        setWorkflowConfig(self.id, self.plan, backend, deadline)
         self.vars, self.actions  = Steep_Parser(self.plan).getTuple() # Tuple[List[Variable], List[Action]]
             
     def execute(self, hosts):

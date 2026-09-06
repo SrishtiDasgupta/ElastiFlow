@@ -6,9 +6,9 @@ from .steep.steep_parser_HPO import *
 
 class Steep_Workflow_HPO(Workflow):
 
-    def __init__(self, wf_plan, sim, deadline):
+    def __init__(self, wf_plan, backend, deadline):
         super().__init__(wf_plan)
-        setWorkflowConfig(self.id, self.plan, sim, deadline)
+        setWorkflowConfig(self.id, self.plan, backend, deadline)
         self.vars, self.actions  = Steep_Parser_HPO(self.plan).getTuple()
 
     def execute(self, hosts):

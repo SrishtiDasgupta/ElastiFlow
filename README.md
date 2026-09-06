@@ -42,8 +42,8 @@ See `docs/INSTALL.md`. In short: a venv, `pip install -r requirements.txt`,
 `pip install -e .`, a Redis server on localhost, then
 
 ```
-python -m pytest            # unit + regression, about one minute
-python -m pytest -m smoke   # every simulated policy once, about seven minutes
+python -m pytest            # unit + regression, about half a minute
+python -m pytest -m smoke   # every simulated policy once against the recorded baseline, about half a minute
 ```
 
 The regression tests re-run one committed cell of each campaign and compare
@@ -52,7 +52,9 @@ They are the contract for any change to the framework.
 
 ## Reproducing results
 
-* One simulated cell: `docs/INSTALL.md`, section "Running a simulated cell by hand".
+* One simulated cell: `python -m elastiflow run --mode simulated --use-case seissol ...`
+  (`docs/INSTALL.md`, section "Running a simulated cell by hand"); `--mode live`
+  starts the live scheduler process instead.
 * A campaign: `use_cases/seissol/results/sweep_PLAIN.py` and
   `use_cases/licence/results/canonical_sweep.py` (they merge into the dataset
   files in place; run them on a branch).

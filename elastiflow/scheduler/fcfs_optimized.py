@@ -10,7 +10,6 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance
 from elastiflow.resource_manager.resource_manager import ResourceManager
 from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.scheduler.scheduler import Scheduler
-from elastiflow.execution.backend import backend_for
 
 # If requested resources are available, they are granted. Else the workflow waits
 class FCFS_Optimized(Scheduler):
@@ -22,13 +21,11 @@ class FCFS_Optimized(Scheduler):
         self.resource_manager.sortResourcesByFunction(func)
         super().__init__(queue, finish_queue, resource_request_queue)
 
-    def run(self, sim = None, wf_mb = None, resource_request_mb = None):
-        
-        backend = backend_for(sim)
+    def run(self, backend):
         print(f'Starting scheduler...')
 
         # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
         
         while True:
 
@@ -42,7 +39,7 @@ class FCFS_Optimized(Scheduler):
                 if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
                     backend.resource_requests.pop()
                     continue
-                self.processFreeRequest(resource_request, sim)
+                self.processFreeRequest(resource_request, backend)
                 print(f"Resource stuff overhead: {time.time() - start}")
                 backend.resource_requests.pop()
                 continue
@@ -61,7 +58,7 @@ class FCFS_Optimized(Scheduler):
                     break 
 
                 # If workflow cannot be executed, pop it to prevent stagnation
-                # if self.purgeWorkflow(wf_plan, sim):
+                # if self.purgeWorkflow(wf_plan, backend):
                 #     backend.workflows.pop()
                 #     self.resource_manager.setResourcesAvailable(True)
                 #     continue
@@ -79,7 +76,7 @@ class FCFS_Optimized(Scheduler):
                         backend.workflows.pop()
                         # NOTE: We start billing at this point
                         start_time = backend.now()
-                        self.sendWorkflowForExecution(wf_plan, ips, sim, constraints['deadline'])
+                        self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
                     else:
@@ -225,8 +222,7 @@ class FCFS_Optimized(Scheduler):
         closeness = lambda x: math.isclose(runtime, x, rel_tol=CLOSENESS_TOLERANCE)
         return any(map(closeness, runtimes_list))
         
-    def processFreeRequest(self, request, sim):
-        backend = backend_for(sim)
+    def processFreeRequest(self, request, backend):
         (instances, budget, deadline, _, mesh) = self.resource_manager.getWorkflow(request['wf-id'])
         
         # Check if additional resources are needed
@@ -254,7 +250,7 @@ class FCFS_Optimized(Scheduler):
                 min_needed_count = request['chains'] // chains_per_node + bool(request['chains'] % chains_per_node)
                 if cur_count >= min_needed_count:
                     request['count'] = cur_count - min_needed_count
-                    self.freeResources(instances, request, sim)
+                    self.freeResources(instances, request, backend)
                     self.metrics.recordScaleDownAttempt(request, request['count'])
                     return
                 else: # allocate resources
@@ -274,9 +270,9 @@ class FCFS_Optimized(Scheduler):
         path = 'on_prem' if isinstance(instances[0][0], OnPremInstance) else 'cloud'
         self.metrics.recordScaleUpAttempt(request, alloc_instances, path=path)
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances) # alloc_resource = {obj: (count, [ips])}
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
+        self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None))
 
-    def freeResources(self, instances, request, sim):
+    def freeResources(self, instances, request, backend):
         response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
         freed_count = 0
         to_free_instances = []   
@@ -292,4 +288,4 @@ class FCFS_Optimized(Scheduler):
                 if freed_count == request['count']:
                     break
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
-        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
+        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None))

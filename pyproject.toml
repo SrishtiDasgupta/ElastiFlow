@@ -27,6 +27,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 
+[project.scripts]
+elastiflow = "elastiflow.cli:main"
+
 [tool.setuptools.packages.find]
 include = ["elastiflow*"]
 
