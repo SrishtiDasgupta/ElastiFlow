@@ -68,7 +68,8 @@ if _iter0 is not None:
 
 import simulus  # noqa: E402
 from elastiflow.wf_queue.redis_queue import Redis_Queue  # noqa: E402
-from elastiflow.scripts.dispatcher_LA import dispatcher_LA  # noqa: E402
+from elastiflow.scripts.dispatcher import dispatcher  # noqa: E402
+from elastiflow.scripts.dispatcher_LA import LICENCE  # noqa: E402
 from elastiflow.config.constants_LA import (  # noqa: E402
     TOTAL_WORKFLOWS, LICENSE_DISTRIBUTION, LICENSE_POOL_CAPACITY,
     MOLDABLE,
@@ -126,7 +127,7 @@ from elastiflow.scripts.tinyda_runtime import iteration_runtime
 backend_sched = SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorklow, on_resources=processNewResources, cold_start=COLD_START_TIME, fake_ip=simulated_ip, executor_overhead=7.7, runtime_model=iteration_runtime)
 backend_disp = SimulatedBackend(sim_dispatcher)   # sends by mailbox name from its own simulator
 
-sim_dispatcher.process(dispatcher_LA, backend_disp)
+sim_dispatcher.process(dispatcher, backend_disp, LICENCE)
 sim_sched.process(sched.run, backend_sched, name=f'{SCHEDULER_NAME.lower()}_sched')
 sim_sched.process(sched.processJobCompletion, backend_sched, name='job_completion_sched')
 

@@ -2,7 +2,7 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 to B7.3 and B7.5 are done; B7.6, B7.7 and B7.4 are not applied yet. Every figure below was measured on that commit with
+end. B7.0 to B7.3, B7.5 and B7.6 are done; B7.7 and B7.4 are not applied yet. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -407,6 +407,27 @@ construct their policy themselves, refuse the option with a message. Gates:
 entry point's resolver), two new CLI regression cells by policy name
 (Elastic-EDF_c and EDF-LAMF reproduce the datasets of record), default
 suite (214), smoke unchanged.
+
+**B7.6 done (2026-09-06).** One arrival loop, `dispatcher.dispatcher(backend,
+arrivals)`, over an `Arrivals` profile per use case: the workflow count, the
+delay generator, the plan loader, the wait before END and the use case's log
+lines. The generators and loaders are the old dispatchers' own functions
+unchanged (`SEISSOL` in `dispatcher.py`, `LICENCE` in `dispatcher_LA.py`,
+`dispatcher_HPO.arrivals(...)` for the hand-crafted and the generated or
+Poisson modes), so a seeded run draws the same random sequence; the HPO
+runner's `dispatcher_HPO.dispatcher(backend, ...)` is a thin wrapper. Before
+the merge the three arrival processes were recorded against a stub clock
+(`tests/regression/baseline_dispatch.json`: 301, 701 and 6/16/16 sends with
+their submit times, SeisSol seeded by `constants.SEED`, the others by numpy
+seeds 42 and 7) and the merged loop reproduces the record exactly, on top
+of the smoke suite. The one loop has one guard the SeisSol and hand-crafted
+HPO loops lacked: a plan that fails to load is skipped rather than crashing
+the process; no campaign plan fails to load. One executor node loop:
+`executor.processQueueData(queue, backend, execute, on_resources)` and
+`executor.serve(backend, execute, on_resources, started)`; `executor_LA.py` and
+`executor_HPO.py` keep only their execute and resource-update functions and
+their banners (live paths, import composition only). Gates: dispatch record,
+unit (199), default (216), smoke, all exact.
 
 ## Method
 

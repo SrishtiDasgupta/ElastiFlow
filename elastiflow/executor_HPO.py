@@ -1,31 +1,8 @@
-import threading
-import sys
 import argparse
 from elastiflow.utils.exec_sched import setNewResources, isResourceRequestPending
 from elastiflow.scripts.create_instance_HPO import deleteInstanceFromIp
 from elastiflow.utils.request import getConfig, sendRequest
 from elastiflow.workflow.steep_workflow_HPO import Steep_Workflow_HPO
-from elastiflow.server import server
-from elastiflow.wf_queue.redis_queue import Redis_Queue
-
-def processQueueData(queue, backend):
-    """
-    Process incoming workflow execution requests
-    Same pattern as SeisSol executor
-    """
-    while True:
-        data = queue.peek()
-        if data:
-            data = eval(data)
-            if data["initial-alloc"]:
-                # NOTE: For every request to the executor, we create a new thread
-                thread = threading.Thread(target=executeWorkflowHPO, args=[data, backend])
-                thread.start()
-            else:
-                # Resource update for moldable scheduling
-                processNewResourcesHPO(data)
-            queue.pop()
-
 
 def executeWorkflowHPO(data, backend):
     """
@@ -174,32 +151,10 @@ if __name__ == "__main__":
     print('  Scheduler → Executor → Steep → run_hpo.py → Runner → Workers')
     print('=' * 60)
 
-    # Setup main executor queue (same as SeisSol)
-    queue = Redis_Queue(queue_name='exec-queue')
     from elastiflow.execution.backend import LiveBackend
+    from elastiflow.executor import serve
     from elastiflow.scripts.create_instance_HPO import launch_workers, terminate_live
-    backend = LiveBackend(launch=launch_workers, terminate=terminate_live)   # the executor node: HPO's own provisioning
-
-    # Start HTTP server thread
-    server_thread = threading.Thread(
-        target=server.run,
-        kwargs={'queue': queue, 'port': getConfig('executor-incoming-port')}
-    )
-    server_thread.start()
-
-    # Start queue listener daemon thread
-    queue_listener = threading.Thread(target=processQueueData, args=[queue, backend])
-    queue_listener.daemon = True
-    queue_listener.start()
-
-    print(f'HPO Executor started successfully!')
-    print(f'Listening for workflows on port {getConfig("executor-incoming-port")}...')
-    print('Press Ctrl+C to stop')
-    print('')
-
-    try:
-        server_thread.join()
-        queue_listener.join()
-    except KeyboardInterrupt:
-        print("\n\nHPO Executor shutting down...")
-        sys.exit(0)
+    serve(LiveBackend(launch=launch_workers, terminate=terminate_live), executeWorkflowHPO, processNewResourcesHPO,   # the executor node: HPO's own provisioning
+          started=('HPO Executor started successfully!',
+                   f'Listening for workflows on port {getConfig("executor-incoming-port")}...',
+                   'Press Ctrl+C to stop', ''))

@@ -2,11 +2,11 @@ import yaml
 import os
 import time
 import argparse
-import requests
 import numpy as np
 
 from elastiflow.config.constants_HPO import TOTAL_WORKFLOWS as DEFAULT_TOTAL_WORKFLOWS, AVG_INTERARRIVAL_TIME, WORKFLOW_ORDER
 from elastiflow.utils.validate_workflow import validate_workflow
+from elastiflow.scripts.dispatcher import Arrivals, dispatcher as _dispatcher, send_workflow
 
 
 def generate_poisson_delays(num_workflows, avg_interarrival):
@@ -53,76 +53,52 @@ def fetchWorkflow(i, use_generated=False):
     return workflow
 
 
-def send_workflow(workflow, scheduler_host='0.0.0.0', port=8080):
-    """POST workflow to scheduler's HTTP server"""
-    proxies = {"http": None, "https": None}
-    url = f'http://{scheduler_host}:{port}'
-    response = requests.post(url, proxies=proxies, json=workflow)
-    if response.status_code == 200:
-        print(f'  Success: {workflow["id"]}')
-    else:
-        print(f'  Error: {response.status_code} {response.text}')
+def arrivals(num_workflows=None, use_generated=False, poisson=False, avg_delay=None) -> Arrivals:
+    """The HPO arrival process, for `dispatcher.dispatcher`.
 
-
-def dispatcher(backend, num_workflows=None, use_generated=False, poisson=False, avg_delay=None):
-    """
-    HPO workflow dispatcher for simulation mode.
-
-    Supports two modes:
+    Two modes:
     1. Hand-crafted (default): 5 workflows with hardcoded delays (sim_wf*.yaml)
     2. Generated + Poisson: N workflows from data*.yaml with Poisson inter-arrival times
 
     Args:
-        backend: the execution backend (its clock, and its workflows channel to submit on)
         num_workflows: number of workflows to dispatch (default: 5 for hand-crafted, or TOTAL_WORKFLOWS)
         use_generated: use generated data*.yaml files instead of sim_wf*.yaml
         poisson: use Poisson-distributed inter-arrival times
         avg_delay: average inter-arrival time in seconds (default: AVG_INTERARRIVAL_TIME)
     """
     if use_generated or poisson:
-        # Generated workflow mode with Poisson arrivals
         if num_workflows is None:
             num_workflows = DEFAULT_TOTAL_WORKFLOWS
         if avg_delay is None:
             avg_delay = AVG_INTERARRIVAL_TIME
 
-        if poisson:
-            delays = generate_poisson_delays(num_workflows, avg_delay)
-        else:
-            delays = [0] + [avg_delay] * (num_workflows - 1)
+        def delays(n):
+            d = generate_poisson_delays(n, avg_delay) if poisson else [0] + [avg_delay] * (n - 1)
+            return [float(x) for x in d]
 
-        print(f'Starting HPO dispatcher for {num_workflows} generated workflows at {backend.now()}...')
-        print(f'  Arrival pattern: {"Poisson" if poisson else "Fixed"} (avg={avg_delay:.0f}s)')
+        def banner(n, backend):
+            print(f'Starting HPO dispatcher for {n} generated workflows at {backend.now()}...')
+            print(f'  Arrival pattern: {"Poisson" if poisson else "Fixed"} (avg={avg_delay:.0f}s)')
 
-        for i in range(num_workflows):
-            backend.sleep(float(delays[i]))
+        def announce(i, backend):
             file_idx = WORKFLOW_ORDER[i] if i < len(WORKFLOW_ORDER) else i
             print(f'Dispatching workflow pos={i} (data{file_idx}.yaml) at t={backend.now():.0f}s')
-            workflow = fetchWorkflow(i, use_generated=True)
-            if workflow is None:
-                print(f'  Failed to load data{i}.yaml, skipping')
-                continue
-            workflow['submit_time'] = backend.now()
-            backend.workflows.send(workflow)
-    else:
-        # Original hand-crafted mode (5 workflows)
-        if num_workflows is None:
-            num_workflows = 5
-        delays = [0, 100, 200, 150, 150]
 
-        print(f'Starting HPO dispatcher for {num_workflows} workflows at {backend.now()}...')
+        return Arrivals('hpo', num_workflows, delays, lambda i: fetchWorkflow(i, use_generated=True), end_delay=150000,
+                        banner=banner, announce=announce, missing=lambda i: print(f'  Failed to load data{i}.yaml, skipping'),
+                        at_end=lambda backend: print(f'Sending END signal at t={backend.now()}s'))
+    # Original hand-crafted mode (5 workflows)
+    if num_workflows is None:
+        num_workflows = 5
+    return Arrivals('hpo', num_workflows, lambda n: [0, 100, 200, 150, 150], lambda i: fetchWorkflow(i, use_generated=False), end_delay=150000,
+                    banner=lambda n, backend: print(f'Starting HPO dispatcher for {n} workflows at {backend.now()}...'),
+                    announce=lambda i, backend: print(f'Dispatching workflow {i+1} at t={backend.now()}s'),
+                    at_end=lambda backend: print(f'Sending END signal at t={backend.now()}s'))
 
-        for i in range(num_workflows):
-            backend.sleep(delays[i])
-            print(f'Dispatching workflow {i+1} at t={backend.now()}s')
-            workflow = fetchWorkflow(i, use_generated=False)
-            workflow['submit_time'] = backend.now()
-            backend.workflows.send(workflow)
 
-    # Send END after all workflows complete (large delay to ensure completion)
-    backend.sleep(150000)
-    print(f'Sending END signal at t={backend.now()}s')
-    backend.workflows.send(fetchWorkflow('end'))
+def dispatcher(backend, num_workflows=None, use_generated=False, poisson=False, avg_delay=None):
+    """The HPO runner's entry: the shared loop on the HPO arrivals."""
+    return _dispatcher(backend, arrivals(num_workflows, use_generated, poisson, avg_delay))
 
 
 if __name__ == "__main__":
