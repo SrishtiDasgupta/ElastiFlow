@@ -2,8 +2,7 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 to B7.3 and B7.5 to B7.7 are done; B7.4 is in progress (the SeisSol
-and licence families are on the skeleton, HPO is next). Every figure below was measured on that commit with
+end. Every step is done; B7 is complete. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -491,6 +490,35 @@ route; HSM is EDF-LAMF with its banner, prefix and the non-blocking waits
 (the difference reported under B7.3 item 4 is now two short methods). About
 820 lines of loops for about 330 of hooks. Arbiter: the smoke suite, exact on
 the 5 licence cells; default suite unchanged.
+
+**B7.4, HPO (2026-09-06), and B7 complete.** HPO has no simulated cell, so
+the four HPO loops were first recorded against a stub backend
+(`tests/regression/hpo_loop.py`, `baseline_hpo_loop.json`: three sample
+plans and END on the workflows channel, one grow request for the first
+admitted workflow appearing once it has started, the clock advancing by the
+requested sleeps, every channel operation, sleep, message and provisioning
+call logged in order; all four loops run to END). Then the loops moved onto
+the skeleton: `Scheduler_HPO` holds the admission body with the layer's
+allocation (`allocateForAdmission`: the static or the elastic one) and the
+metrics call under the policy's file prefix; the static layer logs and drops
+requests without an overhead charge; Elastic-FCFS and Elastic-EDF keep their
+own request phases (the negotiation log, the 300 s timeout, the elastic
+negotiation); the EDF pair drain the channel into their heap, and only the
+static one still pops the queue behind the heap (the elastic one's comment
+about the data5 bug is kept where the pop is not). The merged loops
+reproduce the record event for event, and the allocation record is unchanged.
+`elastiflow/scheduler/` stands at 5,388 lines, from 8 244 before B7.1;
+no policy carries a `run` of its own, and every scheduling decision that
+differs between two cited policies is a named hook.
+
+B7 as a whole: the seven steps of the plan are done, in the order B7.0,
+B7.1, B7.2, B7.3, B7.5, B7.6, B7.7, B7.4. What stayed separate on purpose:
+the three metrics classes (dataset schemas), the licence and HPO algorithms,
+the HPO execute action's live runner, and the four behavioural differences
+reported under B7.3. The references added on the way, all recorded from the
+tree before the change they guard: the HPO allocation and message record, the
+arrival-process record, the HPO loop record, and the four uncited SeisSol
+cells in the smoke baseline.
 
 ## Method
 

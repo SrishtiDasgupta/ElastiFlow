@@ -10,7 +10,7 @@ The target layout and the plan are in `docs/REORGANISATION.md`.
 | dissertation component | package location | notes |
 |---|---|---|
 | Gateway (submission, completion, resource-request endpoints) | `elastiflow/server/server.py`, `elastiflow/wf_queue/` | HTTP handlers; three Redis queues (`wf-queue`, `completed-jobs-queue`, `resource-request-queue`). Ports from `config/resources.yaml`: user requests 8080, workflow completion 8082, resource requests 8084, executor 8089. |
-| Scheduler | `elastiflow/scheduler/` | one abstract base per use case today (see below) and the policy classes |
+| Scheduler | `elastiflow/scheduler/` | one base (`scheduler.py`: the request loop and its hooks), the licence and HPO layers, and the policy classes, each a set of hooks (see below and `docs/PHASE_B7_SCHEDULER_MERGE.md`) |
 | Resource Manager | `elastiflow/resource_manager/` | `instance.py` (instance model), `resource_manager.py` / `resource_manager_LA.py` |
 | Licence Manager | `elastiflow/resource_manager/license/` | `manager.py`, `policy.py` (token laws per solver), `models.py`, `persistence.py` |
 | Load Balancer | inside the schedulers and `utils/exec_sched.py` | stream-to-resource assignment (SeisSol) and phase-conditioned assignment (HPO) are methods of the policy classes, not a separate module yet |

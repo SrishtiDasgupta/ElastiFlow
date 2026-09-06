@@ -1,5 +1,5 @@
-"""The request-loop skeleton (B7.4): the SeisSol and licence policies no longer
-carry a `run` of their own; each is the base skeleton plus the hooks listed here."""
+"""The request-loop skeleton (B7.4): no policy carries a `run` of its own any
+more; each is the base skeleton plus the hooks listed here."""
 from elastiflow.scheduler.scheduler import Scheduler, Scheduler_Ordered
 from elastiflow.scheduler.fcfs_scheduler import FCFS_Scheduler
 from elastiflow.scheduler.fcfs_optimized import FCFS_Optimized
@@ -65,3 +65,31 @@ def test_licence_hooks_per_policy():
     # HSM: EDF-LAMF's loop with its own banner, prefix and non-blocking waits
     assert set(EDF_HSM_LA.__dict__) & {'serviceResourceRequests', 'nextWorkflow', 'whenRefused', 'beginCycle'} == set()
     assert 'waitForResources' in EDF_HSM_LA.__dict__ and 'waitNoResources' in EDF_HSM_LA.__dict__
+
+
+# --- the HPO family --------------------------------------------------------------------
+from elastiflow.policies import POLICIES  # noqa: E402
+from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO, Scheduler_HPO_Elastic, Scheduler_HPO_Static  # noqa: E402
+from elastiflow.scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO  # noqa: E402
+from elastiflow.scheduler.edf_scheduler_HPO import EDF_Scheduler_HPO  # noqa: E402
+from elastiflow.scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO  # noqa: E402
+from elastiflow.scheduler.edf_optimized_HPO import EDF_Optimized_HPO  # noqa: E402
+
+
+def test_hpo_policies_run_the_skeleton():
+    for cls in (FCFS_Scheduler_HPO, EDF_Scheduler_HPO, FCFS_Optimized_HPO, EDF_Optimized_HPO):
+        assert 'run' not in cls.__dict__ and cls.run is Scheduler.run and cls.admit is Scheduler_HPO.admit, cls
+    assert Scheduler_HPO_Static.scheduler_overhead is False and Scheduler_HPO_Elastic.scheduler_overhead is True
+    assert (Scheduler_HPO_Static.wait_mode, Scheduler_HPO_Elastic.wait_mode) == ('', 'moldable ')
+    # static: requests are logged and dropped; elastic: each keeps its own request phase
+    assert FCFS_Scheduler_HPO.serviceResourceRequests is Scheduler.serviceResourceRequests and 'handleRequest' in Scheduler_HPO_Static.__dict__
+    assert 'serviceResourceRequests' in FCFS_Optimized_HPO.__dict__ and 'serviceResourceRequests' in EDF_Optimized_HPO.__dict__
+    # the EDF pair drain into their heap; only the static one still pops the queue behind the heap
+    for cls in (EDF_Scheduler_HPO, EDF_Optimized_HPO):
+        assert 'nextWorkflow' in cls.__dict__ and 'dropWorkflow' in cls.__dict__, cls
+    assert 'endCycle' in EDF_Optimized_HPO.__dict__
+
+
+def test_no_policy_has_its_own_run():
+    for p in POLICIES:
+        assert 'run' not in p.load().__dict__, p.name
