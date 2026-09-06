@@ -1,3 +1,10 @@
+"""The executor node: one loop for every use case (B7.6).
+
+In the dissertation's terms this is the execution plane's entry on a tier's
+gateway node: it receives the Scheduler's start and resource-update messages
+and runs the use case's execute function, which drives the Workflow Engine
+and its driver.
+"""
 import threading
 from elastiflow.utils.exec_sched import setNewResources
 from elastiflow.scripts.create_instance import deleteInstanceFromIp

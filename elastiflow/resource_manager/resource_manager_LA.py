@@ -1,8 +1,8 @@
 """
-License-Aware Resource Manager
+The Resource Manager of the licence-constrained use case.
 
-Extends the standard resource manager with license tracking capabilities.
-Maintains workflow state including both compute resources and license holds.
+Extends the standard Resource Manager with licence-hold tracking: the
+workflow state carries both the bound compute resources and the pool holds.
 """
 
 from typing import List, Tuple, Optional

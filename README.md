@@ -1,41 +1,54 @@
 # ElastiFlow
 
-ElastiFlow is a runtime framework for elastic resource management of iterative,
-dynamic scientific workflows on hybrid on-premise and cloud infrastructure. A
-workflow negotiates its resource allocation with the scheduler at every
-iteration boundary; the scheduler grants, modifies or denies the request against
-cost, deadline and, where applicable, floating-licence constraints. The framework
-runs in two modes behind one interface: **live**, against real clusters and
-cloud instances, and **simulated**, as a discrete-event simulation that replaces
-only the execution backend and keeps the orchestration code unchanged.
+ElastiFlow is a runtime framework for elastic resource management of dynamic,
+iterative scientific workflows on hybrid on-premise and cloud infrastructure.
+At every iteration boundary the Workflow Engine renegotiates the workflow's
+allocation with the Scheduler, which answers APPROVE, MODIFY or DENY after a
+three-stage resolution: feasibility under the remaining budget and deadline,
+binding within the workflow's tier, atomic commit. Floating-licence pools enter
+the feasibility test as a further dimension where they apply. The framework
+runs in two modes behind one execution-backend interface: **live**, against
+real clusters and cloud instances, and **simulated**, as a Simulus
+discrete-event simulation that replaces only the execution plane and keeps the
+orchestration code unchanged.
 
-It is the software behind the dissertation *Elastic Resource Management for
-Iterative and Dynamic Scientific Workflows* (Srishti Dasgupta, TUM, 2026). Three
+It is the software behind the dissertation *Elastic Resource Management and
+Scheduling for Dynamic Iterative Workflows on Hybrid HPC-Cloud Infrastructure*
+(Srishti Dasgupta, Technical University of Munich, submitted 2026-09-04). Three
 use cases are evaluated there: seismic Bayesian inversion (SeisSol–TinyDA) and a
 licence-constrained CAE variant of it, both in simulated mode, and
-hyperparameter optimisation (HPO) on live AWS GPU instances.
+hyperparameter optimisation (HPO) on live AWS GPU instances. The documentation
+uses the dissertation's vocabulary (dynamic workflows, elastic allocation,
+execution streams, the Workflow Engine); `docs/THESIS_CODE_DIFFERENCES.md`
+records where the dissertation and the code disagree.
 
 ## Layout
 
 ```
-elastiflow/          the framework: gateway (server/, wf_queue/), scheduler/ (policies),
-                     policies.py (the registry of the dissertation's policy names),
-                     usecase.py (what each use case contributes: plan recognition, iteration inputs, engine actions),
-                     resource_manager/ (incl. licence/), workflow/ (Steep engine), utils/,
-                     config/, scripts/ (dispatchers, workload generators, runtime models,
-                     provisioning), the runners (simulate_*.py, main*.py)
+elastiflow/          the framework: gateway (server/, wf_queue/), scheduler/ (one base, the
+                     licence and HPO layers, the policy classes), policies.py (the registry of
+                     the dissertation's policy names), usecase.py (what each use case contributes:
+                     plan recognition, iteration inputs, engine actions), execution/ (the backend
+                     interface and its two backends), resource_manager/ (incl. licence/),
+                     workflow/ (the Steep-based engine), utils/, config/, scripts/ (dispatchers,
+                     workload generators, runtime models, provisioning), the runners
+                     (simulate_*.py, main*.py), cli.py (python -m elastiflow run)
 use_cases/seissol/   results (datasets, sweeps, figure generators, plots), the Chapter 7
                      simulator validation, the TinyDA client/server driver
-use_cases/licence/   results for the licence-constrained campaign
-use_cases/hpo/       profiling data, results, the standalone N-sweep models, the CIFAR-10
-                     application code
+use_cases/licence/   results for the licence-constrained campaign, the workload description
+use_cases/hpo/       profiling data, results, the calibrated N-sweep model, the CIFAR-10
+                     application code, the workload description
 deploy/              runners/ (live execution on AWS and SLURM), aws/ (Terraform, cluster
                      configs), nodes/ (node-side scripts and the Seis-Bridge submodule)
-motivation/          the manual-versus-automated workflow experiment of Chapter 1
-tests/               regression (one tagged cell per campaign), unit (import composition),
-                     smoke (every policy once), fixtures
-docs/                INSTALL, ARCHITECTURE, PROVENANCE, REORGANISATION (the refactoring plan
-                     and its status), history/ (working notes and context logs)
+motivation/          the manual-versus-automated workflow experiment (not reported in the
+                     submitted dissertation)
+tests/               regression (one tagged cell per campaign, the HPO allocation and loop
+                     baselines), unit (import composition, hierarchy, CLI, manifest), smoke
+                     (every policy once), fixtures
+docs/                INSTALL, ARCHITECTURE, THESIS_CODE_DIFFERENCES (where the
+                     dissertation and the code disagree), PROVENANCE, REORGANISATION (the
+                     refactoring plan and its status), PHASE_B_BACKEND, PHASE_B7_SCHEDULER_MERGE,
+                     history/ (working notes and context logs)
 thesis/              figures.yaml (every data figure of the dissertation: submitted image,
                      committed file, the one writer, state) and sync_figures.py
 ```
@@ -69,18 +82,19 @@ They are the contract for any change to the framework.
   `python thesis/sync_figures.py check --thesis-images DIR` compares the committed
   files with the submitted images, `regenerate` re-runs a generator in a
   throw-away worktree and compares.
-* HPO ran live; its live driver is `elastiflow/simulate_main_HPO.py` with
+* HPO ran live; its driver on AWS is `elastiflow/simulate_main_HPO.py` with
   `deploy/runners/run_hpo.py` on the cluster, and the batch-size sweep used the
-  analytical models under `use_cases/hpo/results/r7_n7_actual_vs_modeled/`.
+  calibrated model under `use_cases/hpo/results/r7_n7_actual_vs_modeled/`.
 
 ## Status
 
-Phase A of `docs/REORGANISATION.md` is complete: the repository is flattened,
-packaged, cleaned and laid out by use case, with every step verified to
-reproduce the tagged results. Phase B (one scheduler, one dispatcher, one
-metrics class, the execution-backend interface of Fig. 7.1 made explicit) and
-Phase C (one writer per figure, a provenance manifest) are next. The
-`refactoring` branch is the work in progress; `main` holds the state the
-dissertation was built from.
-
-The licence under which this code is published has not yet been chosen.
+Phases A, B and C of `docs/REORGANISATION.md` are complete (2026-09-06): the
+repository is flattened, packaged and laid out by use case; the execution
+backend of Chapter 7 is one interface with a `--mode` switch; the three
+scheduler forks are one hierarchy with the policies as sets of hooks
+(`docs/PHASE_B7_SCHEDULER_MERGE.md`); every dissertation figure has exactly one
+writer. Every step was verified to reproduce the tagged results. The
+`refactoring` branch holds this work; `main` holds the state the dissertation
+was built from. Before publication: the history scrub of credentials and
+private addresses, the licence under which the code is published (not yet
+chosen), and the open decisions listed in `docs/REORGANISATION.md`.

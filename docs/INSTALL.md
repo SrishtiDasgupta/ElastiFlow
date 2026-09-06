@@ -4,8 +4,10 @@
 
 * Python 3.10 or newer (the dissertation results were produced with 3.13).
 * A Redis server on `localhost:6379`. Both execution modes use it for the three
-  work queues (this dependency of the *simulated* mode is removed in Phase B of
-  `docs/REORGANISATION.md`).
+  work queues. The simulated mode keeps them by the author's decision (Phase B,
+  step B5 dropped, `docs/PHASE_B_BACKEND.md`); Chapter 7 of the dissertation
+  describes the Gateway enqueueing to the Redis-backed queue unchanged in the
+  simulator.
 * For live mode only: AWS credentials and the cluster setup under `deploy/aws/`
   and `deploy/nodes/`; SLURM on the on-premise tier.
 
@@ -75,9 +77,12 @@ python -m elastiflow run --mode simulated --use-case seissol edf moldable --sort
 python -m elastiflow run --mode live --use-case seissol        # the live scheduler process (Redis, AWS); executor nodes run elastiflow/executor.py
 ```
 
-`python -m elastiflow` with no arguments lists the policy names. HSM's uniform
-rho gate is an environment setting of the driver (`LA_HSM_POOL_RHO*=0.70`),
-not of the runner, so set it as `canonical_sweep.py` does.
+`python -m elastiflow` with no arguments lists the policy names as the
+dissertation writes them; the runners' own word
+`moldable` selects what the dissertation calls the elastic policies. HSM's
+uniform pool-pressure threshold (P_thresh = 0.70) is an environment setting of
+the driver (`LA_HSM_POOL_RHO*=0.70`), not of the runner, so set it as
+`canonical_sweep.py` does.
 
 `pip install -e .` also installs the same command as `elastiflow`.
 

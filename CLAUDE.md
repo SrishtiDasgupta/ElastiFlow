@@ -6,9 +6,11 @@ Guidance for Claude Code when working in this repository.
 
 ElastiFlow, the framework behind Srishti Dasgupta's dissertation on elastic
 resource management for iterative scientific workflows. `README.md` gives the
-layout, `docs/ARCHITECTURE.md` the components and the three per-use-case forks,
-`docs/PROVENANCE.md` the figure-to-dataset map, `docs/REORGANISATION.md` the
-refactoring plan and its status. Read those before changing anything.
+layout, `docs/ARCHITECTURE.md` the components, the execution modes and what
+remains per use case, `docs/THESIS_CODE_DIFFERENCES.md` where the
+dissertation and the code disagree (none changed), `docs/PROVENANCE.md`
+the figure-to-dataset map, `docs/REORGANISATION.md` the refactoring plan and its
+status. Read those before changing anything.
 
 ## Ground rules
 
@@ -30,6 +32,10 @@ refactoring plan and its status. Read those before changing anything.
   them as a test. The regression tests call the runners directly.
 * Policy names, dataset schemas and figure basenames are cited by the
   dissertation and do not change.
+* Documentation and docstrings use the dissertation's words: dynamic workflows, elastic (not moldable)
+  allocation, execution streams, licence, Simulus, the Workflow Engine. Code
+  identifiers keep their names; write them in backticks with the
+  dissertation's word beside them.
 * Live mode (AWS, SLURM, Ray) cannot be tested here; it gets the import
   composition test only, and that limit is stated wherever it matters.
 

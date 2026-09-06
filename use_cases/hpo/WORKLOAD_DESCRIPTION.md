@@ -1,8 +1,10 @@
-# HPO Workload Description
+# HPO workload description
+
+The third workload class of the dissertation (Chapter 8, HPO Workflows; the driver in Chapter 6; the results in Chapter 9, Hyperparameter Optimisation). It ran live on AWS; the batch-size sweep of Chapter 9 uses the calibrated model under `results/r7_n7_actual_vs_modeled/`. The dissertation's words for the concepts below: a trial is an execution stream, an epoch is an evaluation, an HPO round is a workflow iteration; the policies are FCFS-ST and EDF-ST (rigid allocation) and Elastic-FCFS and Elastic-EDF (`--mode moldable` in the runner). This file was aligned with the submitted dissertation on 2026-09-06.
 
 ## 1. Overview
 
-The HPO (Hyperparameter Optimization) workload is a representative machine learning use-case for evaluating the Vortex moldable scheduling system. Each HPO workflow performs automated hyperparameter tuning for image classification using transfer learning on CIFAR-10. The workload is designed to exhibit the computational patterns that benefit from moldable resource allocation: iterative execution with variable parallelism, GPU-bound computation, and multi-round optimization with feedback loops.
+The HPO (Hyperparameter Optimisation) workload is the machine-learning use case of ElastiFlow. Each HPO workflow performs automated hyperparameter tuning for image classification using transfer learning on CIFAR-10. The workload exhibits the pattern the framework targets: iterative execution with a trial population that changes at every iteration boundary, GPU-bound computation, and multi-round optimisation with a feedback loop.
 
 ## 2. Machine Learning Task
 
@@ -19,10 +21,10 @@ Pre-trained CNN backbones (ImageNet weights) are fine-tuned on CIFAR-10 by repla
 - 10 classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck
 
 **Data augmentation** (training set only):
-- `Resize(64)` — upsample to 64x64
-- `RandomCrop(64, padding=4)` — random spatial crop with 4-pixel padding
-- `RandomHorizontalFlip()` — 50% chance horizontal flip
-- `Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))` — ImageNet channel statistics
+- `Resize(64)`: upsample to 64x64
+- `RandomCrop(64, padding=4)`: random spatial crop with 4-pixel padding
+- `RandomHorizontalFlip()`: 50% chance horizontal flip
+- `Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))`: ImageNet channel statistics
 
 **Test transforms**: `Resize(64)` + `Normalize` only (no augmentation).
 
@@ -49,7 +51,7 @@ All models use `torchvision.models` with ImageNet-pretrained weights. The full b
 | **Output classes** | 10 (CIFAR-10) |
 | **DataLoader workers** | 2 per GPU (with `pin_memory=True`) |
 | **Test batch size** | 256 (fixed) |
-| **Training batch size** | Variable (32, 64, or 128 — tuned hyperparameter) |
+| **Training batch size** | Variable (32, 64, or 128: tuned hyperparameter) |
 
 ### 2.4 Per-Epoch Training Loop
 
@@ -82,7 +84,7 @@ for each epoch:
     })
 ```
 
-## 3. Hyperparameter Optimization
+## 3. Hyperparameter Optimisation
 
 ### 3.1 Hyperparameters Tuned
 
@@ -94,19 +96,19 @@ for each epoch:
 
 ### 3.2 HPO Framework
 
-**Ray Tune** (part of the Ray AI Runtime) is used for distributed hyperparameter search.
+**Ray Tune** (part of the Ray AI Runtime) is used for distributed hyperparameter search; the driver is `deploy/runners/run_hpo.py` over `application/hpo_pipeline_verbose.py` (the dissertation names it `drivers/raytune_hpo.py`).
 
-**Search scheduler**: `AsyncHyperBandScheduler` (ASHA — Asynchronous Successive Halving Algorithm)
+**Search scheduler**: `AsyncHyperBandScheduler` (ASHA: Asynchronous Successive Halving Algorithm)
 - Performs aggressive early stopping of underperforming trials
 - Allocates more training resources (epochs) to promising configurations
-- `max_t=200`: maximum training budget per trial (epochs)
+- Maximum trial length: the dissertation states T_max = 20 epochs; `TunePipeline` defaults to `AsyncHyperBandScheduler(max_t=20)`, while the per-phase scheduler it builds passes `max_t=200` (`hpo_pipeline_verbose.py`, the phase loop); a trial's epoch count is bounded by the YAML's `epochs` in either case
 - Asynchronous: does not wait for all trials to reach the same epoch before making pruning decisions
 
-### 3.3 Optimization Objective
+### 3.3 Optimisation Objective
 
 - **Metric**: Test set accuracy on CIFAR-10 (fraction correct, range 0.0–1.0)
 - **Direction**: Maximize (`mode="max"`)
-- **Target threshold**: 0.99 (99% accuracy) — if reached, remaining phases are skipped
+- **Target threshold**: 0.99 (99% accuracy): if reached, remaining phases are skipped
 
 ### 3.4 Convergence Criteria
 
@@ -117,17 +119,17 @@ Three levels of stopping:
 2. **Per-phase target**: If any trial achieves accuracy >= 0.99, the entire HPO run stops early (remaining phases are skipped).
 
 3. **Pipeline-level** (across iterations):
-   - `improvement_threshold = 1e-3` (0.1% absolute accuracy improvement)
-   - `patience = 2` rounds without improvement triggers stop
+   - improvement threshold δ_imp = 0.01, one percentage point of top-1 accuracy (the value the `run_hpo.py` path passes as `improvement_threshold=1e-2`; the class default is `1e-3`)
+   - `patience = 2` rounds without improvement triggers stop (a driver setting the dissertation does not name; the iteration cap is the operative termination criterion)
 
 ### 3.5 Adaptive Trial Count
 
 The number of trials per workflow iteration is **adaptive** based on the success rate of the previous round:
 
-- If success rate > 50%: reduce trials — `next_trials = max(3, current × 0.5)` (exploit promising region)
-- If success rate <= 50%: increase trials — `next_trials = min(10, current × 1.5)` (explore more broadly)
+- success rate above the threshold 0.50: the iteration is fruitful and the population contracts, `next_trials = max(MIN_TRIALS, current × 0.5)` with `MIN_TRIALS = 3` in the driver (the dissertation states the bounds [p_min, p_max] = [2, 10]; the difference is recorded in `docs/THESIS_CODE_DIFFERENCES.md`)
+- success rate at or below 0.50: the iteration is stalled and the population expands, `next_trials = min(10, current × 1.5)`
 
-This mimics a Bayesian optimization strategy of alternating exploration and exploitation.
+This is the adaptive iteration schedule of the HPO driver in Chapter 6, alternating exploitation and exploration.
 
 ### 3.6 Search Space Refinement
 
@@ -164,7 +166,7 @@ Measured from 36 profiling runs per instance type (3 models × 3 worker counts �
 | 2 GPUs | 42.0 s/epoch | 19.8 s/epoch | 1.95x | 97.6% |
 | 4 GPUs | 21.4 s/epoch | 10.5 s/epoch | 3.84x | 96.0% |
 
-Scaling is near-linear due to the compute-bound nature of CNN forward/backward passes and the high bandwidth of NCCL over NVLink/PCIe.
+Each node carries one GPU, so a multi-GPU trial synchronises through NCCL all-reduce over the network at every backward pass. The dissertation's load-balancer efficiency ε = 0.92 (`scaling_efficiency`, `run_hpo.py --efficiency`) is the pooled estimate the phase plan uses.
 
 ### 4.3 Speedup Model (Power Law)
 
@@ -188,7 +190,7 @@ Runtime scales **linearly with epochs** (verified: coefficient of variation < 5%
 
 ### 4.4 Hybrid Batching Algorithm
 
-When the number of trials does not evenly divide the available GPUs, a **multi-phase hybrid batching** strategy maximizes GPU utilization:
+When the number of trials does not evenly divide the available GPUs, a **multi-phase hybrid batching** strategy (the phase-conditioned assignment of the HPO Load Balancer, Chapter 6) maximises GPU utilisation:
 
 1. **Full parallel batches**: When `trials >= GPUs`, run `floor(trials / GPUs)` batches of `GPUs` trials, each with 1 GPU.
 2. **Handle remainder optimally**: For leftover trials, compare:
@@ -226,7 +228,7 @@ id: hpo-60bf3eb4
 
 config:
   mesh: vgg19                    # Model architecture (string)
-  workflowIterations: 3          # Number of HPO optimization rounds
+  workflowIterations: 3          # Number of HPO optimisation rounds
 
 constraints:
   budget: 1.18                   # Maximum cost in USD
@@ -280,14 +282,14 @@ The HPO workload maps onto the same scheduling abstractions as the SeisSol seism
 
 | Scheduling Concept | SeisSol (Plain) | HPO |
 |---|---|---|
-| **Chain** | One parallel simulation run | One parallel HPO trial |
-| **Chains (2-4)** | Parallel simulation instances | Concurrent trials per iteration |
-| **TinyDA Iteration** | One sequential simulation step | One training epoch |
-| **TinyDA Iterations (10-28)** | Sequential steps per chain | Epochs per trial |
-| **Workflow Iteration (3-5)** | Data assimilation feedback round | HPO optimization round |
+| **Execution stream** (`chains`) | One MCMC chain | One HPO trial |
+| **Streams per iteration (2-4)** | Concurrent chains | Concurrent trials |
+| **Evaluation** (`tinydaIterations`) | One SeisSol solve | One training epoch |
+| **Evaluations per stream (10-28)** | Solves per chain | Epochs per trial |
+| **Workflow iteration (3-5)** | Sampling round | HPO optimisation round |
 | **Workflow** | Complete seismic analysis | Complete hyperparameter search |
 
-This mapping allows the same scheduling algorithms (FCFS, EDF) and resource management strategies (static vs. moldable) to be evaluated across fundamentally different workload types.
+This mapping allows the same admission orders (FCFS, EDF) and allocation regimes (rigid, elastic) to be evaluated across structurally different workloads; the Scheduler is unchanged between them (Chapter 10, contributions).
 
 ## 6. Constraint Formulation
 
@@ -307,7 +309,7 @@ budget = epoch_cost × trials × avg_epochs × workflow_iterations
 
 - `epoch_runtime`: Per-epoch compute time on the **slowest** instance (g4dn T4, 1 GPU)
 - `epoch_cost`: Per-epoch compute cost on the **most expensive** instance (g5 on-demand)
-- `3× contention factor`: Covers cold start (measured ~330s for on-demand g4dn.xlarge in R1, 2026-05-06), setup overhead, queuing delays, DDP coordination, and moldable lane-allocation contention. Empirically tuned from R1: ×2 was too tight (3/5 wfs missed by <55s — near-binary on resource luck); ×3 isolates genuine race-loss cases. Standard in HPC scheduling (1.5–3× typical, this work uses the top end of the range).
+- `3× contention factor` (the dissertation's deadline contention factor c_d = 3): Covers cold start (measured ~330s for on-demand g4dn.xlarge in R1, 2026-05-06), setup overhead, queuing delays, DDP coordination, and lane-allocation contention under elastic allocation. Empirically tuned from R1: ×2 was too tight (3/5 wfs missed by <55s: near-binary on resource luck); ×3 isolates genuine race-loss cases. Standard in HPC scheduling (1.5–3× typical, this work uses the top end of the range).
 
 ### 6.2 Measured Per-Epoch Runtimes
 
@@ -321,7 +323,7 @@ budget = epoch_cost × trials × avg_epochs × workflow_iterations
 
 | Overhead | Value | Source |
 |---|---|---|
-| Cold start (on-demand) | 400.52s | Thesis Section 5.3 |
+| Cold start (on-demand) | 400.5 s base setup, plus 90 s NVIDIA driver installation and 40 s reboot, 530 s in all (`COLD_START_TIME`); the staleness threshold is 720 s (`RESOURCE_REQUEST_TIMEOUT`) | Chapter 7 (overhead injection), Chapter 8 (scheduler parameters) |
 | Setup: VGG19 | 5.78s | g4_img64.jsonl |
 | Setup: Wide ResNet101-2 | 5.22s | g4_img64.jsonl |
 | Setup: ConvNeXt Large | 12.91s | g4_img64.jsonl |
@@ -375,7 +377,7 @@ Budget   = (198.00/12)/3600 × $1.006/hr × 3 trials × 20 epochs × 4 iteration
 The HPO system uses a **dedicated executor** pattern that separates the control plane from the compute plane:
 
 ```
-Vortex Scheduler
+ElastiFlow Scheduler
     │ POST workflow to executor
     ▼
 Executor (lightweight EC2, no GPU participation in training)
@@ -407,7 +409,7 @@ Results propagate back → Executor → Scheduler
 ### 8.2 Key Design Properties
 
 - **Executor does not train**: It orchestrates Ray clusters on worker instances but never participates in GPU-bound computation. This prevents straggling.
-- **Full moldability**: The entire worker pool can be replaced between workflow iterations. The executor SSHs into new workers, sets up a fresh Ray cluster, and continues the next HPO iteration.
+- **Full elasticity**: The entire worker pool can be replaced between workflow iterations. The executor SSHs into new workers, sets up a fresh Ray cluster, and continues the next HPO iteration.
 - **Isolation**: Each workflow gets its own Ray cluster (started and torn down per iteration). No interference between concurrent workflows.
 
 ## 9. Workflow Design (15 Designed Configurations)
@@ -443,20 +445,20 @@ WORKFLOW_ORDER = [8, 3, 9, 7, 5, 12, 1, 4, 10, 14, 0, 6, 11, 2, 13]
 
 **Strategy: Wide-Short first, Narrow-Long last.**
 
-- **Positions 0–4** (5-wf batch): `[8, 3, 9, 7, 5]` — 2 Wide-Short VGG19 (chains=4) arrive first, demanding 4 instances each. Static scheduler greedily saturates the pool (16 demand > 14 supply). Moldable starts lean (9 of 14 slots used), leaving headroom for scale-up.
+- **Positions 0–4** (5-wf batch): `[8, 3, 9, 7, 5]`: 2 Wide-Short VGG19 (chains=4) arrive first, demanding 4 instances each. The rigid policies commit the full first-iteration demand (16 > 14 slots); the elastic policies commit the same at admission (`MOLDABLE_INITIAL_CAP = 1.0`) and differ at the later boundaries.
 
-- **Positions 5–9** (added for 10-wf): `[12, 1, 4, 10, 14]` — Mixed workflows arrive into an already-loaded system. Static faces severe queuing (cumulative demand: 32). Moldable has moderate oversubscription (18) with ongoing resource recycling.
+- **Positions 5–9** (added for 10-wf): `[12, 1, 4, 10, 14]`: Mixed workflows arrive into an already-loaded system. The rigid policies face severe queuing (cumulative demand: 32); the elastic policies recycle capacity at the boundaries.
 
-- **Positions 10–14** (added for 15-wf): `[0, 6, 11, 2, 13]` — All Narrow-Long ConvNeXt (chains=2, high epochs). These long-running workflows benefit most from moldable scale-up as earlier Wide-Short workflows complete and release resources.
+- **Positions 10–14** (added for 15-wf): `[0, 6, 11, 2, 13]`: All Narrow-Long ConvNeXt (chains=2, high epochs). These long-running workflows benefit most from elastic scale-up as earlier Wide-Short workflows complete and release resources.
 
-## 10. What the Vortex Scheduler Controls
+## 10. What the ElastiFlow Scheduler Controls
 
-The Vortex scheduler does **not** control the HPO search algorithm, hyperparameter selection, or trial scheduling within Ray Tune. It controls:
+The ElastiFlow Scheduler does **not** control the HPO search algorithm, hyperparameter selection, or trial scheduling within Ray Tune. It controls:
 
-1. **Resource allocation**: How many GPU instances each workflow receives (static: full greedy allocation; moldable: capped at `ceil(chains × 0.5)` initially, scaled up between iterations).
-2. **Instance type selection**: g4dn (cheaper, slower) vs. g5 (expensive, faster) — moldable can switch mid-workflow.
+1. **Resource allocation**: How many GPU instances each workflow receives (rigid: the first-iteration demand, held for the workflow's lifetime; elastic: the same at admission, `MOLDABLE_INITIAL_CAP = 1.0`, then renegotiated at every iteration boundary).
+2. **Instance type selection**: g4dn (cheaper, slower) vs. g5 (expensive, faster); the elastic policies may change it at a boundary.
 3. **Workflow ordering**: FCFS (arrival order) vs. EDF (earliest deadline first).
-4. **Resource redistribution**: When a workflow completes an iteration, its resources can be reallocated (moldable only).
+4. **Resource redistribution**: When a workflow completes an iteration, its resources can be reallocated (elastic policies only).
 5. **On-demand instance creation**: Spinning up additional cloud instances when reserved capacity is exhausted.
 
 The HPO pipeline adapts to whatever GPU count the scheduler provides via the hybrid batching algorithm. More GPUs = more concurrent trials or faster per-trial training; fewer GPUs = smaller batches but still functional.

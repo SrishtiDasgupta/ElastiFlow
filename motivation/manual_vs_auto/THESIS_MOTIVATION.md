@@ -1,3 +1,10 @@
+> **Note (2026-09-06).** This file predates the submitted dissertation and keeps
+> its own wording. The manual-versus-automated experiment below is not reported
+> in the dissertation; Chapter 1 says in one sentence that such workflows were
+> historically run semi-manually and are now automated. The "Suggested Thesis
+> Text" sections are superseded by the submitted chapters. Where this file says
+> moldable, the dissertation says elastic, and the framework is ElastiFlow.
+
 # Thesis Motivation: Feedback-Driven Workflows
 
 This document provides framing and text for presenting the manual vs automated workflow comparison experiment in a PhD thesis introduction section.
