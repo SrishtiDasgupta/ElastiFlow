@@ -1,9 +1,9 @@
 # Architecture
 
-This document describes the code as it is on the `refactoring` branch after
-Phases A, B and C (2026-09-06), using the component names of the dissertation
-(Chapters 4, 6 and 7), and states plainly where the implementation still differs
-from that description. Where the dissertation and the code disagree is recorded
+This document describes the code as it is on the `refactoring` branch
+(2026-09-06), using the component names of the dissertation (Chapters 4, 6
+and 7), and states plainly where the implementation still differs from that
+description. Where the dissertation and the code disagree is recorded
 in `docs/THESIS_CODE_DIFFERENCES.md`; the refactoring plan and its status are in
 `docs/REORGANISATION.md`.
 
@@ -44,7 +44,8 @@ is denied and the workflow continues under its allocation.
 ## Execution modes
 
 The dissertation (Chapter 7, Fig. 7.1) describes one execution-backend interface
-with a mode flag; since Phase B (`docs/PHASE_B_BACKEND.md`) the code has it. The
+with a mode flag; the code has it (its introduction is recorded in
+`docs/PHASE_B_BACKEND.md`). The
 interface is `elastiflow/execution/backend.py`: clock (`now`, `sleep`), the
 three message channels (`workflows`, `completions`, `resource_requests`), the
 scheduler-to-executor messages (`start_workflow`, `notify_resources`), process
@@ -64,7 +65,7 @@ The entry point constructs one backend and passes it down (`--mode` of
 `python -m elastiflow run`, or the runner scripts directly); every component
 receives it as `backend`, and `backend.simulated` is the only mode test left.
 Both modes construct the three Redis queues at start-up: the author kept this
-(Phase B, step B5 dropped), and it is what Chapter 7 describes (the Gateway
+(recorded in `docs/PHASE_B_BACKEND.md`), and it is what Chapter 7 describes (the Gateway
 "enqueues them to the Redis-backed admission queue", and the orchestration code
 "executes unchanged").
 
@@ -77,7 +78,8 @@ the simulated backend serves SeisSol and licence.
 
 ## What is shared and what remains per use case
 
-Since Phase B7 the framework is one code path: one `Scheduler` base with the
+The framework is one code path (the merge of the former three scheduler forks
+is recorded in `docs/PHASE_B7_SCHEDULER_MERGE.md`): one `Scheduler` base with the
 request loop of Chapter 6 as a skeleton of hooks (`Scheduler_LA(Scheduler)` and
 `Scheduler_HPO(Scheduler)` override what differs for their family, and every
 policy class is a set of hooks with no `run` of its own), one dispatcher loop,

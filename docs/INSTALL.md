@@ -4,8 +4,8 @@
 
 * Python 3.10 or newer (the dissertation results were produced with 3.13).
 * A Redis server on `localhost:6379`. Both execution modes use it for the three
-  work queues. The simulated mode keeps them by the author's decision (Phase B,
-  step B5 dropped, `docs/PHASE_B_BACKEND.md`); Chapter 7 of the dissertation
+  work queues. The simulated mode keeps them by the author's decision
+  (recorded in `docs/PHASE_B_BACKEND.md`); Chapter 7 of the dissertation
   describes the Gateway enqueueing to the Redis-backed queue unchanged in the
   simulator.
 * For live mode only: AWS credentials and the cluster setup under `deploy/aws/`
