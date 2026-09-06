@@ -206,7 +206,8 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   `LiveBackend`.
 * **B7. Merge the scheduler forks.** With `sim` out of every signature, the
   three abstract bases differ only in their licence and HPO extension points;
-  that merge is planned as its own document now that B6 is in.
+  the merge is planned in `docs/PHASE_B7_SCHEDULER_MERGE.md` (measured
+  inventory, seven gated steps, four decisions for the author).
 
 ## What does not change
 
