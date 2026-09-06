@@ -145,10 +145,22 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   `COLD_START_TIME`; the HPO module keeps them for its CLI-only helpers
   (`createExecutorInstance`, `getInstanceRole`, `listHPOInstances`). Gate:
   regression 11/11, smoke against the B0 baseline.
-* **B4. Iteration execution.** `run_iteration` replaces the execute action's
-  branch. First as a move that keeps the subprocess call to the service stub in
-  the simulated implementation (so the numbers cannot move), then, as a separate
-  gated step, the stub's runtime lookup becomes an in-process call.
+* **B4. Iteration execution**, first half (done 2026-09-06). `run_iteration(wf_id,
+  service, args, deadline, iteration) -> IterationResult(output, runtime,
+  completed)` on the backend. `SimulatedBackend` keeps the subprocess call to the
+  runtime-model stub, sleeps `min(runtime, remaining) + executor_overhead`
+  (7.7 s, now a registration parameter) and reports `completed`; `LiveBackend`
+  runs the service and takes the first output line. The SeisSol/licence execute
+  action in `steep_actions.py` calls it and no longer branches on the mode; the
+  on-premise port lease is `lease_port` / `return_port` (simulated: the constant
+  4242 and a no-op, as before; live: `ports.yaml`). `SIMULATE` is gone from the
+  workflow engine and from `utils/exec_sched.py`. One thing the move exposed: the
+  engine's `eval` of the stub's output relied on `numpy` being imported in the
+  engine module (the licence runtime model prints `np.float64(...)`); the backend
+  passes the name explicitly. Deferred: `steep_actions_HPO.py` keeps its own
+  iteration runner (a retry loop and JSON parsing around the live service, no
+  overhead injection); it is the HPO driver and folds in with the use-case
+  protocol. Next: the in-process runtime lookup, as its own gated step.
 * **B5. In-memory channels for simulated mode.** Simulated runs stop needing
   Redis. Gate: the default suite with Redis stopped.
 * **B6. One switch.** The `SIMULATE` constants and the `sim` parameters go;

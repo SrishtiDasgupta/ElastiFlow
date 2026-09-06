@@ -15,9 +15,25 @@ bare backend that supports the clock only.
 """
 from __future__ import annotations
 
+import subprocess
+import sys
+
+import numpy as np   # the runtime-model stub prints numpy scalars (np.float64(...)); eval needs the name, as the engine had it
 import threading
 import time
+from dataclasses import dataclass
 from typing import Callable, Protocol
+
+
+@dataclass
+class IterationResult:
+    """What one workflow iteration produced: the service's output (the object the
+    engine used to receive as `result`), the iteration's runtime in seconds
+    (modelled or measured; None where the live service does not report it), and
+    whether it ran to completion (False when the deadline cut it short)."""
+    output: object
+    runtime: float | None
+    completed: bool
 
 
 class Channel(Protocol):
@@ -39,6 +55,9 @@ class ExecutionBackend(Protocol):
     def spawn(self, fn: Callable, *args, name=None) -> None: ...
     def provision(self, instance_type: str, count: int) -> list: ...   # returns instance ips
     def release(self, ips) -> None: ...
+    def run_iteration(self, wf_id: str, service: str, args: dict, deadline: float, iteration: int) -> IterationResult: ...
+    def lease_port(self) -> int: ...          # on-premise service port for an iteration
+    def return_port(self, port: int) -> None: ...
 
 
 # --- simulated ---------------------------------------------------------------
@@ -79,9 +98,11 @@ class SimulatedBackend:
 
     def __init__(self, sim, mailboxes: dict | None = None, execute: Callable | None = None,
                  on_resources: Callable | None = None, cold_start: float = 0.0,
-                 fake_ip: Callable | None = None, release_message: str | None = None):
+                 fake_ip: Callable | None = None, release_message: str | None = None,
+                 executor_overhead: float = 7.7):
         self.sim = sim
         self._cold_start, self._fake_ip, self._release_message = cold_start, fake_ip, release_message
+        self._executor_overhead = executor_overhead
         mailboxes = mailboxes or {}
         self.workflows = SimulatedChannel(sim, 'wf_mb', mailboxes.get('wf_mb'))
         self.completions = SimulatedChannel(sim, 'completed_jobs_mb', mailboxes.get('completed_jobs_mb'))
@@ -114,6 +135,24 @@ class SimulatedBackend:
     def release(self, ips) -> None:
         if self._release_message:
             print(self._release_message.format(ips=ips))
+
+    def run_iteration(self, wf_id: str, service: str, args: dict, deadline: float, iteration: int) -> IterationResult:
+        """One iteration in simulated time: the service (the runtime-model stub)
+        reports the modelled runtime; the process sleeps for it, capped at the
+        deadline, plus the measured executor overhead. B4 keeps the subprocess
+        call; the in-process lookup is the next step."""
+        cp = subprocess.run([sys.executable, service, str(args)], check=True, capture_output=True, text=True)
+        result = eval(cp.stdout, {'np': np})
+        runtime = float(result['runtime'])
+        sleep_time = min(runtime, max(deadline - self.now(), 0))
+        self.sleep(sleep_time + self._executor_overhead)
+        return IterationResult(result, runtime, sleep_time >= runtime)
+
+    def lease_port(self) -> int:
+        return 4242            # no on-premise dispatch in simulation; the constant the engine used
+
+    def return_port(self, port: int) -> None:
+        pass
 
 
 # --- live --------------------------------------------------------------------
@@ -193,6 +232,30 @@ class LiveBackend:
             from elastiflow.scripts.create_instance import terminateInstance
             self._terminate = terminateInstance
         return self._terminate(ips)
+
+    def run_iteration(self, wf_id: str, service: str, args: dict, deadline: float, iteration: int) -> IterationResult:
+        """One iteration for real: run the service and take the first line of its
+        output as the value for the next iteration (as the engine did)."""
+        cp = subprocess.run([sys.executable, service, str(args)], check=True, capture_output=True, text=True)
+        print(f"{wf_id} Workflow iteration {iteration} started at {time.time()}")
+        input_value = cp.stdout.splitlines()[0]
+        print(input_value)
+        return IterationResult(eval(input_value, {'np': np}), None, True)
+
+    def lease_port(self) -> int:
+        from elastiflow.utils.exec_sched import getWorkflowOnpremPort
+        return getWorkflowOnpremPort()
+
+    def return_port(self, port: int) -> None:
+        import yaml
+        from elastiflow.config.paths import PACKAGE_DIR
+        with open(f"{PACKAGE_DIR}/config/ports.yaml", "r") as f:
+            data = yaml.safe_load(f)
+        ports = data.get("onprem_ports", [])
+        ports.append(port)
+        data["onprem_ports"] = ports
+        with open(f"{PACKAGE_DIR}/config/ports.yaml", "w") as f:
+            yaml.safe_dump(data, f)
 
 
 # --- registry ----------------------------------------------------------------

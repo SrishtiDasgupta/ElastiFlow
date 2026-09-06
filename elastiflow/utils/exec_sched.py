@@ -2,7 +2,7 @@ import time
 from typing import List, Tuple
 import re
 
-from elastiflow.config.constants import FREE_RESOURCES, MOLDABLE, RESOURCE_REQUEST_TIMEOUT, SIMULATE
+from elastiflow.config.constants import FREE_RESOURCES, MOLDABLE, RESOURCE_REQUEST_TIMEOUT
 from .request import ExecutorRequest, getConfig, sendRequest
 from . import negotiation_log
 
@@ -113,6 +113,7 @@ def getClientInputs_Plain(wf_id, input: Tuple, ind):
     """
     mesh = getWorkflowConfig(wf_id)['mesh']
     sim = getWorkflowConfig(wf_id)['sim']
+    backend = backend_for(sim)
     workflow_config_array = getWorkflowConfig(wf_id)['workflowConfig']
 
     # Extract from pre-planned workflowConfig array
@@ -121,10 +122,7 @@ def getClientInputs_Plain(wf_id, input: Tuple, ind):
 
     alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
 
-    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
-        port = getWorkflowOnpremPort()
-    else:
-        port = 4242
+    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
 
     return {
         'wf_id': wf_id,
@@ -149,6 +147,7 @@ def getClientInputs_LA(wf_id, input: Tuple, ind):
     """
     mesh = getWorkflowConfig(wf_id)['mesh']
     sim = getWorkflowConfig(wf_id)['sim']
+    backend = backend_for(sim)
 
     # Read from workflowConfig if present (for moldable LAMF scheduling)
     # This allows chains to vary per iteration, triggering resource requests
@@ -169,10 +168,7 @@ def getClientInputs_LA(wf_id, input: Tuple, ind):
 
     alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
 
-    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
-        port = getWorkflowOnpremPort()
-    else:
-        port = 4242
+    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
 
     return {
         'wf_id': wf_id,
@@ -194,6 +190,7 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
     """
     mesh = getWorkflowConfig(wf_id)['mesh']
     sim = getWorkflowConfig(wf_id)['sim']
+    backend = backend_for(sim)
 
     # Iteration 0: input[0] is initial config from workflow YAML (has 'epochs', 'next_trials')
     # Iteration 1+: input[0] is HPO pipeline output (has 'epoch', 'next_trials')
@@ -208,16 +205,13 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
         tinyda_iterations = input[0].get('epoch', input[0].get('epochs', 1))
 
     # HPO uses its own constants from constants_HPO (not the shared constants.py)
-    from elastiflow.config.constants_HPO import MOLDABLE as HPO_MOLDABLE, SIMULATE as HPO_SIMULATE
+    from elastiflow.config.constants_HPO import MOLDABLE as HPO_MOLDABLE
     from elastiflow.config.constants_HPO import FREE_RESOURCES as HPO_FREE_RESOURCES
     from elastiflow.config.constants_HPO import RESOURCE_REQUEST_TIMEOUT as HPO_TIMEOUT
     alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, HPO_MOLDABLE, chains,
                                                HPO_FREE_RESOURCES, HPO_TIMEOUT)
 
-    if not HPO_SIMULATE and len(hosts.get('on-prem', [])) != 0:
-        port = getWorkflowOnpremPort()
-    else:
-        port = 4242
+    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
 
     return {
         'wf_id': wf_id,
@@ -244,6 +238,7 @@ def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
     cfg = getWorkflowConfig(wf_id)
     mesh = cfg['mesh']
     sim = cfg['sim']
+    backend = backend_for(sim)
     constraints = cfg.get('constraints', {})
 
     inner = input[0] if isinstance(input[0], dict) else {'cohesion': input[0]}
@@ -259,10 +254,7 @@ def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
 
     alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
 
-    if not SIMULATE and len(hosts.get('on-prem', [])) != 0:
-        port = getWorkflowOnpremPort()
-    else:
-        port = 4242
+    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
 
     cumulative_cap = constraints.get('tinydaIterations',
                                      cfg.get('workflowIterations', 10) * tinyda_iterations)
