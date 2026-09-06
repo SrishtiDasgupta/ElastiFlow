@@ -1,6 +1,6 @@
 {
  "_provenance": {
-  "git_head": "7e7677e73d8700bc43ff7bfe0d88df09f2072d3b",
+  "git_head": "2aacdf8ee887e9d5fcc0bdfbdfa3a86370b4dba7",
   "note": "Every field must be reproduced exactly (floats to 1e-12) by tests/regression/test_hpo_allocation_baseline.py.",
   "policies": [
    "FCFS-ST",
@@ -78,7 +78,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7002.9,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-0a5998a0"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-417bb2bd": {
    "alloc": [
@@ -108,7 +132,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-417bb2bd"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-5e16eb0a": {
    "alloc": [
@@ -138,7 +186,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7721.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-5e16eb0a"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-60bf3eb4": {
    "alloc": [
@@ -168,7 +240,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6160.6,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-60bf3eb4"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-73120874": {
    "alloc": [
@@ -198,7 +294,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5755.8,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-73120874"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-a87b8123": {
    "alloc": [
@@ -228,7 +348,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-a87b8123"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-b03a4442": {
    "alloc": [
@@ -258,7 +402,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8473.22,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-b03a4442"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-c10c49c2": {
    "alloc": [
@@ -288,7 +456,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7226.46,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-c10c49c2"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-cb7a7521": {
    "alloc": [
@@ -318,7 +510,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7675.89,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-cb7a7521"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-ccb43739": {
    "alloc": [
@@ -348,7 +564,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5728.71,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-ccb43739"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-cd563898": {
    "alloc": [
@@ -378,7 +618,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7928.19,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-cd563898"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-df19b440": {
    "alloc": [
@@ -408,7 +672,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7289.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-df19b440"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-f0363876": {
    "alloc": [
@@ -438,7 +726,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5889.87,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-f0363876"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-f4815881": {
    "alloc": [
@@ -468,7 +780,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6717.39,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-f4815881"
+     }
+    ]
+   ]
   },
   "EDF-ST/fresh/hpo-ff42ba35": {
    "alloc": [
@@ -498,7 +834,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8256.99,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-ff42ba35"
+     }
+    ]
+   ]
   },
   "EDF-ST/select/convnext_large/b0.5/d0.5/t1/e20": [
    "g4",
@@ -1420,6 +1780,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7002.9,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-0a5998a0"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-0a5998a0"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-0a5998a0"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1456,6 +1883,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-417bb2bd"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-417bb2bd"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-417bb2bd"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-EDF/fresh/hpo-5e16eb0a": {
@@ -1487,6 +1974,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7721.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-5e16eb0a"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-5e16eb0a"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-5e16eb0a"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1523,6 +2077,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6160.6,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-60bf3eb4"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-60bf3eb4"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-60bf3eb4"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-EDF/fresh/hpo-73120874": {
@@ -1554,6 +2168,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5755.8,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-73120874"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-73120874"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-73120874"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1590,6 +2271,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-a87b8123"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-a87b8123"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-a87b8123"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-EDF/fresh/hpo-b03a4442": {
@@ -1621,6 +2362,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8473.22,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-b03a4442"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-b03a4442"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-b03a4442"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1657,6 +2465,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7226.46,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-c10c49c2"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-c10c49c2"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-c10c49c2"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1693,6 +2568,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7675.89,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-cb7a7521"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-cb7a7521"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-cb7a7521"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1729,6 +2671,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5728.71,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-ccb43739"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-ccb43739"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-ccb43739"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-EDF/fresh/hpo-cd563898": {
@@ -1760,6 +2762,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7928.19,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-cd563898"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-cd563898"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-cd563898"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1796,6 +2865,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7289.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-df19b440"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-df19b440"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-df19b440"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1832,6 +2968,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5889.87,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-f0363876"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-f0363876"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-f0363876"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1868,6 +3071,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6717.39,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-f4815881"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-f4815881"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-f4815881"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -1904,6 +3174,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8256.99,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-ff42ba35"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-ff42ba35"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-ff42ba35"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -2587,7 +3924,13 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
   },
   "Elastic-EDF/sequence/hpo-417bb2bd": {
    "alloc": [
@@ -2617,7 +3960,8 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "scale_up": []
   },
   "Elastic-EDF/sequence/hpo-5e16eb0a": {
    "alloc": [
@@ -2649,7 +3993,8 @@
       ]
      ]
     }
-   }
+   },
+   "scale_up": []
   },
   "Elastic-EDF/sequence/hpo-60bf3eb4": {
    "alloc": null,
@@ -2719,7 +4064,8 @@
       ]
      ]
     }
-   }
+   },
+   "scale_up": []
   },
   "Elastic-EDF/sequence/hpo-b03a4442": {
    "alloc": null,
@@ -2804,7 +4150,8 @@
     },
     "on-prem": {},
     "reserved": {}
-   }
+   },
+   "scale_up": []
   },
   "Elastic-EDF/sequence/hpo-f0363876": {
    "alloc": null,
@@ -2860,7 +4207,8 @@
     },
     "on-prem": {},
     "reserved": {}
-   }
+   },
+   "scale_up": []
   },
   "Elastic-FCFS/fresh/hpo-0a5998a0": {
    "alloc": [
@@ -2891,6 +4239,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7002.9,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-0a5998a0"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-0a5998a0"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-0a5998a0"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -2927,6 +4342,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-417bb2bd"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-417bb2bd"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-417bb2bd"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-FCFS/fresh/hpo-5e16eb0a": {
@@ -2958,6 +4433,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7721.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-5e16eb0a"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-5e16eb0a"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-5e16eb0a"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -2994,6 +4536,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6160.6,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-60bf3eb4"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-60bf3eb4"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-60bf3eb4"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-FCFS/fresh/hpo-73120874": {
@@ -3025,6 +4627,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5755.8,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-73120874"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-73120874"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-73120874"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3061,6 +4730,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-a87b8123"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-a87b8123"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-a87b8123"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-FCFS/fresh/hpo-b03a4442": {
@@ -3092,6 +4821,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8473.22,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-b03a4442"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-b03a4442"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-b03a4442"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3128,6 +4924,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7226.46,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-c10c49c2"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-c10c49c2"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-c10c49c2"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3164,6 +5027,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7675.89,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-cb7a7521"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-cb7a7521"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-cb7a7521"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3200,6 +5130,66 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5728.71,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-ccb43739"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {},
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-ccb43739"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-ccb43739"
+     }
+    ]
+   ],
    "scale_up": []
   },
   "Elastic-FCFS/fresh/hpo-cd563898": {
@@ -3231,6 +5221,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7928.19,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-cd563898"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-cd563898"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-cd563898"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3267,6 +5324,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7289.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-df19b440"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-df19b440"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-df19b440"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3303,6 +5427,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5889.87,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-f0363876"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-f0363876"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-f0363876"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3339,6 +5530,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6717.39,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-f4815881"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-f4815881"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-f4815881"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -3375,6 +5633,73 @@
     },
     "reserved": {}
    },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8256.99,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "moldable": true,
+      "wf-plan": "hpo-ff42ba35"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 1,
+      "wf-id": "hpo-ff42ba35"
+     }
+    ],
+    [
+     "notify",
+     "10.0.0.9",
+     {
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         1,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": false,
+      "request": 2,
+      "wf-id": "hpo-ff42ba35"
+     }
+    ]
+   ],
    "scale_up": [
     [
      "on-prem/on-prem",
@@ -4058,7 +6383,13 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
   },
   "Elastic-FCFS/sequence/hpo-417bb2bd": {
    "alloc": [
@@ -4088,7 +6419,8 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "scale_up": []
   },
   "Elastic-FCFS/sequence/hpo-5e16eb0a": {
    "alloc": [
@@ -4120,7 +6452,8 @@
       ]
      ]
     }
-   }
+   },
+   "scale_up": []
   },
   "Elastic-FCFS/sequence/hpo-60bf3eb4": {
    "alloc": null,
@@ -4190,7 +6523,8 @@
       ]
      ]
     }
-   }
+   },
+   "scale_up": []
   },
   "Elastic-FCFS/sequence/hpo-b03a4442": {
    "alloc": null,
@@ -4275,7 +6609,8 @@
     },
     "on-prem": {},
     "reserved": {}
-   }
+   },
+   "scale_up": []
   },
   "Elastic-FCFS/sequence/hpo-f0363876": {
    "alloc": null,
@@ -4331,7 +6666,8 @@
     },
     "on-prem": {},
     "reserved": {}
-   }
+   },
+   "scale_up": []
   },
   "FCFS-ST/fresh/hpo-0a5998a0": {
    "alloc": [
@@ -4361,7 +6697,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7002.9,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-0a5998a0"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-417bb2bd": {
    "alloc": [
@@ -4391,7 +6751,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-417bb2bd"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-5e16eb0a": {
    "alloc": [
@@ -4421,7 +6805,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7721.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-5e16eb0a"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-60bf3eb4": {
    "alloc": [
@@ -4451,7 +6859,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6160.6,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-60bf3eb4"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-73120874": {
    "alloc": [
@@ -4481,7 +6913,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5755.8,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-73120874"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-a87b8123": {
    "alloc": [
@@ -4511,7 +6967,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5195.84,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-a87b8123"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-b03a4442": {
    "alloc": [
@@ -4541,7 +7021,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8473.22,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-b03a4442"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-c10c49c2": {
    "alloc": [
@@ -4571,7 +7075,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7226.46,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-c10c49c2"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-cb7a7521": {
    "alloc": [
@@ -4601,7 +7129,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7675.89,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-cb7a7521"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-ccb43739": {
    "alloc": [
@@ -4631,7 +7183,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5728.71,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         4,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-ccb43739"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-cd563898": {
    "alloc": [
@@ -4661,7 +7237,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7928.19,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-cd563898"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-df19b440": {
    "alloc": [
@@ -4691,7 +7291,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 7289.82,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-df19b440"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-f0363876": {
    "alloc": [
@@ -4721,7 +7345,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 5889.87,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         2,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-f0363876"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-f4815881": {
    "alloc": [
@@ -4751,7 +7399,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 6717.39,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-f4815881"
+     }
+    ]
+   ]
   },
   "FCFS-ST/fresh/hpo-ff42ba35": {
    "alloc": [
@@ -4781,7 +7453,31 @@
      ]
     },
     "reserved": {}
-   }
+   },
+   "messages": [
+    [
+     "start",
+     "172.31.10.149",
+     {
+      "deadline": 8256.99,
+      "executor-ip": "172.31.10.149",
+      "hosts": {
+       "on-demand": {},
+       "on-prem": {
+        "on-prem": [
+         3,
+         [
+          "172.31.10.149"
+         ]
+        ]
+       },
+       "reserved": {}
+      },
+      "initial-alloc": true,
+      "wf-plan": "hpo-ff42ba35"
+     }
+    ]
+   ]
   },
   "FCFS-ST/select/convnext_large/b0.5/d0.5/t1/e20": [
    "g4",

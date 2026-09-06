@@ -26,10 +26,15 @@ def test_shared_methods_are_the_base_methods():
 
 def test_layers_keep_their_own_versions_of_what_differs():
     for name in ('sendWorkflowForExecution', 'sendNewResources', 'sendFreedResources', 'allocateNewResources',
-                 'freeResources', 'checkNewResources', 'checkCloseness', 'processJobCompletion'):
+                 'checkNewResources', 'checkCloseness', 'processJobCompletion'):
         assert getattr(Scheduler_LA, name) is not getattr(Scheduler, name), name
-    for name in ('allocateNewResources', 'freeResources', 'checkNewResources', 'processJobCompletion'):
+    for name in ('freeResources', 'checkNewResources', 'processJobCompletion'):
         assert getattr(Scheduler_HPO, name) is not getattr(Scheduler, name), name
+    # B7.3: the licence release and the HPO scale-up request are the base's, with the
+    # timeout and the tuple width as the only differences
+    assert Scheduler_LA.freeResources is Scheduler.freeResources
+    assert Scheduler_HPO.allocateNewResources is Scheduler.allocateNewResources
+    assert (Scheduler.request_timeout, Scheduler_LA.request_timeout, Scheduler_HPO.request_timeout) == (180, 180, 720)
 
 
 def test_every_policy_class_is_a_scheduler():
@@ -66,15 +71,18 @@ def test_hsm_is_edf_lamf_plus_its_gate():
     assert issubclass(EDF_HSM_LA, EDF_Optimized_LA)
     for name in ('checkNewResourcesWithLicenses', 'findLicenseFeasibleAllocation', 'isWorkflowImpossible', 'freeResourcesWithLicenses'):
         assert getattr(EDF_HSM_LA, name) is getattr(EDF_Optimized_LA, name), name
-    for name in ('run', 'processFreeRequestWithLicenses', '_hsm_in_static_phase', '__init__'):
+    for name in ('run', '_hsm_in_static_phase', '_holdAllocation', '__init__'):
         assert name in EDF_HSM_LA.__dict__, name
+    assert EDF_HSM_LA.processFreeRequestWithLicenses is EDF_Optimized_LA.processFreeRequestWithLicenses   # B7.3: the gate is a hook
 
 
 def test_elastic_licence_layer():
     for cls in (FCFS_Optimized_LA, EDF_Optimized_LA):
         assert issubclass(cls, Scheduler_LA_Elastic)
         assert cls.freeResourcesWithLicenses is Scheduler_LA_Elastic.freeResourcesWithLicenses
-    assert 'checkNewResourcesWithLicenses' in FCFS_Optimized_LA.__dict__ and 'checkNewResourcesWithLicenses' in EDF_Optimized_LA.__dict__
+    for name in ('checkNewResourcesWithLicenses', 'findLicenseFeasibleAllocation'):      # shared since B7.3, differing by _feasibilityChains
+        assert FCFS_Optimized_LA.__dict__.get(name) is None and EDF_Optimized_LA.__dict__.get(name) is None
+        assert getattr(FCFS_Optimized_LA, name) is getattr(Scheduler_LA_Elastic, name)
 
 
 def test_hpo_static_and_elastic_layers():
@@ -85,3 +93,39 @@ def test_hpo_static_and_elastic_layers():
         assert cls.getInstanceTypeForHPO is Scheduler_HPO.getInstanceTypeForHPO
     for name in ('_syncOnDemandIPs', 'freeResources', 'getHPOInstanceCost', 'createOnDemandWorkers'):
         assert FCFS_Optimized_HPO.__dict__.get(name) is None and getattr(FCFS_Optimized_HPO, name) is getattr(Scheduler_HPO_Elastic, name), name
+
+
+# --- B7.3: the near-identical methods, merged behind explicit per-policy hooks ------
+from elastiflow.scheduler.fcfs_optimized import FCFS_Optimized  # noqa: E402
+from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5  # noqa: E402
+
+
+def test_seissol_elastic_fcfs_keeps_only_its_planner():
+    assert 'checkNewResourcesMoldable' in FCFS_Optimized.__dict__
+    assert 'processFreeRequest' not in FCFS_Optimized.__dict__ and 'freeResources' not in FCFS_Optimized.__dict__
+    assert FCFS_Optimized.processFreeRequest is Scheduler.processFreeRequest
+
+
+def test_licence_policy_hooks():
+    assert FCFS_Optimized_LA._feasibilityChains(None, {'chains': 4}) == 1
+    assert EDF_Optimized_LA._feasibilityChains(None, {'chains': 4}) == 4
+    assert EDF_HSM_LA._feasibilityChains is EDF_Optimized_LA._feasibilityChains
+    assert EDF_Optimized_LA._holdAllocation(None, *([None] * 9)) is False
+    assert 'processFreeRequestWithLicenses' not in EDF_HSM_LA.__dict__ and '_holdAllocation' in EDF_HSM_LA.__dict__
+    assert (EDF_Optimized_LA.negotiation_label, EDF_HSM_LA.negotiation_label) == ('EDF-LAMF', 'HSM MOLDABLE-PHASE')
+    assert (EDF_Optimized_LA.phase_note, EDF_HSM_LA.phase_note) == ('', ' (MOLDABLE)')
+
+
+def test_hpo_policy_hooks_and_labels():
+    assert FCFS_Optimized_HPO._runtimeFunctionFor(None, 'on-prem') is getRuntime_g5
+    assert EDF_Optimized_HPO._runtimeFunctionFor(None, 'on-prem') is getRuntime_g4
+    for cls in (FCFS_Optimized_HPO, EDF_Optimized_HPO):
+        assert cls._runtimeFunctionFor(None, 'g4dn.xlarge') is getRuntime_g4 and cls._runtimeFunctionFor(None, 'g5.xlarge') is getRuntime_g5
+    assert (Scheduler_HPO.policy_label, FCFS_Scheduler_HPO.policy_label, EDF_Scheduler_HPO.policy_label, EDF_Optimized_HPO.policy_label) == ('', '', 'EDF ', 'EDF ')
+    assert (Scheduler_HPO_Static.mode_label, Scheduler_HPO_Elastic.mode_label) == ('', 'Moldable ')
+    assert Scheduler_HPO_Elastic.moldable_request and not Scheduler_HPO_Static.moldable_request
+    for cls in (FCFS_Scheduler_HPO, EDF_Scheduler_HPO, FCFS_Optimized_HPO, EDF_Optimized_HPO):
+        assert cls.sendWorkflowForExecutionHPO is Scheduler_HPO.sendWorkflowForExecutionHPO
+        assert cls.selectOptimalInstanceType.__qualname__.split('.')[0] in ('Scheduler_HPO_Static', 'Scheduler_HPO_Elastic')
+    for name in ('allocateResourcesMoldableHPO', 'checkNewResourcesHPO', 'sendNewResources', 'sendFreedResources'):
+        assert getattr(FCFS_Optimized_HPO, name) is getattr(Scheduler_HPO_Elastic, name) is getattr(EDF_Optimized_HPO, name), name

@@ -2,7 +2,7 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 to B7.2 are done; B7.3 onwards are not applied yet. Every figure below was measured on that commit with
+end. B7.0 to B7.3 are done; B7.5 onwards are not applied yet. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -333,6 +333,65 @@ the HPO policies likewise over `Scheduler_HPO_Static` / `Scheduler_HPO_Elastic`.
 `elastiflow/scheduler/` went from 8 244 lines before B7.1 to 7 402. Gates:
 default suite (201), smoke (20 cells), HPO allocation baseline, all
 unchanged; `test_scheduler_hierarchy.py` pins the new layers.
+
+**B7.3 done (2026-09-06).** Every pair at ratio ≥ 0.95 that was not identical
+was diffed after normalisation and classified. First the reference was widened
+where the merge would otherwise have been unchecked: the HPO record now also
+holds the messages each scheduler sends (the start request of every fresh
+allocation; for the elastic classes one grow and one shrink notification on a
+registered workflow) and the scale-up probe after every sequence allocation,
+which reaches the cloud paths of `checkNewResourcesHPO` (the fresh
+allocations all land on-prem, so those paths were unpinned before). That
+record was produced from the pre-merge commit in a throw-away worktree and
+the merged tree is compared with it exactly.
+
+*No-ops, merged:* the HPO elastic pair's `allocateResourcesMoldableHPO`,
+`selectOptimalInstanceType`, `sendNewResources`, `sendFreedResources` and the
+static pair's `allocateResourcesHPO`, `selectOptimalInstanceType` (a dead
+assignment and print texts, emoji versus none), `sendWorkflowForExecutionHPO`
+across all four (the elastic request carries `moldable: True`, now set from
+the layer's `moldable_request`); a `policy_label` (`'EDF '`) keeps the EDF
+policies' log prefixes. The base's `allocateNewResources` serves HPO too
+(`request_timeout` class attribute, 180 s versus HPO's 720 s), and the base's
+`freeResources` serves the licence layer (it unpacks the resource manager's
+5- or 7-tuple). Elastic-FCFS's copy of `processFreeRequest` and of the
+moldable release were the base's with other callee names; both are gone and
+its scale-up planner is now its `checkNewResourcesMoldable` override.
+
+*Extensions, hooked:* HSM's `processFreeRequestWithLicenses` was EDF-LAMF's
+plus the phase gate: the gate is now `_holdAllocation(...)` (False in
+EDF-LAMF, HSM's `_hsm_in_static_phase` in HSM), called at the same point, with
+the two log labels as class attributes; 202 lines gone from HSM.
+
+*Behavioural differences between cited policies, kept behind a one-line hook
+each and reported here:*
+
+1. **Elastic-FCFS versus Elastic-EDF/Elastic-Rank (SeisSol), scale-up
+   fallback.** `FCFS_Optimized.checkNewResourcesMoldable` skips a candidate
+   instance that is slower than 1.2× the fleet's slowest and has a single free
+   node (`else: continue`); the base's `Scheduler.checkNewResourcesMoldable`,
+   which the port to the other elastic policies produced, takes it with one
+   node. The two planners stay separate.
+2. **FCFS-LAMF versus EDF-LAMF, licence feasibility.** The feasibility search
+   sizes tokens with one chain in FCFS-LAMF and with the workflow's chain count
+   in EDF-LAMF (and HSM): `_feasibilityChains(request)` returns 1 or
+   `request['chains']`; the two 60-line methods are now one each in
+   `Scheduler_LA_Elastic`.
+3. **Elastic-FCFS versus Elastic-EDF (HPO), on-prem scale-up.** For an on-prem
+   workflow (instance name `on-prem`), Elastic-FCFS models the added
+   instances with the g5 runtime, Elastic-EDF with g4:
+   `_runtimeFunctionFor(instance_type)`. The same condition appears in the two
+   `processMoldableRequestHPO` loops, which are below the threshold and stay.
+4. **HSM versus EDF-LAMF, the request loop.** Not merged (0.95, a `run`
+   method, B7.4 territory), but the diff is worth knowing: when a workflow
+   cannot be admitted, EDF-LAMF calls `setResourcesAvailable(False)` and waits
+   for a release before trying again, HSM does not and retries every polling
+   interval; HSM also writes its metrics files with the prefix `EDF_HSM_`
+   rather than `EDF_`.
+
+`elastiflow/scheduler/` is at 6 167 lines (8 244 before B7.1). Gates:
+default suite (204), smoke (20 cells), the widened HPO record, all exact;
+`test_scheduler_hierarchy.py` pins the hooks and labels.
 
 ## Method
 

@@ -11,8 +11,12 @@ decisions live in pure methods. This module exercises them deterministically:
   for each of the 20 workflows of workflow/sample_workflows_HPO, once on a
   fresh scheduler and once in sequence on one scheduler without releases, so
   the on-prem, reserved and on-demand paths are all reached;
-* for the elastic classes, one scale-up probe (checkNewResourcesHPO) after the
-  fresh allocation.
+* for the elastic classes, one scale-up probe (checkNewResourcesHPO) after each
+  fresh and each sequence allocation (the sequence reaches the cloud paths);
+* the messages the scheduler sends (B7.3): the start-workflow request each
+  class builds for the fresh allocation, and for the elastic classes the
+  grow and shrink notifications of one scale-up and one release on a
+  registered workflow.
 
 The schedulers provision on-demand workers from a thread pool, which cannot
 sleep on a simulus clock from another thread, so the harness hands them a stub
@@ -74,8 +78,26 @@ class ProbeBackend:
     def release(self, ips):
         pass
 
+    def __init__(self):
+        self.sent = []
 
-def _allocate(sched, wf_plan: dict, probe: bool) -> dict:
+    def start_workflow(self, request, executor_ip):
+        self.sent.append(('start', executor_ip, _brief(request)))
+
+    def notify_resources(self, request, executor_ip):
+        self.sent.append(('notify', executor_ip, _brief(request)))
+        return True
+
+
+def _brief(request):
+    """The request as sent, with the workflow plan reduced to its id."""
+    r = dict(request)
+    if isinstance(r.get('wf-plan'), dict):
+        r['wf-plan'] = r['wf-plan'].get('id')
+    return _ser(r)
+
+
+def _allocate(sched, wf_plan: dict, probe: bool, messages: bool = False) -> dict:
     from elastiflow.utils.resource import getConstraintsFromWorkflow
     backend = ProbeBackend()
     out = {}
@@ -90,7 +112,29 @@ def _allocate(sched, wf_plan: dict, probe: bool) -> dict:
         out['scale_up'] = _ser(sched.checkNewResourcesHPO(
             sched.resource_manager.getResources(), alloc, c['budget'], c['deadline_duration'],
             request, c['mesh'], alloc[0][0].name, backend))
+    if messages and alloc:
+        out['messages'] = _messages(sched, wf_plan, c, ips, alloc, backend, probe)
     return out
+
+
+def _messages(sched, wf_plan, c, ips, alloc, backend, elastic):
+    """What the scheduler sends for this workflow: the start request, and for
+    the elastic classes a grow notification (the scale-up probe's instances,
+    allocated) and a shrink notification (one instance released)."""
+    sched.sendWorkflowForExecutionHPO(wf_plan, ips, backend, c['deadline'])
+    if elastic:
+        wf_id = wf_plan['id']
+        wf = sched.resource_manager.addWorkflow(wf_id, alloc, c['budget'], c['deadline'], 0, c['mesh'])
+        sched.metrics.addToDataframe(wf_id, wf, 0)
+        request = {'wf-id': wf_id, 'chains': c['chains'], 'count': c['chains'], 'tinyda-iterations': c['tinydaIterations'],
+                   'iteration': 1, 'request-time': 0, 'client-ip': '10.0.0.9'}
+        grow = sched.checkNewResourcesHPO(sched.resource_manager.getResources(), alloc, c['budget'], c['deadline_duration'],
+                                          request, c['mesh'], alloc[0][0].name, backend)
+        ips2, alloc2 = sched.resource_manager.allocateResources(grow)
+        sched.sendNewResources(wf_id, ips2, alloc2, backend, request['client-ip'], iter_idx=1)
+        instances = sched.resource_manager.getWorkflow(wf_id)[0]
+        sched.freeResources(instances, dict(request, count=1, iteration=2), backend)
+    return _ser(backend.sent)      # tuples become lists, as they are in the JSON file
 
 
 def compute() -> dict:
@@ -117,8 +161,8 @@ def compute() -> dict:
                                 rec[f'{name}/select/{model}/b{bs:g}/d{ds:g}/t{t}/e{e}'] = _ser(
                                     s.selectOptimalInstanceType(b, d, model, t, e))
             for wf in plans:
-                rec[f'{name}/fresh/{wf["id"]}'] = _allocate(_fresh(cls), wf, probe=elastic)
+                rec[f'{name}/fresh/{wf["id"]}'] = _allocate(_fresh(cls), wf, probe=elastic, messages=True)
             s = _fresh(cls)
             for wf in plans:
-                rec[f'{name}/sequence/{wf["id"]}'] = _allocate(s, wf, probe=False)
+                rec[f'{name}/sequence/{wf["id"]}'] = _allocate(s, wf, probe=elastic)   # the cloud scale-up paths, once on-prem is full
     return rec

@@ -19,7 +19,7 @@ import math
 import os
 import threading
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict
 
 from elastiflow.config.constants_LA import (
     COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST,
@@ -32,7 +32,6 @@ from elastiflow.config.constants_LA import (
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
-from elastiflow.resource_manager.license.exceptions import LicenseError, InsufficientTokens
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow, getEstimate
 from elastiflow.scheduler.scheduler import EDFOrderingMixin
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA_Elastic
@@ -71,6 +70,19 @@ class EDF_Optimized_LA(EDFOrderingMixin, Scheduler_LA_Elastic):
 
         # Link license manager from resource manager (required for license-aware operations)
         self.license_manager = self.resource_manager.license_manager
+
+    # Log labels of the negotiation trace; HSM overrides them (B7.3).
+    negotiation_label = 'EDF-LAMF'
+    phase_note = ''
+
+    def _feasibilityChains(self, request) -> int:
+        # EDF-LAMF sizes licence feasibility with the workflow's chain count (FCFS-LAMF uses one).
+        return request.get('chains', 1)
+
+    def _holdAllocation(self, request, instances, deadline, start_time, mesh, license_pool, software_id, ind, backend) -> bool:
+        """HSM's phase gate: True while a workflow holds its allocation (no
+        scale-down). EDF-LAMF never holds; EDF_HSM_LA overrides this (B7.3)."""
+        return False
 
     def run(self, backend):
         """
@@ -369,165 +381,6 @@ class EDF_Optimized_LA(EDFOrderingMixin, Scheduler_LA_Elastic):
     # LICENSE-AWARE RESOURCE MANAGEMENT
     # =========================================================================
 
-    def checkNewResourcesWithLicenses(
-        self,
-        resources: List[Instance],
-        current_resources: List[tuple[Instance, int, List]],
-        budget: float,
-        available_runtime: float,
-        request,
-        mesh,
-        license_pool: Optional[str]
-    ) -> Tuple[List[tuple[Instance, int]], List[str]]:
-        """
-        Check new resources WITH license constraints
-
-        Returns:
-            (alloc_instances, license_holds)
-        """
-        # First, get compute allocation (from checkNewResources)
-        # GLOBAL VIEW: Pass available_runtime for deadline feasibility check.
-        # Pass software_id so the depth (nodes-per-chain) search is license-cost-aware.
-        sid = {'ANSYS': 1, 'ABAQUS': 2, 'LSDYNA': 3}.get(license_pool)
-        alloc_instances = self.checkNewResources(
-            resources, current_resources, budget, available_runtime, request, mesh,
-            software_id=sid
-        )
-
-        if not alloc_instances:
-            # Compute gate rejected the request; the licence pool was never tested.
-            self._last_licence_outcome = 'deny_compute'
-            self.metrics.recordNegotiationOutcome('deny_compute')
-            return ([], [])
-
-        # If no license pool, return compute allocation as-is
-        if not license_pool:
-            return (alloc_instances, [])
-
-        # Calculate licenses needed for proposed allocation
-        total_cores = sum(inst.cores * count for inst, count in alloc_instances)
-
-        try:
-            licenses_needed = self.license_manager.calculate_tokens(
-                pool=license_pool,
-                cores=total_cores,
-                chains=request.get('chains', 1)
-            )
-
-            # Check if licenses available
-            available_tokens = self.license_manager.get_available_tokens(license_pool)
-
-            if available_tokens >= licenses_needed:
-                # Can allocate! Hold licenses
-                hold_id = self.license_manager.hold(
-                    pool=license_pool,
-                    amount=licenses_needed,
-                    owner=request['wf-id'],
-                    ttl=300
-                )
-                self.license_manager.commit(hold_id)
-
-                print(f"  ✓ Allocated {licenses_needed} licenses (available: {available_tokens})")
-                self._last_licence_outcome = 'approve'
-                self.metrics.recordNegotiationOutcome(
-                    'approve', tokens_needed=licenses_needed,
-                    tokens_available=available_tokens)
-                return (alloc_instances, [hold_id])
-
-            else:
-                # Insufficient licenses - try partial allocation
-                print(f"  ⚠ Insufficient licenses: need {licenses_needed}, have {available_tokens}")
-
-                feasible_instances = self.findLicenseFeasibleAllocation(
-                    alloc_instances, available_tokens, license_pool, request
-                )
-
-                if feasible_instances:
-                    # Partial allocation
-                    total_cores_feasible = sum(inst.cores * count for inst, count in feasible_instances)
-                    licenses_feasible = self.license_manager.calculate_tokens(
-                        pool=license_pool,
-                        cores=total_cores_feasible,
-                        chains=request.get('chains', 1)
-                    )
-
-                    hold_id = self.license_manager.hold(
-                        pool=license_pool,
-                        amount=licenses_feasible,
-                        owner=request['wf-id'],
-                        ttl=300
-                    )
-                    self.license_manager.commit(hold_id)
-
-                    print(f"  ✓ Partial allocation: {sum(c for _, c in feasible_instances)} instances, {licenses_feasible} licenses")
-                    self._last_licence_outcome = 'modify'
-                    self.metrics.recordNegotiationOutcome(
-                        'modify',
-                        requested=sum(c for _, c in alloc_instances),
-                        granted=sum(c for _, c in feasible_instances),
-                        tokens_needed=licenses_needed,
-                        tokens_available=available_tokens)
-                    return (feasible_instances, [hold_id])
-
-                else:
-                    print(f"  ✗ Cannot fit any allocation to available licenses")
-                    self._last_licence_outcome = 'deny_licence'
-                    self.metrics.recordNegotiationOutcome(
-                        'deny_licence', tokens_needed=licenses_needed,
-                        tokens_available=available_tokens)
-                    return ([], [])
-
-        except (InsufficientTokens, LicenseError) as e:
-            print(f"  ✗ License error: {e}")
-            self._last_licence_outcome = 'deny_licence'
-            self.metrics.recordNegotiationOutcome('deny_licence')
-            return ([], [])
-
-    def findLicenseFeasibleAllocation(
-        self,
-        instances: List[tuple[Instance, int]],
-        available_licenses: int,
-        license_pool: str,
-        request
-    ) -> Optional[List[tuple[Instance, int]]]:
-        """
-        Find subset of instances that fits available licenses
-
-        Tries to allocate as many instances as possible within license limit.
-        """
-        feasible = []
-        licenses_used = 0
-
-        for inst, count in instances:
-            # Try adding instances one by one
-            for i in range(count):
-                # Calculate licenses for current + 1 instance
-                test_cores = sum(i.cores * c for i, c in feasible) + inst.cores
-                try:
-                    test_licenses = self.license_manager.calculate_tokens(
-                        pool=license_pool,
-                        cores=test_cores,
-                        chains=request.get('chains', 1)
-                    )
-
-                    if test_licenses <= available_licenses:
-                        # Can add this instance
-                        if feasible and feasible[-1][0] == inst:
-                            # Same instance type - increment count
-                            feasible[-1] = (inst, feasible[-1][1] + 1)
-                        else:
-                            # New instance type
-                            feasible.append((inst, 1))
-                        licenses_used = test_licenses
-                    else:
-                        # Would exceed license limit - stop
-                        break
-
-                except LicenseError:
-                    break
-
-        return feasible if feasible else None
-
     # =========================================================================
     # DDM-EDF RESOURCE REQUEST PROCESSING (with urgency-based scaling)
     # =========================================================================
@@ -551,6 +404,11 @@ class EDF_Optimized_LA(EDFOrderingMixin, Scheduler_LA_Elastic):
 
         # Iteration-weighted constraints (from LAMF)
         ind = request['iteration']
+
+        # HSM's phase gate (False here): decided before the negotiation, see _holdAllocation.
+        hold_allocation = self._holdAllocation(request, instances, deadline, start_time, mesh, license_pool,
+                                               software_id, ind, backend)
+
         available_time = max(0, deadline - DEADLINE_BUFFER - backend.now()) * OPTIM_FCFS_DFACTOR[ind]
 
         cur_instance: Instance = instances[-1][0]
@@ -560,8 +418,8 @@ class EDF_Optimized_LA(EDFOrderingMixin, Scheduler_LA_Elastic):
             cur_count = sum(inst_tuple[1] for inst_tuple in instances)
 
         # === DIAGNOSTIC LOGGING ===
-        print(f"\n🔍 [EDF-LAMF] processFreeRequestWithLicenses called:")
-        print(f"  wf-id: {request['wf-id']}, iteration: {ind}")
+        print(f"\n🔍 [{self.negotiation_label}] processFreeRequestWithLicenses called:")
+        print(f"  wf-id: {request['wf-id']}, iteration: {ind}{self.phase_note}")
         print(f"  current instances: {cur_count}, chains: {request['chains']}, tinyda-iterations: {request['tinyda-iterations']}")
         print(f"  deadline: {deadline:.1f}s, current time: {backend.now():.1f}s")
         print(f"  available_time (after OPTIM factor {OPTIM_FCFS_DFACTOR[ind]}): {available_time:.1f}s")
@@ -623,7 +481,12 @@ class EDF_Optimized_LA(EDFOrderingMixin, Scheduler_LA_Elastic):
         runtime_per_model = getRuntime(1, mesh, cur_instance.name)
         print(f"  runtime_per_model: {runtime_per_model:.1f}s")
 
-        # Only attempt scale-down if not skipped by urgency trigger
+        # Only attempt scale-down if not skipped by urgency trigger AND the
+        # workflow has left the HSM static phase (static phase forbids scale-down).
+        if hold_allocation:
+            skip_scale_down = True
+            print(f"  📌 [HSM STATIC] scale-down suppressed (holding allocation); "
+                  f"scale-up remains enabled")
         while chains_per_node > 0 and not skip_scale_down:
             runtime = chains_per_node * runtime_per_model * request['tinyda-iterations']
             print(f"  [chains_per_node={chains_per_node}] runtime={runtime:.1f}s vs available_time={available_time:.1f}s")

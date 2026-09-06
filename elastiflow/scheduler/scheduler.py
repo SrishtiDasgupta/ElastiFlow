@@ -24,6 +24,7 @@ class Scheduler(ABC):
 
     metrics_class = Metrics     # the family's metrics (MetricsLA, MetricsHPO in the subclasses)
     log_prefix = ''             # 'HPO ' in the HPO layer: its log lines carry the prefix
+    request_timeout = RESOURCE_REQUEST_TIMEOUT   # the HPO layer binds its own (720 s)
 
     def __init__(self, queue, finish_queue, resource_request_queue):
         self.queue = queue
@@ -71,7 +72,7 @@ class Scheduler(ABC):
 
     # request = {"wf-id", "count", "iteration": ind, "tinyda-iterations", "client-ip", "request-time"}
     def allocateNewResources(self, request, backend):
-        if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+        if backend.now() - request['request-time'] > self.request_timeout:
             return
         
         (instances, budget, _, start_time, mesh) = self.resource_manager.getWorkflow(request['wf-id'])
@@ -100,9 +101,9 @@ class Scheduler(ABC):
 
     # request = {"wf-id", "count", "request-time", "client-ip"} 
     def freeResources(self, request, backend):
-        if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+        if backend.now() - request['request-time'] > self.request_timeout:
             return
-        (instances, _, deadline, _, _) = self.resource_manager.getWorkflow(request['wf-id'])
+        (instances, _, deadline, *_) = self.resource_manager.getWorkflow(request['wf-id'])   # 5 fields, 7 in the licence layer
         
         response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
         # Only free resources if next iteration can happen in available time
