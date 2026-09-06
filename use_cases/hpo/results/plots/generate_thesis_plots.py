@@ -110,35 +110,9 @@ COST = {
     "MAL FCFS":  [_pw(3, "moldable", "fcfs"), _pw(5, "moldable", "fcfs"), _pw(7, "moldable", "fcfs")],
 }
 # Paired difference (Malleable − Static), per ordering, per N: (mean, stdev)
-DIFF_MISS = {
-    "EDF":  [(+0.33, 0.52), (-0.33, 0.82), (-0.83, 1.17)],
-    "FCFS": [(+0.33, 0.52), (-0.67, 1.03), (-1.17, 1.17)],
-}
 DIFF_FLOW = {  # minutes
     "EDF":  [(+11.6, 27.6), (-58.6, 34.5), (-224.9, 86.7)],
     "FCFS": [(+11.6, 27.6), (-166.0, 21.4), (-269.4, 86.8)],
-}
-DIFF_COST = {  # dollars
-    "EDF":  [(+1.70, 0.64), (+2.93, 0.35), (-0.03, 0.46)],
-    "FCFS": [(+1.70, 0.64), (-1.06, 1.53), (-1.30, 1.41)],
-}
-
-# Δ CPR (Elastic − Static), per ordering per N. CPR is computed per run as
-# (1 − misses/N) / (cost_total/N), then run-paired (same seed index) for the
-# mean and stdev of the difference.
-def _cpr_runs(N, mode, ord_):
-    cell = _total[f"N{N}_{mode}_{ord_}"]
-    return [((1.0 - r["misses"]/N) / (r["cost_total"]/N))
-            if r["cost_total"] > 0 else 0.0
-            for r in cell["per_run"]]
-def _paired_cpr_diff(N, ord_):
-    elastic = _cpr_runs(N, "moldable", ord_)
-    static  = _cpr_runs(N, "static",   ord_)
-    diffs = np.array([e - s for e, s in zip(elastic, static)])
-    return float(diffs.mean()), float(diffs.std(ddof=1) if len(diffs) > 1 else 0.0)
-DIFF_CPR = {
-    "EDF":  [_paired_cpr_diff(N, "edf")  for N in (3, 5, 7)],
-    "FCFS": [_paired_cpr_diff(N, "fcfs") for N in (3, 5, 7)],
 }
 
 OUT = Path(__file__).resolve().parent
@@ -730,51 +704,5 @@ line_plot(
     palette=PAL["sumflow"],
 )
 
-
-# --------------------------------------------------------------------- Plot 4
-fig, axs = plt.subplots(1, 3, figsize=(16, 5.5))
-metrics = [
-    ("Δ misses",            DIFF_MISS, "misses"),
-    ("Δ CPR",               DIFF_CPR,  "1/USD"),
-    ("Δ on-demand cost ($)", DIFF_COST, "USD"),
-]
-bar_w = 0.36
-x = np.arange(len(NS))
-EDF_COL = "#0F766E"
-FCFS_COL = "#5EEAD4"
-
-for ax, (ylabel, data, _) in zip(axs, metrics):
-    mu_e, sd_e = split(data["EDF"])
-    mu_f, sd_f = split(data["FCFS"])
-    bars1 = ax.bar(x - bar_w / 2, mu_e, bar_w, yerr=sd_e,
-                   color=EDF_COL, edgecolor="black", linewidth=0.8,
-                   capsize=4, label="EDF")
-    bars2 = ax.bar(x + bar_w / 2, mu_f, bar_w, yerr=sd_f,
-                   color=FCFS_COL, edgecolor="black", linewidth=0.8,
-                   capsize=4, label="FCFS")
-    ax.axhline(0, color="black", linewidth=1.0)
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"N={n}" for n in NS])
-    ax.set_ylabel(ylabel, fontsize=LABEL_FS)
-    ax.tick_params(axis="both", labelsize=TICK_FS)
-    for lbl in ax.get_xticklabels() + ax.get_yticklabels():
-        lbl.set_fontweight("bold")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.grid(True, axis="y", alpha=0.25)
-
-h_edf, _ = axs[0].containers[0], None
-h_fcfs = axs[0].containers[1]
-fig.legend([h_edf, h_fcfs], ["EDF", "FCFS"],
-           loc="lower center", ncol=2, fontsize=LEG_FS, frameon=True,
-           bbox_to_anchor=(0.5, -0.20), prop={"weight": "bold", "size": LEG_FS},
-           markerscale=LEG_MARKER_SCALE, handlelength=LEG_HANDLE_LEN,
-           handletextpad=0.8, columnspacing=2.0, borderpad=0.8)
-fig.suptitle("Paired difference (Elastic − Static), per scheduler ordering",
-             fontsize=TITLE_FS, fontweight="bold", y=1.02)
-fig.tight_layout()
-fig.savefig(OUT / "04_paired_diff.png", dpi=300, bbox_inches="tight")
-fig.savefig(OUT / "04_paired_diff.pdf", bbox_inches="tight")
-plt.close(fig)
 
 print("Wrote plots to", OUT)

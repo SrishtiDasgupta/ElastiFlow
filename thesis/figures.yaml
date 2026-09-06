@@ -1,0 +1,430 @@
+about: 'Every figure of the dissertation that comes from data: the submitted image (relative to the thesis sources''
+  images/ directory), the committed file it is a copy of, the one script that writes that file, what the script
+  reads, and the state recorded when this manifest was made. Checked by thesis/sync_figures.py; the rule is one
+  writer per figure and the submitted tree is frozen.'
+reference: tag thesis-submitted-2026-09-04; states checked against the submitted image tree on 2026-09-06 after
+  Phase C
+states:
+  identical: byte-identical
+  identical tokens: the same drawn text (PDF creation metadata or layout differs)
+  differs: the drawn content differs; see note
+figures:
+- thesis: 9.chapter/1.naive-seissol/01_cost_vs_n.pdf
+  committed: use_cases/seissol/results/plots/01_cost_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/01b_cost_stack.pdf
+  committed: use_cases/seissol/results/plots/01b_cost_stack.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02_budget_vs_n.pdf
+  committed: use_cases/seissol/results/plots/02_budget_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02_cost_per_wf_vs_n.pdf
+  committed: use_cases/seissol/results/plots/02_cost_per_wf_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02_miss_vs_n.pdf
+  committed: use_cases/seissol/results/plots/02_miss_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02_turnaround_vs_n.pdf
+  committed: use_cases/seissol/results/plots/02_turnaround_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02_util_vs_n.pdf
+  committed: use_cases/seissol/results/plots/02_util_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02_wait_vs_n.pdf
+  committed: use_cases/seissol/results/plots/02_wait_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02b_miss_bar.pdf
+  committed: use_cases/seissol/results/plots/02b_miss_bar.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02c_budget_miss_bar.pdf
+  committed: use_cases/seissol/results/plots/02c_budget_miss_bar.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02d_turnaround_stack.pdf
+  committed: use_cases/seissol/results/plots/02d_turnaround_stack.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02e_saturation.pdf
+  committed: use_cases/seissol/results/plots/02e_saturation.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02f_miss_decomposition.pdf
+  committed: use_cases/seissol/results/plots/02f_miss_decomposition.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/02g_cpr_bar.pdf
+  committed: use_cases/seissol/results/plots/02g_cpr_bar.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/04_paired_delta.pdf
+  committed: use_cases/seissol/results/plots/04_paired_delta.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/06_pareto.pdf
+  committed: use_cases/seissol/results/plots/06_pareto.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/07_scaling_activity.pdf
+  committed: use_cases/seissol/results/plots/07_scaling_activity.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/07b_grant_tier_stack.pdf
+  committed: use_cases/seissol/results/plots/07b_grant_tier_stack.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/07c_grant_tier_vs_n.pdf
+  committed: use_cases/seissol/results/plots/07c_grant_tier_vs_n.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/08_intent_satisfaction.pdf
+  committed: use_cases/seissol/results/plots/08_intent_satisfaction.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/09_sortkey_panel.pdf
+  committed: use_cases/seissol/results/plots/09_sortkey_panel.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/10_rank_pair.pdf
+  committed: use_cases/seissol/results/plots/10_rank_pair.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/11_util_timeline.pdf
+  committed: use_cases/seissol/results/plots/11_util_timeline.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/1.naive-seissol/12_per_wf_scatter.pdf
+  committed: use_cases/seissol/results/plots/12_per_wf_scatter.pdf
+  generator: use_cases/seissol/results/generate_plain_plots.py
+  reads:
+  - plain_results_per_run.json
+  status: identical
+- thesis: 9.chapter/2.hpo/01_cost_vs_n.pdf
+  committed: use_cases/hpo/results/plots/01_cost_vs_n.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: identical tokens
+- thesis: 9.chapter/2.hpo/01b_cost_stack.pdf
+  committed: use_cases/hpo/results/plots/01b_cost_stack.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: identical tokens
+- thesis: 9.chapter/2.hpo/02_misses_vs_n.pdf
+  committed: use_cases/hpo/results/plots/02_misses_vs_n.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: identical tokens
+  note: 'Phase C: the superseded writer regen_misses_n.py was removed'
+- thesis: 9.chapter/2.hpo/02b_misses_bar.pdf
+  committed: use_cases/hpo/results/plots/02b_misses_bar.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: differs
+  note: single writer; the committed output carries the current policy-name subscripts in the axis labels, the submitted
+    copy the earlier ones; the drawn data are the same (docs/PROVENANCE.md)
+- thesis: 9.chapter/2.hpo/02c_budget_misses_bar.pdf
+  committed: use_cases/hpo/results/plots/02c_budget_misses_bar.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - plain_results_per_run.json
+  - total_cost_per_run.json
+  status: identical
+  note: 'Phase C: the superseded writer in regen_corrected_figs.py was removed'
+- thesis: 9.chapter/2.hpo/02d_turnaround_stack.pdf
+  committed: use_cases/hpo/results/plots/02d_turnaround_stack.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: identical tokens
+- thesis: 9.chapter/2.hpo/02e_makespan_bar.pdf
+  committed: use_cases/hpo/results/plots/02e_makespan_bar.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: identical tokens
+- thesis: 9.chapter/2.hpo/02g_utilization_time.pdf
+  committed: use_cases/hpo/results/plots/02g_utilization_time.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - plain_results_per_run.json
+  - total_cost_per_run.json
+  status: differs
+  note: single writer since Phase C; the committed output reflects the on-demand utilisation accounting fix of 2026-09-04
+    (legend text), which the submitted figure predates
+- thesis: 9.chapter/2.hpo/02h_tier_zoom_elastic_edf_n7.pdf
+  committed: use_cases/hpo/results/plots/02h_tier_zoom_elastic_edf_n7.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: identical tokens
+  note: the generator's current output has the same tokens as the committed file with a different layout (tick placement),
+    the renderer
+- thesis: 9.chapter/2.hpo/03_sumflow_vs_n.pdf
+  committed: use_cases/hpo/results/plots/03_sumflow_vs_n.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: differs
+  note: single writer; the committed output carries the current policy-name subscripts in the axis labels, the submitted
+    copy the earlier ones; the drawn data are the same (docs/PROVENANCE.md)
+- thesis: 9.chapter/2.hpo/04_paired_diff.pdf
+  committed: use_cases/hpo/results/plots/04_paired_diff.pdf
+  generator: use_cases/hpo/results/plots/regen_paired_n7.py
+  reads:
+  - plain_results_per_run.json
+  - total_cost_per_run.json
+  status: identical tokens
+  note: 'Phase C: the committed file was a superseded panel from another writer; regenerated by its writer of record
+    and now the submitted figure token for token; the two superseded writers were removed'
+- thesis: 9.chapter/2.hpo/05_per_wf_n7.pdf
+  committed: use_cases/hpo/results/plots/05_per_wf_n7.pdf
+  generator: use_cases/hpo/results/plots/generate_thesis_plots.py
+  reads:
+  - total_cost_per_run.json
+  status: identical tokens
+- thesis: 9.chapter/2.hpo/HPO_06_pareto_trajectory.pdf
+  committed: use_cases/hpo/results/plots/HPO_06_pareto_trajectory.pdf
+  generator: use_cases/hpo/results/plots/generate_hpo_insights.py
+  reads:
+  - negotiation_merged.csv
+  - negotiation_scheduler.csv
+  - plain_results_per_run.json
+  - total_cost_per_run.json
+  status: identical
+  note: the generator's current output has the same tokens as the committed file with a different layout, the renderer
+- thesis: 9.chapter/2.hpo/HPO_08_intent_satisfaction_n7.pdf
+  committed: use_cases/hpo/results/plots/HPO_08_intent_satisfaction_n7.pdf
+  generator: use_cases/hpo/results/plots/generate_hpo_insights.py
+  reads:
+  - negotiation_merged.csv
+  - negotiation_scheduler.csv
+  - plain_results_per_run.json
+  - total_cost_per_run.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/HSM_PERPOOL_vs_LAMF_vsN.pdf
+  committed: use_cases/licence/results/plots/HSM_PERPOOL_vs_LAMF_vsN.pdf
+  generator: use_cases/licence/results/fig_hsm_vs_lamf_vsN.py
+  reads:
+  - canonical_results.json
+  - hsm_perpool_sweep.json
+  - hsm_rho_sweep.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/HSM_vs_LAMF_vsN.pdf
+  committed: use_cases/licence/results/plots/HSM_vs_LAMF_vsN.pdf
+  generator: use_cases/licence/results/fig_hsm_vs_lamf_vsN.py
+  reads:
+  - canonical_results.json
+  - hsm_perpool_sweep.json
+  - hsm_rho_sweep.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_01_cost_structure.pdf
+  committed: use_cases/licence/results/plots/LA_01_cost_structure.pdf
+  generator: use_cases/licence/results/fig_la_cost_structure.py
+  reads:
+  - canonical_results.json
+  - data_la_cost_structure.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_02_overhead_vs_n.pdf
+  committed: use_cases/licence/results/plots/LA_02_overhead_vs_n.pdf
+  generator: use_cases/licence/results/fig_la_vs_n.py
+  reads:
+  - canonical_results.json
+  - data_la_vs_n.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_03_lic_per_done_vs_n.pdf
+  committed: use_cases/licence/results/plots/LA_03_lic_per_done_vs_n.pdf
+  generator: use_cases/licence/results/fig_la_vs_n.py
+  reads:
+  - canonical_results.json
+  - data_la_vs_n.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_04_eff_util_vs_n.pdf
+  committed: use_cases/licence/results/plots/LA_04_eff_util_vs_n.pdf
+  generator: use_cases/licence/results/fig_la_efficiency.py
+  reads:
+  - canonical_results.json
+  - data_la_efficiency.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_05_waste_usd_vs_n.pdf
+  committed: use_cases/licence/results/plots/LA_05_waste_usd_vs_n.pdf
+  generator: use_cases/licence/results/fig_la_efficiency.py
+  reads:
+  - canonical_results.json
+  - data_la_efficiency.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_06_tokensec_per_done_vs_n.pdf
+  committed: use_cases/licence/results/plots/LA_06_tokensec_per_done_vs_n.pdf
+  generator: use_cases/licence/results/fig_la_efficiency.py
+  reads:
+  - canonical_results.json
+  - data_la_efficiency.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_07_completion_by_solver.pdf
+  committed: use_cases/licence/results/plots/LA_07_completion_by_solver.pdf
+  generator: use_cases/licence/results/fig_la_solver_pool.py
+  reads:
+  - canonical_results.json
+  - data_la_solver_pool.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_08_pool_util.pdf
+  committed: use_cases/licence/results/plots/LA_08_pool_util.pdf
+  generator: use_cases/licence/results/fig_la_solver_pool.py
+  reads:
+  - canonical_results.json
+  - data_la_solver_pool.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_08b_lic_share.pdf
+  committed: use_cases/licence/results/plots/LA_08b_lic_share.pdf
+  generator: use_cases/licence/results/fig_la_solver_pool.py
+  reads:
+  - canonical_results.json
+  - data_la_solver_pool.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_boundary.pdf
+  committed: use_cases/licence/results/plots/LA_boundary.pdf
+  generator: use_cases/licence/results/fig_la_boundary.py
+  reads:
+  - data_la_boundary.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/LA_scarcity.pdf
+  committed: use_cases/licence/results/plots/LA_scarcity.pdf
+  generator: use_cases/licence/results/fig_la_scarcity.py
+  reads:
+  - data_la_scarcity.json
+  status: identical
+- thesis: 9.chapter/3.license-aware/XWORKLOAD_elastic_vs_static.pdf
+  committed: use_cases/licence/results/plots/XWORKLOAD_elastic_vs_static.pdf
+  generator: use_cases/licence/results/fig_xworkload_elastic_vs_static.py
+  reads:
+  - canonical_results.json
+  - plain_results_per_run.json
+  - total_cost_per_run.json
+  status: identical
+- thesis: 8.chapter/speedup.pdf
+  committed: elastiflow/plots/speedup.pdf
+  generator: elastiflow/scripts/speedup_plot.py
+  reads: []
+  status: identical
+- thesis: 8.chapter/speedup_HPO.pdf
+  committed: elastiflow/plots/speedup_HPO.pdf
+  generator: elastiflow/scripts/speedup_plot_HPO.py
+  reads: []
+  status: identical
+- thesis: 8.chapter/submit_times.pdf
+  committed: elastiflow/plots/submit_times.pdf
+  generator: elastiflow/scripts/plot_submit_times.py
+  reads: []
+  status: identical
+- thesis: 8.chapter/KSENS_chains_per_node.pdf
+  committed: use_cases/seissol/results/plots/KSENS_chains_per_node.pdf
+  generator: use_cases/seissol/results/fig_k_sensitivity.py
+  reads:
+  - k_sensitivity_snapshot.json
+  - k_sweep_per_run.json
+  status: identical
+- thesis: 8.chapter/RHOSENS_hsm_gate.pdf
+  committed: use_cases/licence/results/plots/RHOSENS_hsm_gate.pdf
+  generator: use_cases/licence/results/fig_hsm_rho.py
+  reads:
+  - canonical_results.json
+  - hsm_rho_snapshot.json
+  - hsm_rho_sweep.json
+  status: identical
+- thesis: 8.chapter/PRELSENS_partial_release.pdf
+  committed: use_cases/licence/results/plots/PRELSENS_partial_release.pdf
+  generator: use_cases/licence/results/fig_partial_release_sensitivity.py
+  reads:
+  - partial_release_snapshot.json
+  - partial_release_sweep.json
+  status: identical
+- thesis: 7.chapter/mape.png
+  committed: use_cases/seissol/validation/modelled/figures/thesis/thesis_fig3_mape_context.png
+  generator: use_cases/seissol/validation/make_figures_thesis.py
+  reads:
+  - modelled/*.csv
+  - out/*.csv (parse_logs.py from an external raw-log directory)
+  status: differs
+  note: hand-renamed copy in the thesis (mape.png); the submitted image is an earlier output of this generator,
+    and the generator's current output also differs from the committed file
+- thesis: 7.chapter/cost-fidelity.png
+  committed: use_cases/seissol/validation/modelled/figures/thesis/thesis_fig4_cost.png
+  generator: use_cases/seissol/validation/make_fig4_cost.py
+  reads:
+  - modelled/*.csv
+  - out/*.csv (parse_logs.py from an external raw-log directory)
+  status: identical
+  note: 'hand-renamed copy in the thesis (cost-fidelity.png); Phase C: the copy of this figure in make_figures_thesis.py
+    was removed. make_fig4_cost.py reproduces the committed file byte for byte'
+- thesis: 7.chapter/sim_infra_gantt.png.png
+  committed: use_cases/seissol/validation/modelled/figures/thesis/thesis_fig1_gantt.png
+  generator: use_cases/seissol/validation/make_fig1_gantt.py
+  reads:
+  - modelled/*.csv
+  - out/*.csv (parse_logs.py from an external raw-log directory)
+  status: identical
+  note: 'hand-renamed copy in the thesis (sim_infra_gantt.png.png); Phase C: the copy of this figure in make_figures_thesis.py
+    was removed. The generator''s current raster differs from the committed one at the pixel level (1.9 % of pixels,
+    spread over the whole figure, the renderer); the content is the same on inspection'
+- thesis: 5.chapter/urgency_weight_schedule.pdf
+  committed: use_cases/seissol/validation/urgency_weight_schedule.pdf
+  generator: use_cases/seissol/validation/urgency_weights.py
+  reads: []
+  status: identical

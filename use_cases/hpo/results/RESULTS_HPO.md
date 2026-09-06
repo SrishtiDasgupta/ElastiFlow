@@ -4,7 +4,7 @@
 - Source file: `HPO/results/plots/total_cost_per_run.json` (regenerated 2026-06-07; backup `total_cost_per_run.OLD_OD4.json`)
 - Simulator: `HPO/results/r7_n7_actual_vs_modeled/sim_4corners_calibrated.py` — fleet now `CLUSTER_CAP = {slurm: 4, g4: 5, g5: 5}`, `RESERVED = {slurm: 4, g4: 2, g5: 2}` ⇒ on-prem 4 + reserved cloud 4 + on-demand cloud 6 = **14 lanes total** (deployed AWS plan).
 - Aggregation: `HPO/results/plots/compute_total_cost.py` (re-run on patched simulator).
-- Plot generators: `generate_thesis_plots.py`, `generate_hpo_insights.py`, `regen_corrected_figs.py` (all run on new data).
+- Plot generators: `generate_thesis_plots.py`, `generate_hpo_insights.py`, `regen_paired_n7.py` (the paired-difference figure), `regen_corrected_figs.py` (two figures not in the dissertation) (all run on new data).
 - Cross-workload reference: `plain_results/plain_results_per_run.json` (unchanged).
 - Extract revised: 2026-06-07.
 - All numbers in this file are recomputed from the new `total_cost_per_run.json` on the SeisSol-canonical definitions (`src/main/utils/metrics.py`).

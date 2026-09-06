@@ -54,7 +54,8 @@ A Redis server must be running on localhost:6379, also for simulated runs.
 * Several analysis scripts under `elastiflow/scripts/` act on import
   (`speedup_HPO.py`, `speedup_plot_HPO.py`); the import test excludes them.
 * Figure generators write into their own `plots/` directories, which are
-  tracked; after running one, `git checkout --` the directory unless the
-  regeneration is intended. Four HPO figures have more than one writer script
-  (Phase C).
+  tracked; use `python thesis/sync_figures.py regenerate` (a throw-away
+  worktree) to check one, and `git checkout --` the directory after running a
+  generator by hand unless the regeneration is intended. Every dissertation
+  figure has exactly one writer (`thesis/figures.yaml`, held by a unit test).
 * `git mv` into a directory that already exists moves the source *into* it.
