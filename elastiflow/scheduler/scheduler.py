@@ -16,12 +16,19 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
 
 class Scheduler(ABC):
+    """The scheduler base of every policy (B7.1). The licence and HPO layers
+    subclass it (`scheduler_LA.Scheduler_LA`, `scheduler_HPO.Scheduler_HPO`)
+    and override what differs for them; the two class attributes below are
+    the only per-family bindings the shared methods need."""
+
+    metrics_class = Metrics     # the family's metrics (MetricsLA, MetricsHPO in the subclasses)
+    log_prefix = ''             # 'HPO ' in the HPO layer: its log lines carry the prefix
 
     def __init__(self, queue, finish_queue, resource_request_queue):
         self.queue = queue
         self.finish_queue = finish_queue
         self.resource_request_queue = resource_request_queue
-        self.metrics = Metrics()
+        self.metrics = self.metrics_class()
 
     @abstractmethod
     def run(self, backend):
@@ -124,7 +131,7 @@ class Scheduler(ABC):
             "wf-id": wf_id,
             "hosts": response_instances # {cluster: {name: (count, ips)}}
         }
-        print(f"Scheduler freeing {response_instances} for {wf_id} ")
+        print(f"{self.log_prefix}Scheduler freeing {response_instances} for {wf_id} ")
         backend.notify_resources(new_req, client_ip)
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
@@ -198,7 +205,7 @@ class Scheduler(ABC):
         # NOTE: We can have 2 workflow iterations at the least
         runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
         if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
-            print(f"Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
+            print(f"{self.log_prefix}Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
             return True
         return False
 

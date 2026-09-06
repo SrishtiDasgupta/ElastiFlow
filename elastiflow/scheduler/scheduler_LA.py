@@ -5,7 +5,6 @@ Extends the standard scheduler with license management capabilities.
 Integrates with the existing license manager for dual-resource (compute + license) scheduling.
 """
 
-from abc import ABC, abstractmethod
 import math
 import os
 import time
@@ -23,53 +22,40 @@ MAX_NODES_PER_CHAIN = int(os.environ.get('LA_MAX_DEPTH', '8'))
 DEPTH_MODE = os.environ.get('LA_DEPTH_MODE', 'cost')
 
 from elastiflow.config.constants import (
-    AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME,
+    AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME,
     RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, COLD_START_TIME, DEADLINE_BUFFER
 )
 from elastiflow.scripts.speedup import getRuntime
-from elastiflow.utils.metrics_LA import MetricsLA as Metrics
+from elastiflow.utils.metrics_LA import MetricsLA
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.instance import Instance, OnPremInstance, CloudOnDemandInstance
 from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
+from elastiflow.scheduler.scheduler import Scheduler
 
 
-class Scheduler_LA(ABC):
+class Scheduler_LA(Scheduler):
     """
     License-Aware Scheduler Base Class
 
     Provides license management on top of standard resource scheduling.
     All license-aware schedulers should inherit from this class.
+
+    Since B7.1 a subclass of `Scheduler`: run, allocateResources, checkResources
+    and purgeWorkflow are inherited unchanged; the licence layer overrides the
+    admission, negotiation, completion and messaging methods.
     """
 
+    metrics_class = MetricsLA
+
     def __init__(self, queue, finish_queue, resource_request_queue):
-        self.queue = queue
-        self.finish_queue = finish_queue
-        self.resource_request_queue = resource_request_queue
-        self.metrics = Metrics()
+        super().__init__(queue, finish_queue, resource_request_queue)
 
         # License management - will use resource_manager's license_manager
         # (initialized in subclass after resource_manager is created)
         self.license_manager = None
         self.license_holds = {}  # {wf_id: [hold_ids]}
-
-    @abstractmethod
-    def run(self, backend):
-        pass
-
-    def allocateResources(self, constraints):
-        """
-        Allocate compute resources (base method)
-
-        Override this in child classes to add license awareness
-        """
-        ips, alloc_resources = {}, []
-        instances = self.resource_manager.getResources()
-        count, instances = self.checkResources(instances, constraints['min_instances'])
-        if count == constraints['min_instances']:
-            ips, alloc_resources = self.resource_manager.allocateResources(instances)
-        return ips, alloc_resources
 
     def allocateResourcesWithLicenses(self, constraints):
         """
@@ -419,34 +405,6 @@ class Scheduler_LA(ABC):
             # Metrics tracking now happens in fcfs_optimized_LA.py before calling freeResourcesWithLicenses()
             # self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())  # OLD signature - removed
 
-    def checkResources(self, instances: List[Instance], min_instances: int) -> tuple[int, List[tuple[Instance, int]]]:
-        """
-        Check compute resource availability
-
-        Same as base scheduler
-        """
-        currently_acquired = 0
-        acquired_instances = []
-
-        for instance in instances:
-            # Allocate on-prem only if it can be fully allocated
-            if isinstance(instance, OnPremInstance):
-                if instance.getFreeSlots() >= min_instances:
-                    acquired_instances = [(instance, min_instances)]
-                    return (min_instances, acquired_instances)
-                else:
-                    continue
-
-            # Check if enough nodes are available
-            to_be_used = min(min_instances-currently_acquired, instance.getFreeSlots())
-            if to_be_used:
-                currently_acquired += to_be_used
-                acquired_instances.append((instance, to_be_used))
-                if currently_acquired == min_instances:
-                    break
-
-        return (currently_acquired, acquired_instances)
-
     # =========================================================================
     # OLD (BUGGY) checkNewResources - COMMENTED OUT FOR COMPARISON
     # =========================================================================
@@ -698,14 +656,3 @@ class Scheduler_LA(ABC):
         closeness = lambda x: math.isclose(runtime, x, rel_tol=0.15)
         return any(map(closeness, runtimes_list))
 
-    def purgeWorkflow(self, wf_plan, backend) -> bool:
-        """
-        Check if workflow should be purged
-
-        Same as base scheduler
-        """
-        runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
-        if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
-            print(f"Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
-            return True
-        return False

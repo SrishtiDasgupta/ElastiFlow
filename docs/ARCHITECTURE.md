@@ -53,13 +53,16 @@ simulated backend serves SeisSol and licence.
 
 ## The three per-use-case forks
 
-The framework exists in three parallel copies, one per experiment, with
-unrelated abstract base classes. Phase B merges them.
+The framework exists in three parallel copies, one per experiment. Since
+B7.1 the scheduler bases form one hierarchy (`Scheduler`, with
+`Scheduler_LA` and `Scheduler_HPO` as subclasses that override what differs
+for their family); the remaining layers are still copies. Phase B7
+(`docs/PHASE_B7_SCHEDULER_MERGE.md`) merges them step by step.
 
 | layer | SeisSol | licence | HPO |
 |---|---|---|---|
 | runner | `simulate_sweep.py` (campaign), `simulate_main.py` (Ch. 7) | `simulate_main_LA.py` | `simulate_main_HPO.py` (live) |
-| scheduler base | `scheduler/scheduler.py` `Scheduler` | `scheduler_LA.py` `Scheduler_LA` | `scheduler_HPO.py` `Scheduler_HPO` |
+| scheduler base | `scheduler/scheduler.py` `Scheduler` | `scheduler_LA.py` `Scheduler_LA(Scheduler)` | `scheduler_HPO.py` `Scheduler_HPO(Scheduler)` |
 | dispatcher | `dispatcher.py` | `dispatcher_LA.py` | `dispatcher_HPO.py` |
 | executor | `executor.py` | `executor_LA.py` | `executor_HPO.py` |
 | constants | `config/constants.py` | `constants_LA.py` | `constants_HPO.py` |

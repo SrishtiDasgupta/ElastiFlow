@@ -1,57 +1,31 @@
-from abc import ABC, abstractmethod
 import time
 from typing import List
 
-from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT
+from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, RESOURCE_REQUEST_TIMEOUT
 from elastiflow.scripts.create_instance_HPO import deleteInstanceFromIp
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
-from elastiflow.utils.metrics_HPO import MetricsHPO as Metrics
+from elastiflow.utils.metrics_HPO import MetricsHPO
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.instance import Instance, OnPremInstance
-from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
+from elastiflow.utils.request import getConfig, sendRequest
+from elastiflow.scheduler.scheduler import Scheduler
 
-class Scheduler_HPO(ABC):
+class Scheduler_HPO(Scheduler):
     """
     HPO-specific base scheduler class
     Uses HPO constants, executor, and runtime functions
+
+    Since B7.1 a subclass of `Scheduler`: the constructor, run,
+    allocateResources, sendWorkflowForExecution, sendNewResources,
+    sendFreedResources, checkResources and purgeWorkflow are inherited
+    (the HPO log lines keep their "HPO " prefix through `log_prefix`); the
+    HPO layer overrides completion, negotiation and on-demand termination,
+    which bind HPO's own timeout, cost floor and provisioning module.
     """
 
-    def __init__(self, queue, finish_queue, resource_request_queue):
-        self.queue = queue
-        self.finish_queue = finish_queue
-        self.resource_request_queue = resource_request_queue
-        self.metrics = Metrics()
+    metrics_class = MetricsHPO
+    log_prefix = 'HPO '
 
-    @abstractmethod
-    def run(self, backend):
-        pass
-
-    def allocateResources(self, constraints):
-        ips, alloc_resources = {}, []
-        instances = self.resource_manager.getResources()
-        count, instances = self.checkResources(instances, constraints['min_instances'])
-        if count == constraints['min_instances']:
-            ips, alloc_resources = self.resource_manager.allocateResources(instances)
-        return ips, alloc_resources
-
-    def sendWorkflowForExecution(self, wf_plan, ips, backend, deadline):
-        """
-        Note: HPO schedulers should override this with sendWorkflowForExecutionHPO
-        This base implementation is for compatibility but should not be called directly
-        """
-        # Send to the executor node - workflow parsing must be handled there
-        request = {
-            "initial-alloc": True,
-            "wf-plan": wf_plan,
-            "hosts": ips, # {type: {name: [ips]/count}}
-            "deadline": deadline
-        }
-
-        executor, on_demand_type = getExecutor(ips, backend)
-        # TODO: What if executor is not created
-        if on_demand_type:
-            request['hosts']['on-demand'][on_demand_type] =  (request['hosts']['on-demand'][on_demand_type][0], [executor])
-        backend.start_workflow(request, executor)
     def processJobCompletion(self, backend):
         print('HPO Scheduler started listening to completed jobs...')
         while True:
@@ -139,22 +113,6 @@ class Scheduler_HPO(ABC):
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances) # alloc_resource = {obj: (count, [ips])}
         self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None))
 
-    def sendNewResources(self, wf_id, ips, alloc_resources, backend, client_ip):
-
-        # Send to the executor node
-        new_req = {
-            "request": ExecutorRequest.REQUEST_RESOURCE.value,
-            "initial-alloc": False,
-            "wf-id": wf_id,
-            "hosts": ips, # {cluster: {name: (count, [ips])}}
-        }
-        print(f"{wf_id} allocated additional resources: ", ips)
-        backend.notify_resources(new_req, client_ip)
-        if alloc_resources:
-            self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
-            self.metrics.updateResources(wf_id, alloc_resources, backend.now())
-
-
     # request = {"wf-id", "count", "request-time", "client-ip"}
     def freeResources(self, request, backend):
         if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
@@ -191,46 +149,6 @@ class Scheduler_HPO(ABC):
 
         # Free resources
         self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None))
-
-    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, backend, client_ip):
-        # Send hosts to be freed to executor
-        new_req = {
-            "request": ExecutorRequest.FREE_RESOURCE.value,
-            "initial-alloc": False,
-            "wf-id": wf_id,
-            "hosts": response_instances # {cluster: {name: (count, ips)}}
-        }
-        print(f"HPO Scheduler freeing {response_instances} for {wf_id} ")
-        backend.notify_resources(new_req, client_ip)
-        if to_free_instances:
-            self.resource_manager.updateFreedResources(wf_id, instances)
-            self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())
-
-    def checkResources(self, instances: List[Instance], min_instances: int) -> tuple[int, List[tuple[Instance, int]]]:
-
-        currently_acquired = 0
-        acquired_instances = []
-
-        for instance in instances:
-
-            # Allocate on-prem only if it can be fully allocated
-            if isinstance(instance, OnPremInstance):
-                if instance.getFreeSlots() >= min_instances:
-                    acquired_instances = [(instance, min_instances)]
-                    return (min_instances, acquired_instances)
-                else:
-                    continue
-
-            # Check if enough nodes are available
-            to_be_used = min(min_instances-currently_acquired, instance.getFreeSlots())
-            if to_be_used:
-                # NOTE: For baseline FCFS, do not worry about budget and deadline, the metrics will handle that
-                currently_acquired += to_be_used
-                acquired_instances.append((instance, to_be_used))
-                if currently_acquired == min_instances:
-                    break
-
-        return (currently_acquired, acquired_instances)
 
     # request = {"wf-id": wf_id, "count": n, "iteration": ind, "tinyda-iterations": m}
     # current_resources = {obj: (count, ip)}
@@ -281,15 +199,6 @@ class Scheduler_HPO(ABC):
         return acquired_instances
 
     # Purge and return if workflow has been purged
-    def purgeWorkflow(self, wf_plan, backend) -> bool:
-        # NOTE: We can have 2 workflow iterations at the least
-        runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
-        if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
-            print(f"HPO Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
-            return True
-        return False
-
-
 # ---------------------------------------------------------------------------
 # Module-level helpers for instance classification.
 #

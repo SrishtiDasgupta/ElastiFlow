@@ -2,7 +2,7 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 is done; B7.1 onwards are not applied yet. Every figure below was measured on that commit with
+end. B7.0 and B7.1 are done; B7.2 onwards are not applied yet. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -289,6 +289,26 @@ each static, N = 100, seed 7); the 16 existing cells are byte-identical to the
 previous file, so the reference did not move. All four run to completion;
 `heft_fcfs_req` finishes 94 of 100 workflows at this cell, which is its
 recorded behaviour, not a defect introduced here.
+
+**B7.1 done (2026-09-06).** `Scheduler_LA` and `Scheduler_HPO` are subclasses
+of `Scheduler`. Before deleting a duplicate, every free name of the method was
+checked to bind to the same object in all three modules (the three that
+differ across the bases are `Metrics`, `RESOURCE_REQUEST_TIMEOUT` and
+`MIN_INSTANCE_COST`, plus HPO's own `deleteInstanceFromIp` and runtime
+functions). Deleted from the licence layer: `run`, `allocateResources`,
+`checkResources`, `purgeWorkflow` (its constructor now calls the base's and
+adds the licence attributes). Deleted from the HPO layer: the constructor,
+`run`, `allocateResources`, `sendWorkflowForExecution`, `sendNewResources`,
+`sendFreedResources`, `checkResources`, `purgeWorkflow`. The two per-family
+bindings the shared methods need are class attributes: `metrics_class`
+(`Metrics`, `MetricsLA`, `MetricsHPO`) and `log_prefix` (`'HPO '` in the HPO
+layer, so its two log lines read as before). Everything that binds a
+differing name stays an override (`allocateNewResources` and `freeResources`
+in HPO bind the 720 s timeout and HPO's termination; the licence layer's
+messaging methods carry licence holds). 135 lines removed net;
+`tests/unit/test_scheduler_hierarchy.py` pins which methods resolve to the
+base and which stay overridden. Gates: default suite, smoke (20 cells), HPO
+allocation baseline, all unchanged.
 
 ## Method
 
