@@ -10,7 +10,7 @@ Redis queues did.
 
 B6: the entry points construct one backend and pass it down. Every component
 receives it as `backend`; `backend.simulated` is the only place the two modes
-are told apart (injected overheads, the ledger clock, the live-only retries).
+are told apart (injected overheads, the Licence Manager's clock, the live-only retries).
 """
 from __future__ import annotations
 

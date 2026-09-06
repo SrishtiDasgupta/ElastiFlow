@@ -1,5 +1,7 @@
 """
-Simulus simulation entry-point for license-aware schedulers.
+Simulus simulation entry point for the licence-constrained policies
+(FCFS-ST-LA, EDF-ST-LA, FCFS-LAMF, EDF-LAMF, HSM; `LAMF` and `EDF-HSM` are
+the runner's names for the last of each family).
 
 Usage:
     python simulate_main_LA.py --scheduler {LAMF,EDF-LAMF,FCFS-ST-LA,EDF-ST-LA,EDF-HSM} \

@@ -1,8 +1,11 @@
 """
-Simple License Manager for Simulation
+The Licence Manager (dissertation Chapter 6, Licence Manager).
 
-Picklable, thread-safe license accounting for SimPy simulations.
-No threading locks (simulation is single-threaded), no Redis, no complex state.
+Pool accounting with hold, commit and release (the holdUnits, commitHold and
+releaseHold of the two-phase commit), hold expiry, and per-workflow licence
+cost. Invoked only from the Scheduler's serialised loop, so it needs no locks;
+the clock arrives through set_sim_time in both execution modes. Picklable, no
+Redis, no complex state.
 """
 
 from __future__ import annotations

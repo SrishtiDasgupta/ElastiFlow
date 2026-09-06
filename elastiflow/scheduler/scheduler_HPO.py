@@ -1,3 +1,7 @@
+"""The HPO scheduler layer: what the GPU pool changes for `Scheduler` (instance
+families, the on-demand worker path, the rigid and the elastic allocation of
+trials to GPU nodes).
+"""
 import math
 import time
 from typing import List

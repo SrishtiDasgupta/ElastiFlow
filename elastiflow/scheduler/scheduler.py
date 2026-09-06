@@ -1,3 +1,8 @@
+"""The Scheduler (dissertation Chapter 6, Scheduler): the serialised request loop
+as a skeleton of hooks (`Scheduler.run`), the SeisSol--TinyDA allocation
+methods, and the ordering mixins. The licence and HPO layers subclass it, and
+every policy class is a set of hooks (docs/PHASE_B7_SCHEDULER_MERGE.md).
+"""
 from abc import ABC
 import heapq
 import math

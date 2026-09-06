@@ -1,3 +1,10 @@
+> Moved from `elastiflow/scripts/` on 2026-09-06 and kept as a record. An early
+> derivation of the HPO constraints that Chapter 8 of the dissertation
+> supersedes: the submitted population constants are (c_d, p, e, I) = (3, 3, 20, 4),
+> the instances g4dn.xlarge and g5.xlarge, and there is no Ray overhead term
+> (`RAY_COORDINATION_OVERHEAD = 0.00`, measured). It cites another thesis for the
+> SeisSol constraint scheme and uses the pre-thesis word moldable.
+
 HPO Workflow Constraint Calculation Framework for Moldable Scheduling
 Executive Summary
 This report establishes a rigorous methodology for calculating budget and deadline constraints for Hyperparameter Optimization (HPO) workflows in moldable scheduling systems. The approach adapts the proven constraint calculation framework from SeisSol workflows, ensuring consistency with existing literature while accounting for HPO-specific characteristics. The methodology provides conservative constraint bounds that enable moldable scheduling to demonstrate measurable efficiency improvements through dynamic resource allocation.

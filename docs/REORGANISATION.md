@@ -1,6 +1,8 @@
 # Reorganising the repository: ElastiFlow as a framework, three use cases
 
-Status: PROPOSAL, nothing applied. Branch `refactoring`, base `main` at 968d306
+Status: written as a proposal on 2026-09-05; Phases A, B and C were applied on
+2026-09-06 and section 3 records each step. Section 1 describes the tree as it
+was before Phase A. Branch `refactoring`, base `main` at 968d306
 (tag `thesis-submitted-2026-09-04` = the code and data behind the submitted PDF).
 
 ## 1. What the code is today (verified 2026-09-05)
@@ -271,7 +273,11 @@ untouched inside the new tree; `elastiflow.cli` simply dispatches to them.
    submodule the only thing called Seis-Bridge.
 Exit criterion: 11/11 regression tests pass; every generator runs from a clean clone.
 
-**Phase B, unify the forks** (the actual refactoring). First step: extract the
+**Phase B, unify the forks** (the actual refactoring; done 2026-09-06 as steps
+B0 to B7, recorded in `docs/PHASE_B_BACKEND.md` and
+`docs/PHASE_B7_SCHEDULER_MERGE.md`. The in-memory queue of the first step was
+dropped by the author: simulated runs keep the three Redis queues, as Chapter 7
+describes. The rest of this paragraph is the plan as written.) First step: extract the
 execution-backend interface of Fig. 7.1, so that `sim` leaves the scheduler
 signatures and the 105 branch sites collapse into two backends selected once in
 `cli.py`; the in-memory queue removes the Redis dependency of simulated runs.

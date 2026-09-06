@@ -1,464 +1,357 @@
-# License-Aware (LA) SeisSol Workload Description
+# Licence-constrained SeisSol–TinyDA workload
+
+The second workload class of the dissertation (Chapter 8, Licence-Constrained
+Scientific Workflows; the policies in Chapter 5, Elastic Scheduling with
+Auxiliary Pool Constraints; the results in Chapter 9). The names below are the
+dissertation's; where the code says something else, the identifier is given in
+backticks. This description
+was aligned with the submitted dissertation on 2026-09-06 and every number in
+it was checked against the code or the dissertation's tables that day.
 
 ## 1. Overview
 
-The License-Aware (LA) SeisSol workload extends the plain SeisSol scheduling problem with a **dual-resource constraint**: workflows require both **compute instances** and **commercial software license tokens** to execute. This models real-world HPC environments where expensive CAE (Computer-Aided Engineering) solvers — ANSYS, ABAQUS, LS-DYNA — have limited concurrent-use licenses that must be co-allocated alongside compute resources.
+Each workflow is a SeisSol–TinyDA Bayesian inversion workflow (the first
+workload class) annotated with a mandatory licence requirement drawn from one
+of three commercial CAE solver pools, ANSYS, ABAQUS and LS-DYNA. Simulation
+task, resource shape and infrastructure pool are those of the plain campaign.
+What the class adds is a second, globally shared resource: a workflow must
+secure tokens from its pool before it can execute, and the token consumption of
+every concurrently executing workflow couples otherwise independent allocation
+decisions. Chapter 5 formalises this as an auxiliary pool constraint evaluated
+jointly with compute capacity in Stage 1 of the three-stage allocation
+resolution, committed by a two-phase hold and commit.
 
-The LA workload is evaluated in **simulation mode** (`SIMULATE = True`): runtimes are computed from fitted models rather than executing actual SeisSol code. This enables testing at scale (700 workflows) within tractable time.
+The campaign runs in the simulated execution backend (`--mode simulated`, the
+`LiveBackend` is never used): iteration runtimes come from the fitted runtime
+model, not from SeisSol. Batch sizes N ∈ {150, 200, 300, 400, 500, 600, 700},
+six submission seeds each, five policies, 210 runs
+(`results/canonical_results.json`, merged by `results/canonical_sweep.py`).
 
-## 2. Scientific Application: SeisSol
+## 2. The application: SeisSol behind TinyDA
 
-**SeisSol** is a high-performance seismic wave propagation simulator that solves earthquake dynamics on unstructured tetrahedral meshes. It is a representative HPC workload: mesh-based, MPI-parallel, and computationally expensive.
+SeisSol is the forward model (a seismic wave-propagation solver on unstructured
+tetrahedral meshes, MPI-parallel); TinyDA is the delayed-acceptance MCMC
+sampler that proposes parameters and drives the forward evaluations through
+UM-Bridge. In the dissertation's model an evaluation is one SeisSol solve, an
+execution stream is one MCMC chain (a sequence of evaluations), and an
+iteration dispatches p concurrent chains and pools their samples at its end.
 
-### 2.1 Mesh Sizes
+### 2.1 Mesh resolution, the problem-size descriptor
 
-Three mesh resolutions control the problem scale:
+Three resolutions are used; 500 is the finest and most expensive. The
+population is split 2:1:1 over 500:750:1000 (`MESH_DISTRIBUTION`). Runtimes
+below are the fitted on-premise model of `elastiflow/scripts/speedup.py`
+(`hpcOnpremRuntime`), which is what both the Scheduler's estimates and the
+simulated backend use.
 
-| Mesh | Single-Node Runtime (on-prem) | 2-Node Runtime | TinyDA Overhead | Distribution |
-|------|-------------------------------|----------------|-----------------|--------------|
-| 1000 | 109s | 64s | 4.7s | 25% |
-| 750 | 149s | 87s | 8.4s | 25% |
-| 500 | 469s | 246s | 25.8s | 50% |
+| mesh | 1 node | 2 nodes | TinyDA–UM-Bridge coupling added per evaluation (`tinyDaOverhead`) | share |
+|---|---|---|---|---|
+| 1000 (coarse) | 109 s | 64 s | 4.7 s | 25 % |
+| 750 | 149 s | 87 s | 8.4 s | 25 % |
+| 500 (fine) | 469 s | 246 s | 25.8 s | 50 % |
 
-Larger mesh numbers correspond to coarser (faster) simulations; mesh 500 is the finest and most expensive.
+The dissertation's overhead table (Chapter 7) reports the measured coupling as
+5.6, 10.4 and 27.2 s; the code injects the values above. The difference is
+recorded in `docs/THESIS_CODE_DIFFERENCES.md`.
 
-### 2.2 Runtime Model
+### 2.2 Runtime model
 
-Runtimes are computed from fitted exponential models, not from actual execution:
-
-```
-runtime(nodes, mesh, instance_type) = a × exp(b × nodes/k + c × mesh/1000) + d
-```
-
-Where `a`, `b`, `c`, `d` are instance-specific fitted coefficients. For on-prem:
-- `a = 1.452 × 10⁴`, `b = -2.520`, `c = -5.906`, `d = 56.73`
-- Scaling factor `k = 8` (node normalisation)
-
-The model supports multiple instance types: on-prem, hpc7a.24xlarge, hpc7a.12xlarge, c7i.24xlarge, c7i.12xlarge, c6i.32xlarge, c6i.16xlarge.
-
-Each simulation's total runtime includes a fixed **TinyDA overhead** per mesh size (4.7–25.8s), added to the fitted compute time.
-
-## 3. TinyDA Data Assimilation Framework
-
-**TinyDA** is a data assimilation framework that wraps SeisSol simulations into an iterative ensemble-based workflow:
-
-```
-Workflow (complete execution)
-  └─ Workflow Iteration (2-6 iterations)
-       └─ TinyDA Iteration (1-9 per workflow iteration)
-            └─ Chain (2-6 parallel simulation runs)
-                 └─ SeisSol Simulation (single mesh solve on allocated nodes)
-```
-
-### 3.1 Chains (Parallel Ensemble Members)
-
-Each **chain** is an independent SeisSol simulation run. Within a TinyDA iteration, all chains execute in **parallel**:
-
-- **Load balancing**: Chains are distributed across available nodes using a max-heap scheduler. Each chain receives at least one node; extra nodes are assigned to the slowest chain.
-- **Completion time**: Determined by the slowest chain (parallel bottleneck).
-- **Two execution modes**:
-  - `hosts >= chains`: Parallel — each chain gets ≥1 node, extra nodes distributed greedily.
-  - `hosts < chains`: Sequential — excess chains are queued on existing nodes, extending runtime.
-
-### 3.2 TinyDA Iterations (Sequential Assimilation Steps)
-
-Within a workflow iteration, TinyDA iterations are **sequential** — each step improves the state estimate by assimilating observations from the previous step. The runtime for one workflow iteration is:
+Per-evaluation runtime is the exponential fit of Chapter 8,
 
 ```
-iteration_runtime = slowest_chain_runtime × (tinydaIterations + 2)
+runtime(nodes, mesh, instance) = a · exp(b · nodes / N0 + c · mesh / 1000) + d
 ```
 
-The `+2` accounts for setup and finalisation overhead in TinyDA.
+with instance-specific coefficients (`elastiflow/scripts/speedup.py`), the
+reference node count N0 = 8 on-premise and 4 for the cloud families, and the
+coupling overhead of §2.1 added. Instance types: on-premise, hpc7a.24xlarge,
+hpc7a.12xlarge, c7i.24xlarge, c7i.12xlarge, c6i.32xlarge, c6i.16xlarge.
 
-### 3.3 Workflow Iterations (Outer Optimisation Loop)
+### 2.3 Iteration structure
 
-Each workflow has 2–6 sequential **workflow iterations**. These are the reallocation boundaries — the moldable scheduler can adjust resources between them.
+```
+workflow (2 to 6 iterations)
+  └─ iteration i: p_i concurrent execution streams (chains, 2 to 6)
+       └─ chain: e_i sequential evaluations (links, 1 to 9)
+            └─ evaluation: one SeisSol solve on the chain's nodes
+```
 
-### 3.4 Cohesion Parameter
+Chains run concurrently and are load-balanced over the allocated nodes with
+a max-heap (each chain at least one node, surplus nodes to the slowest chain;
+when chains outnumber nodes the surplus chains queue on the existing nodes).
+The simulated iteration runtime is the slowest chain's evaluation time
+multiplied by `tinyda_iterations + 2` (`elastiflow/scripts/tinyda_runtime.py`).
+Iteration boundaries are where the elastic policies renegotiate. The cohesion
+value carried through `input_coh`/`output_coh` is a fixed solver parameter and
+does not affect scheduling.
 
-Cohesion is a fixed SeisSol solver parameter (value: `2.13` in simulation output). It is passed through the workflow chain as a loop variable (`input_coh` → `output_coh`) but does **not** affect scheduling or resource allocation.
+## 3. What licence awareness adds
 
-## 4. What Makes License-Aware Different from Plain SeisSol
+| aspect | SeisSol–TinyDA | licence-constrained |
+|---|---|---|
+| resources | compute only | compute and licence tokens, evaluated jointly |
+| per-iteration configuration | `workflowConfig` array (chains and links per iteration) | the same, plus `license_pool` / `software_id` |
+| feasibility at admission and at a boundary | capacity, remaining budget, remaining time | the same, and pool availability (Stage 1 condition 5 of Chapter 5) |
+| cost reported | compute | compute, and licence cost as a separate total-cost-of-ownership figure |
+| scale-down guards | time and budget progress | the same, plus the pool-saturation guard G1 |
+| batch sizes | 100 to 400 | 150 to 700 |
 
-| Aspect | Plain SeisSol | License-Aware (LA) |
-|--------|---------------|-------------------|
-| **Resource model** | Compute only | Compute + license tokens (dual-resource) |
-| **Per-iteration config** | `workflowConfig` array (chains/tinyda vary) | Same `workflowConfig` array + license tracking |
-| **License tracking** | None | Three pools: ANSYS, ABAQUS, LSDYNA |
-| **Allocation check** | Compute availability only | Compute AND license tokens must both be available |
-| **Cost model** | Hardware cost only | Hardware cost + license cost |
-| **Scale-down guards** | Time/budget-based | Time/budget + license pool saturation |
-| **Total workflows** | 400 | 700 |
-| **Constraint constraints** | Single `constraints` block | Same, plus `license_pool` and `software_id` fields |
+## 4. The licence model
 
-## 5. License Model
+### 4.1 Pools
 
-### 5.1 What "License" Means
+Tokens are concurrent-use licences held for the duration of an allocation and
+deducted regardless of tier (bring-your-own-licence). Each pool is sized at
+1.15 times the EDF-ST-LA peak demand at N = 400, the per-pool maximum over the
+six seeds, so that the static baseline runs at 88 to 90 % peak occupancy
+(`elastiflow/config/licenses.yaml`, `LICENSE_POOL_CAPACITY`):
 
-These are **commercial software license tokens** — concurrent-use licences for CAE solvers. In enterprise HPC, a license pool has a fixed number of tokens; each running instance consumes tokens proportional to its core count. When the pool is exhausted, no additional instances can start that solver, regardless of compute availability.
+| pool | `software_id` | token law f(c), c = cores held | capacity |
+|---|---|---|---|
+| ANSYS | 1 | 1 (MEBA base) + max(0, c − 2) HPC Workgroup tokens | 5 832 |
+| ABAQUS | 2 | max(5, 5 · c^0.422), concave | 1 582 |
+| LS-DYNA | 3 | c, linear | 6 219 |
 
-### 5.2 Three License Pools
+The laws are those of Henkel and Treiber (`resource_manager/license/policy.py`:
+`ansys_workgroup`, `powerlaw` with a = 5, b = 0.422, floor 5, `linear`).
+Under the concave and the affine law a reduction in cores can raise the
+tokens per core, which is why the guard G1 (§8.4) exists.
 
-| Pool | Software ID | Token Formula | Pool Capacity | Peak Utilisation |
-|------|-------------|--------------|---------------|-----------------|
-| **ANSYS** | 1 | `T(n) = 1 + max(0, n - 4)` | 6,700 tokens | ~87% |
-| **ABAQUS** | 2 | `T(n) = 5 × n^0.422` | 2,200 tokens | ~86% |
-| **LSDYNA** | 3 | `T(n) = n` | 7,600 tokens | ~87% |
+### 4.2 Licence cost
 
-Where `n` = number of CPU cores allocated.
+Vendor-published annual prices, converted at 1 EUR = 1.10 USD and annualised
+over 31 557 600 s (Chapter 8):
 
-**Token calculation examples** (for 16-core allocation):
-- ANSYS: `1 + max(0, 16-4) = 13` tokens
-- ABAQUS: `5 × 16^0.422 ≈ 17.4` tokens
-- LSDYNA: `16` tokens
+| pool | annual price | USD per second |
+|---|---|---|
+| LS-DYNA | 1 000 EUR per token | 3.486 × 10⁻⁵ per token |
+| ABAQUS | 2 500 EUR per token | 8.714 × 10⁻⁵ per token |
+| ANSYS MEBA | 14 000 EUR per job | 4.880 × 10⁻⁴ per job |
+| ANSYS HPC Workgroup | 1 700 EUR per token | 5.926 × 10⁻⁵ per token |
 
-Pool capacities are sized to create **meaningful scarcity** (~87% peak utilisation). Earlier experiments with 16,800 tokens per pool showed only 3–13% utilisation — licenses were never a constraint.
+Licence cost is accumulated per workflow by the Licence Manager
+(`license_cost_by_owner`, `license_cost_by_pool`) and reported beside compute
+cost. It does not enter the budget gate: the budget bounds compute expenditure
+only, and the binding constraint on licences is the pool capacity.
 
-### 5.3 License Costs
+### 4.3 Assignment
 
-Based on Henkel & Treiber 2015 and JSSPP 2025 Section 2.2:
+Each workflow is assigned one pool at submission, fixed for its lifetime,
+with probabilities 0.33 / 0.33 / 0.34 for ANSYS / ABAQUS / LS-DYNA under a
+fixed seed (`LICENSE_DISTRIBUTION`).
 
-| Software | Annual Cost | Per-Second Cost | Cost Model |
-|----------|------------|-----------------|------------|
-| **LSDYNA** | €1,000/token/year | 31.7 µ€/token/s | Linear: `cost = tokens × rate × duration` |
-| **ABAQUS** | €2,500/token/year | 79.3 µ€/token/s | Power-law: `cost = tokens × rate × duration` |
-| **ANSYS** | €14,000 MEBA + €1,700 workgroup/year | MEBA: 476 µ€/s + WG: 54 µ€/token/s | Fixed base + per-token: `cost = MEBA_rate × duration + WG_tokens × WG_rate × duration` |
+### 4.4 Two-phase commit
 
-The **total workflow cost** = hardware cost + license cost.
+`hold` reserves the tokens with a time-to-live of 300 s (`LICENSE_HOLD_TTL`,
+the dissertation's hold TTL); compute is then bound, and `commit` makes the
+reservation permanent or `release` returns it. An expired hold returns its
+tokens without a recovery log. The three calls are the holdUnits, commitHold
+and releaseHold of Chapter 6.
 
-### 5.4 License Distribution
+## 5. Workflow specification
 
-Workflows are randomly assigned to license pools:
-- ANSYS: 33% of workflows
-- ABAQUS: 33% of workflows
-- LSDYNA: 34% of workflows
-
-### 5.5 Two-Phase Commit for License Allocation
-
-To prevent race conditions when multiple workflows compete for the same license pool:
-
-1. **HOLD**: Reserve tokens with a 5-minute TTL
-2. **Allocate compute**: If compute fails, release the hold
-3. **COMMIT**: Make the token reservation permanent
-
-## 6. Workflow Structure
-
-### 6.1 Workflow YAML Format
+`elastiflow/workflow/sample_workflows_LA/data0.yaml`, as generated:
 
 ```yaml
 api: 4.7.0
-id: lamf-test-ce4837ee
-
+id: lamf-test-ce4837ee-...
 config:
-  mesh: 1000                      # Mesh resolution
-  software_id: 1                  # 1=ANSYS, 2=ABAQUS, 3=LSDYNA
+  mesh: 1000                      # problem-size descriptor
+  software_id: 1                  # 1 = ANSYS, 2 = ABAQUS, 3 = LS-DYNA
   workflowIterations: 5
-  workflowConfig:                 # Per-iteration configuration (varying)
-    - chains: 5                   # Iteration 0
-      tinydaIterations: 1
-    - chains: 6                   # Iteration 1 (scale-up opportunity)
-      tinydaIterations: 8
-    - chains: 5                   # Iteration 2
-      tinydaIterations: 5
-    - chains: 5                   # Iteration 3
-      tinydaIterations: 6
-    - chains: 6                   # Iteration 4
-      tinydaIterations: 4
-
+  workflowConfig:                 # per-iteration (chains, links); iteration 0 first
+  - {chains: 5, tinydaIterations: 1}
+  - {chains: 6, tinydaIterations: 8}
+  - {chains: 5, tinydaIterations: 5}
+  - {chains: 5, tinydaIterations: 6}
+  - {chains: 6, tinydaIterations: 4}
 constraints:
-  budget: 64.81                   # Hardware budget in € (not including license cost)
-  deadline: 14108.37              # Wall-clock deadline in seconds
-  chains: 5                       # Baseline chains (iteration 0)
-  tinydaIterations: 1             # Baseline TinyDA (iteration 0)
-  license_pool: ANSYS             # Required license pool
-
+  budget: 64.81                   # compute budget (soft), dataset unit
+  deadline: 14108.37              # seconds from submission (hard)
+  chains: 5                       # first-iteration stream count p_1
+  tinydaIterations: 1             # first-iteration evaluations per stream e_1
+  license_pool: ANSYS
 vars:
 - id: input_coh
-  value: '3'                      # Cohesion parameter (fixed)
-
+  value: '3'
 actions:
-- type: for                       # Iterative execution
+- type: for                       # the iteration recurrence
   input: input_coh
   enumerator: i
-  yieldToInput: output_coh        # Feedback loop: output → next input
+  yieldToInput: output_coh        # one iteration's output is the next one's input
   actions:
   - type: execute
-    service: scripts/simulate-tinyda-seissol.py
-    inputs:
-    - id: tinyda_input
-      var: i
-    outputs:
-    - id: tinyda_output
-      var: output_coh
+    service: scripts/simulate-tinyda-seissol.py   # the driver (simulated mode)
+    inputs:  [{id: tinyda_input,  var: i}]
+    outputs: [{id: tinyda_output, var: output_coh}]
 ```
 
-### 6.2 Per-Iteration Variation (workflowConfig Array)
-
-Unlike HPO workflows where iteration configs are dynamically determined by optimization output, LA workflows use a **pre-generated `workflowConfig` array** — each iteration's chains and tinydaIterations are fixed at workflow creation time:
-
-```python
-# Iteration 0: uses baseline values from constraints
-workflowConfig[0] = {'chains': 5, 'tinydaIterations': 1}
-
-# Iterations 1+: independently randomised
-workflowConfig[1] = {'chains': random.randint(2, 6), 'tinydaIterations': random.randint(1, 9)}
-workflowConfig[2] = {'chains': random.randint(2, 6), 'tinydaIterations': random.randint(1, 9)}
-# ... etc
-```
-
-This variation creates natural moldability opportunities: an iteration requiring 6 chains followed by one needing 2 chains invites scale-down.
-
-## 7. Constraint Formulation
-
-### 7.1 Budget Formula
-
-```
-budget = single_run_cost × 4 (chains) × AVG_TINYDA_ITERATIONS × AVG_WORKFLOW_ITERATIONS
-```
-
-Where `single_run_cost` is the per-second cost of the slowest single-node runtime multiplied by on-demand instance rate:
-
-| Mesh | Single-Run Cost (€·s) | Budget (€) | Normal Distribution |
-|------|----------------------|------------|---------------------|
-| 1000 | 0.5141 | 57.6 | N(μ=57.6, σ=10) |
-| 750 | 0.8595 | 96.3 | N(μ=96.3, σ=10) |
-| 500 | 2.7422 | 307.5 | N(μ=307.5, σ=15) |
-
-Budget covers **hardware cost only**. License cost is tracked separately in metrics.
-
-### 7.2 Deadline Formula
-
-```
-deadline = slowest_runtime × AVG_TINYDA_ITERATIONS × AVG_WORKFLOW_ITERATIONS × 2
-```
-
-| Mesh | Slowest Runtime (s) | Deadline (s) | Deadline (hours) | Normal Distribution |
-|------|--------------------|-------------|-----------------|---------------------|
-| 1000 | 253 | 14,168 | ~3.9h | N(μ=14168, σ=100) |
-| 750 | 557 | 31,192 | ~8.7h | N(μ=31192, σ=100) |
-| 500 | 2,281 | 127,751 | ~35.5h | N(μ=127751, σ=200) |
-
-The 2× factor covers cold start, queuing delays, and contention — same methodology as Plain SeisSol.
-
-### 7.3 Shared Constants
-
-```python
-AVG_TINYDA_ITERATIONS = 7    # Mean TinyDA iterations per workflow iteration
-AVG_WORKFLOW_ITERATIONS = 4  # Mean workflow iterations
-COLD_START_TIME = 400.5s     # On-demand instance cold start penalty
-DEADLINE_BUFFER = 180s       # 3-minute safety margin before deadline
-```
-
-## 8. Workflow Generation
-
-### 8.1 Scale
-
-**700 workflows** generated with:
-- Mesh distribution: 25% mesh-1000, 25% mesh-750, 50% mesh-500
-- License distribution: 33% ANSYS, 33% ABAQUS, 34% LSDYNA
-- Workflow iterations: random integer in [2, 6]
-- Per-iteration chains: random integer in [2, 6]
-- Per-iteration TinyDA iterations: random integer in [1, 9]
-- Random seed: 0 (reproducible)
-
-### 8.2 Temporal Arrival Pattern
-
-Workflows are submitted over a compressed time window to create peak demand:
-
-| Parameter | Value | Effect |
-|-----------|-------|--------|
-| `TEMPORAL_COMPRESSION_FACTOR` | 0.5 | 20-hour trace compressed to 10 hours (2× arrival rate) |
-| `SUBMISSION_JITTER_MINUTES` | 2 | Workflows within a time slot arrive within 2-minute window (burst) |
-
-This creates periods of high concurrent demand, stressing both compute and license pools.
-
-## 9. Scheduler Variants
-
-### 9.1 Four Schedulers
-
-| Scheduler | Class | Ordering | Moldability | License-Aware |
-|-----------|-------|----------|------------|---------------|
-| **FCFS-LA Static** | `fcfs_scheduler_LA.py` | Arrival order | No | Yes |
-| **LAMF** (FCFS Moldable) | `fcfs_optimized_LA.py` | Arrival order | Yes | Yes |
-| **EDF-LA Static** | `edf_scheduler_LA.py` | Earliest deadline | No | Yes |
-| **EDF-HSM** (Hybrid) | `edf_hsm_LA.py` | Earliest deadline | Hybrid (static iter 0, moldable iter 1+) | Yes |
-
-### 9.2 Static vs Moldable Behaviour
-
-**Static** (FCFS-LA, EDF-LA):
-- Resources and licenses allocated once at workflow submission
-- Held for entire workflow duration regardless of per-iteration needs
-- No scale-up or scale-down between iterations
-- Allocation based on worst-case: `max(chains across iterations)` × `max(tinyda)`
-
-**Moldable** (LAMF, EDF-HSM):
-- Initial allocation at iteration 0 with conservative budget/deadline factors
-- Between iterations, executor requests reallocation based on next iteration's `workflowConfig[i]`
-- Scale-up: acquire additional instances + license tokens if available
-- Scale-down: release excess instances + return license tokens to pool
-
-### 9.3 Iteration-Weighted Budget/Deadline Allocation
-
-The moldable scheduler allocates increasing fractions of the remaining budget and deadline as iterations progress:
-
-```python
-OPTIM_FCFS_BFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
-OPTIM_FCFS_DFACTOR = {0: 0.6, 1: 0.7, 2: 0.8, 3: 0.9, 4: 0.95, 5: 1.0}
-```
-
-- **Iteration 0**: Use 60% of budget and time (conservative, protect remaining iterations)
-- **Iteration 5**: Use 100% (final iteration, no need to reserve)
-
-### 9.4 EDF-HSM Urgency Thresholds
-
-The hybrid EDF scheduler uses time-based urgency to trigger interventions:
-
-| Condition | Threshold | Action |
-|-----------|----------|--------|
-| **Critical** | `time_remaining < 40% × time_elapsed` | Force scale-up (urgency boost 2.5×) |
-| **Warning** | `time_remaining < 80% × time_elapsed` | Attempt scale-up (urgency boost 1.8×) |
-| **Safe** | `time_remaining > 200% × time_elapsed` | Allow scale-down |
-| **Excess** | `time_remaining > 350% × time_elapsed` | Aggressive scale-down + relax guards |
-
-### 9.5 Scale-Down Guards (License-Specific)
-
-Moldable scale-down is blocked when:
-- **License pool saturated**: Other workflows are waiting for tokens from this pool — releasing would help them, but the currently held allocation might be needed for subsequent iterations
-- **Late iteration** (iteration > 3): Too close to completion, risky to change allocation
-- **Time progress > 70%**: Most of the deadline consumed, preserve stability
-- **Budget or time progress > 50%**: Conservative guard for early/mid execution
-
-## 10. Dual-Resource Allocation Logic
-
-### 10.1 Allocation Check (Both Resources Required)
-
-For a workflow to start, the scheduler must satisfy **both**:
-
-1. **Compute**: Sufficient instances available (on-prem or cloud)
-2. **Licenses**: Sufficient tokens available in the workflow's license pool
-
-If either is unavailable, the workflow is queued. The moldable scheduler can attempt **partial allocation** — reducing the instance count until both compute and licenses fit.
-
-### 10.2 Scale-Up with License Constraint
-
-```
-Can we scale up?
-  1. Check compute: more instances available?        → if no, FAIL (insufficient_compute)
-  2. Check licenses: pool has tokens for new cores?  → if no, FAIL (insufficient_licenses)
-  3. Check budget: cost of new allocation fits?       → if no, FAIL (budget_exhausted)
-  4. Check time: enough time remaining?               → if no, FAIL (time_exhausted)
-  All pass → SCALE UP (acquire instances + tokens via two-phase commit)
-```
-
-### 10.3 Scale-Down with License Release
-
-```
-Can we scale down?
-  1. Check safe threshold: time_remaining > 200% of time_elapsed?
-  2. Check not late iteration (iteration <= 3)?
-  3. Check license pool: would releasing tokens help blocked workflows?
-  All pass → SCALE DOWN (release instances + return tokens to pool)
-```
-
-## 11. Metrics Tracked
-
-### 11.1 Per-Workflow Metrics
-
-| Metric | Description |
-|--------|-------------|
-| `submit_time` | When workflow was submitted to scheduler |
-| `exec_start_time` | When first instance was allocated |
-| `finish_time` | When workflow completed |
-| `wait_time` | Queue wait: `exec_start_time - submit_time` |
-| `flowtime` | Total latency: `finish_time - submit_time` |
-| `hardware_cost` | `Σ(instance_rate × count × duration)` |
-| `license_cost` | `Σ(tokens × cost_per_token × duration)` |
-| `total_cost` | `hardware_cost + license_cost` |
-| `deadline_miss` | Boolean: `finish_time > deadline` |
-| `budget_miss` | Boolean: `hardware_cost > budget` |
-
-### 11.2 Moldability Metrics
-
-| Metric | Description |
-|--------|-------------|
-| `scale_up_attempts` | Total scale-up requests across all workflows |
-| `scale_up_successes` | Successful scale-ups |
-| `scale_up_failures_by_reason` | Breakdown: insufficient_compute, insufficient_licenses, budget_exhausted, time_exhausted |
-| `scale_down_attempts` | Total scale-down requests |
-| `scale_down_successes` | Successful scale-downs |
-| `scale_down_blocked_by_reason` | Breakdown: license_pool_saturated, late_iteration, time_progress, budget_or_time_progress |
-| `total_instances_added/removed` | Net instances allocated/freed by moldable decisions |
-| `total_licenses_acquired/released` | Net license tokens acquired/released |
-
-### 11.3 System Metrics
-
-| Metric | Description |
-|--------|-------------|
-| `resource_utilization` | % of compute slots in use, sampled every 20 minutes |
-| `license_utilization` | Per-pool: (timestamp, pool, total_tokens, allocated, utilisation%) |
-| `makespan` | Wall-clock from first submission to last completion |
-
-### 11.4 Output Files
-
-```
-{PREFIX}_{TOTAL_WORKFLOWS}_results.csv       # Per-workflow detailed metrics
-{PREFIX}_{TOTAL_WORKFLOWS}_resources.csv      # Resource utilisation time series
-{PREFIX}_{TOTAL_WORKFLOWS}_license_usage.csv  # Per-pool license utilisation
-```
-
-Where PREFIX is e.g., `LAMF`, `FCFS_Static_LA`, `EDF_Static_LA`, `EDF_HSM`.
-
-## 12. Infrastructure (Simulation Mode)
-
-In simulation mode, no actual instances are launched. The resource configuration defines the **simulated** infrastructure:
-
-| Resource | Type | Slots | Cores/Slot | Cost/hr |
-|----------|------|-------|-----------|---------|
-| On-prem | on-prem | 4 | 4 | $0.526 |
-| Cloud reserved (g4dn) | g4dn.xlarge | 0 | 4 | $0.227 |
-| Cloud reserved (g5) | g5.xlarge | 0 | 4 | $0.435 |
-| Cloud on-demand (g4dn) | g4dn.xlarge | 0 | 4 | $0.526 |
-| Cloud on-demand (g5) | g5.xlarge | 0 | 4 | $1.006 |
-
-**Note**: The slot counts in `resources.yaml` are configurable per experiment. The simulation models instance-specific runtimes using the fitted functions in `speedup.py`, enabling heterogeneous instance type evaluation.
-
-## 13. Key Design Rationale
-
-### 13.1 Why License-Aware Matters
-
-1. **Real-world constraint**: Enterprise HPC sites run ANSYS, ABAQUS, LS-DYNA with expensive per-core licenses. License pools are shared across teams and projects.
-2. **Scheduling bottleneck**: License availability can be more constraining than compute — a cluster with 1,000 cores but 200 license tokens can only run 200-core workloads.
-3. **Cost optimisation**: Moldable scheduling can trade compute parallelism for reduced license duration, lowering total cost.
-4. **Dual-resource contention**: Static allocation wastes both compute AND licenses when a workflow iteration needs fewer resources than allocated.
-
-### 13.2 Why Three Different License Formulas
-
-Different token formulas force the scheduler to make diverse allocation decisions:
-- **LSDYNA (linear)**: Token cost scales directly with parallelism — most expensive to scale up
-- **ABAQUS (power-law)**: Sublinear scaling — moderate cost to add cores
-- **ANSYS (fixed base + linear)**: First 4 cores cost only 1 token; above 4, each core adds 1 token
-
-This diversity prevents a single scheduling heuristic from being universally optimal.
-
-### 13.3 Why `workflowConfig` Array
-
-The per-iteration configuration variation is the **key enabler of moldability**:
-- Iteration 0: 5 chains, 1 TinyDA → light compute, low license usage
-- Iteration 1: 6 chains, 8 TinyDA → heavy compute, high license usage → scale-up opportunity
-- Iteration 2: 3 chains, 2 TinyDA → light again → scale-down opportunity
-
-Without this variation, there would be no benefit to moldable scheduling — static allocation would be optimal.
-
-### 13.4 Why 700 Workflows
-
-700 workflows with temporal compression create realistic multi-tenant contention:
-- Multiple workflows competing for the same license pool simultaneously
-- Peak periods where all three pools approach 87% utilisation
-- Sufficient statistical mass for meaningful makespan and cost comparisons
-
-### 13.5 Why Temporal Compression
-
-The 2× compression (`TEMPORAL_COMPRESSION_FACTOR = 0.5`) with 2-minute jitter creates bursty arrival patterns that stress the scheduler:
-- Periods of high concurrent demand → license pools saturate
-- Moldable scheduling can react by scaling down low-priority workflows to free tokens
-- Static scheduling holds all tokens → longer queues for later arrivals
+The Scheduler sees only the first-iteration configuration and the constraints
+at admission; the later entries of `workflowConfig` are revealed to it one
+boundary at a time, which is how the simulation reproduces a dynamic workflow
+with a reproducible trajectory (Chapter 8, Experimental Validity). Iteration 0
+uses the `constraints` values; iterations 1 and later draw chains from [2, 6]
+and links from [1, 9] independently (`workflow_generator_LA.py`).
+
+## 6. Constraints
+
+The unified derivation of Chapter 8 (Constraint Generation) with the SeisSol
+population constants (p̄, ē, Ī) = (4, 7, 4) and the deadline contention factor
+c_d = 2 (`AVG_TINYDA_ITERATIONS = 7`, `AVG_WORKFLOW_ITERATIONS = 4`,
+`AVG_BUDGET`, `AVG_DEADLINE` in `config/constants.py`, shared by the two CPU
+workloads). The worst-case single-evaluation runtime is the slowest instance at
+one node (c7i.12xlarge), the worst-case cost the most expensive
+(hpc7a.12xlarge).
+
+| mesh | worst-case runtime | worst-case cost per evaluation | mean deadline = runtime · 7 · 4 · 2 | σ | mean budget = cost · 4 · 7 · 4 | σ |
+|---|---|---|---|---|---|---|
+| 1000 | 253 s | 0.5141 | 14 168 s (3.9 h) | 100 | 57.6 | 10 |
+| 750 | 557 s | 0.8595 | 31 192 s (8.7 h) | 100 | 96.3 | 10 |
+| 500 | 2 281 s | 2.7422 | 127 751 s (35.5 h) | 200 | 307.1 | 15 |
+
+Individual constraints are Gaussian draws around these means. The budget is
+a soft constraint (a workflow that overspends completes and is counted as a
+budget miss), the deadline is hard in the reporting sense (a workflow runs to
+completion and a late finish is a deadline miss). Cost units: the datasets and
+YAMLs carry the unit the code calls EUR; the dissertation reports USD at
+1 EUR = 1.10 USD (the figure generators apply the factor). A deadline buffer of
+180 s (`DEADLINE_BUFFER`) is deducted before the urgency weight is applied.
+
+## 7. Workload generation and arrivals
+
+800 workflows are generated once with seed 0
+(`elastiflow/workflow/sample_workflows_LA/`); a run of size N takes the first N
+in dispatch order. Arrival times come from the BMW production trace of 370
+submissions over 20 hours (`elastiflow/scripts/submitTimes.csv`), as for the
+plain campaign, with every inter-arrival delay halved
+(`TEMPORAL_COMPRESSION_FACTOR = 0.5`, floored at 1 s) and a jitter of
+Uniform(0, 2 min) inside each slot (`SUBMISSION_JITTER_MINUTES = 2`,
+`scripts/dispatcher_LA.py`). The doubling of the arrival rate follows from the
+compression; it is not a separate parameter.
+
+## 8. Policies
+
+Five policies (Chapter 5, Instantiation for Licensed Engineering Simulation
+Workflows), selected with `simulate_main_LA.py --scheduler` or
+`python -m elastiflow run --use-case licence --policy`:
+
+| dissertation name | class | `--scheduler` | admission order | allocation |
+|---|---|---|---|---|
+| FCFS-ST-LA | `fcfs_scheduler_LA.FCFS_Scheduler_LA` | `FCFS-ST-LA` | arrival | rigid: compute and tokens committed once at admission, held for the lifetime |
+| EDF-ST-LA | `edf_scheduler_LA.EDF_Scheduler_LA` | `EDF-ST-LA` | earliest deadline | rigid |
+| FCFS-LAMF (Licence-Aware Malleable-First) | `fcfs_optimized_LA.FCFS_Optimized_LA` | `LAMF` | arrival | elastic from the first boundary, scale-up and scale-down |
+| EDF-LAMF | `edf_optimized_LA.EDF_Optimized_LA` | `EDF-LAMF` | earliest deadline | elastic from the first boundary |
+| HSM (Hybrid Static-Malleable) | `edf_hsm_LA.EDF_HSM_LA` | `EDF-HSM` | earliest deadline | per-workflow phase: STATIC (scale-up only) until the transition to MALLEABLE (full EDF-LAMF) |
+
+The runner's word for the elastic policies is `moldable`; the dissertation's is
+elastic. Iteration 0 is allocated at admission against the full budget and
+deadline; the urgency schedule applies from the first boundary.
+
+### 8.1 Urgency weights
+
+The same schedule as the plain SeisSol campaign (`OPTIM_FCFS_BFACTOR`,
+`OPTIM_FCFS_DFACTOR` in `config/constants.py`; index 0 is admission):
+
+| boundary i | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| α_i | 0.70 | 0.80 | 0.90 | 0.95 | 1.00 |
+
+The available budget at a boundary is the remaining budget times α_i times
+the trigger boost φ; the available time is (remaining time − 180 s) times
+α_i.
+
+### 8.2 Trigger modes
+
+Evaluated in priority order at every boundary of the elastic policies
+(`edf_optimized_LA.py`, `evaluateTrigger` region), with υ_i the remaining
+deadline fraction, π_t the elapsed-time fraction and π_β the spent-budget
+fraction:
+
+| condition | boost φ | force scale-up | skip scale-down |
+|---|---|---|---|
+| υ_i < 0.30 | 2.0 | yes | yes |
+| υ_i < 0.50 and π_t > π_β + 0.03 | 1.5 | yes | yes |
+| π_t > π_β + 0.03 | 1.2 | yes | yes |
+| i ≥ 2 and π_t > 0.40 | 1.2 | yes | yes |
+| none | 1.0 | no | no |
+
+### 8.3 HSM's phase gate
+
+A workflow leaves the STATIC phase once, when two conditions hold at a
+boundary: projected deadline slack at the current allocation exceeds a
+threshold fraction of the deadline window (safe), and the pool's occupancy is
+below P_thresh = 0.70 (cheap). The slack condition holds for nearly every
+workflow, so occupancy is the binding condition. P_thresh is uniform over the
+three pools in the campaign; the code's per-pool defaults differ
+(`LA_HSM_POOL_RHO_*`), so `canonical_sweep.py` sets `LA_HSM_POOL_RHO*=0.70`.
+Chapter 8 sweeps P_thresh over {0.5, …, 0.95} at N = 300.
+
+### 8.4 Scale-down guards
+
+Scale-down proceeds only when none of the guards holds (Chapter 5, guard table;
+the code's blocked-reason labels in brackets):
+
+| guard | condition |
+|---|---|
+| G1 | the declared pool is at least 70 % committed and the reduced shape would cost more tokens per core (ANSYS, ABAQUS) [`license_cost_adverse_saturated`; threshold `LA_GUARD_SAT` = 0.70] |
+| G2 | late iteration, i > 2 [`late_iteration`] |
+| G3 | less than half the deadline remains, υ_i < 0.50 |
+| G4 | more than 70 % of the time has elapsed [`time_progress`] |
+| G5 | more than 40 % of budget or time consumed [`budget_or_time_progress`] |
+| G6 | at the instance floor, k ≤ 2 |
+
+On a scale-down the workflow releases 90 % of the freed tokens and retains
+10 % as a buffer against its own next scale-up (retention fraction ω_ret =
+0.10, `LA_PARTIAL_RELEASE` default 0.90); Chapter 8 sweeps the release
+fraction over {0.5, 0.7, 0.8, 0.9, 1.0}.
+
+## 9. Joint feasibility
+
+A request (admission or boundary) is feasible only if compute capacity, pool
+availability, the available budget and the available time all admit it; the
+Scheduler descends from the densest consolidation (3 chains per node,
+`CHAINS_PER_NODE`) to one chain per node, and a request that fails on any
+dimension is denied with the reason recorded (`insufficient_compute`,
+`insufficient_licenses`, `budget_exhausted`, `time_exhausted`). A scale-up
+acquires instances and tokens through the two-phase commit; a scale-down
+releases instances and returns tokens as in §8.4.
+
+## 10. Metrics
+
+The per-workflow, resource-utilisation and licence-usage CSVs of
+`elastiflow/utils/metrics_LA.py` carry the per-workflow timestamps
+(submission, execution start, completion), compute and licence cost, the
+deadline and budget flags, the scale-up and scale-down attempts with their
+outcomes and reasons, resource utilisation sampled every 20 minutes, and
+per-pool token occupancy. `results/canonical_sweep.py` merges them into
+`canonical_results.json`; the figure generators compute the dissertation's
+metrics (deadline, budget and overall miss rate, queue wait, turnaround,
+makespan, cost per completed workflow, the cost-performance ratio, resource
+utilisation) and the licence-specific ones of Chapter 9 (effective licence
+utilisation, licence expenditure per completed workflow, per-solver
+completion).
+
+## 11. Infrastructure
+
+The CPU pool of Chapter 8, shared with the plain campaign
+(`elastiflow/config/resources.yaml`): 148 on-premise nodes of 48 cores (node
+count of CoolMUC-3, per-node profile of SuperMUC-NG Phase 1, realised as
+hpc7a.24xlarge under SLURM, 1.47 USD per node-hour from the three-year TCO at
+90 % utilisation), and six cloud families with 6 reserved and 12 on-demand
+slots each (hpc7a.24xlarge, hpc7a.12xlarge, c7i.24xlarge, c7i.12xlarge,
+c6i.32xlarge, c6i.16xlarge; 36 reserved, 72 on-demand). On-demand
+provisioning costs about 400 s of simulated time (`COLD_START_TIME`);
+on-premise and reserved instances are warm.
+
+## 12. Why the campaign is shaped this way
+
+* Licence pools are a real constraint of industrial CAE sites and can bind
+  before compute does; the three laws (linear, concave, affine with a fixed
+  base) make the value of a scale-down solver-dependent, so no single
+  heuristic is best for all pools.
+* The per-iteration variation in `workflowConfig` is what gives an elastic
+  policy something to do: a wide iteration followed by a narrow one is a
+  scale-down opportunity and the reverse a scale-up opportunity.
+* The compressed, jittered arrival stream and the range up to N = 700 create
+  sustained pool pressure, so that the evaluation spans both constraint
+  satisfaction and elastic scaling under contention (Chapter 8).

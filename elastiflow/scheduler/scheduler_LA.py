@@ -1,8 +1,10 @@
 """
-License-Aware Scheduler Base Class
+The licence-constrained scheduler layer (dissertation Chapter 5, Elastic
+Scheduling with Auxiliary Pool Constraints; Chapter 6, Licence Manager).
 
-Extends the standard scheduler with license management capabilities.
-Integrates with the existing license manager for dual-resource (compute + license) scheduling.
+Extends `Scheduler` with the Licence Manager so that compute capacity and
+licence-pool availability are evaluated jointly at admission and at every
+iteration boundary, under the two-phase commit (hold, commit, release).
 """
 
 import math

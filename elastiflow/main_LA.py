@@ -1,7 +1,7 @@
 """
-Main entry point for License-Aware Moldable FCFS (LAMF) Scheduler
-
-Runs the LAMF scheduler with dual-resource (compute + license) constraints.
+Live entry point of the licence-constrained use case, running FCFS-LAMF
+(Licence-Aware Malleable-First under FCFS ordering) with compute and
+licence-pool feasibility evaluated jointly.
 """
 
 import threading

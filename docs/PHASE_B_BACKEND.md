@@ -1,6 +1,8 @@
 # Phase B, step 1: the execution-backend interface
 
-Status: PROPOSAL. Nothing applied. This is the first Phase B step because it is
+Status: applied 2026-09-06 (B0 to B4 and B6; B5 dropped by the author), each
+step recorded in the list below; the inventory describes the tree before B1.
+This was the first Phase B step because it is
 what makes the three scheduler forks mergeable: today `sim` is threaded through
 every scheduler signature and 314 call sites branch on it.
 

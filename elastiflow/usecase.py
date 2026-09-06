@@ -54,11 +54,11 @@ def getClientInputs_Plain(wf_id, input: Tuple, ind):
 
 def getClientInputs_LA(wf_id, input: Tuple, ind):
     """
-    Handler for License-Aware SeisSol workflows.
+    Handler for the licence-constrained SeisSol--TinyDA workflows (type LA).
 
     LA workflows can use either:
-    - workflowConfig array for moldable scheduling (chains vary per iteration)
-    - constraints for static allocation (chains constant across iterations)
+    - workflowConfig array for elastic allocation (the chain count varies per iteration)
+    - constraints for rigid allocation (chains constant across iterations)
 
     Input format: (cohesion_value, hosts) where cohesion_value is numeric scalar.
     """
@@ -99,7 +99,7 @@ def getClientInputs_LA(wf_id, input: Tuple, ind):
 
 def getClientInputs_HPO(wf_id, input: Tuple, ind):
     """
-    Handler for HPO (Hyperparameter Optimization) workflows.
+    Handler for the HPO (Hyperparameter Optimisation) workflows.
 
     HPO workflows use dynamic dict input for iteration config.
     Input format: (config_dict, hosts) where config_dict has epochs/next_trials keys.
@@ -233,12 +233,12 @@ def for_plan(config: dict) -> UseCase:
     Detect workflow type based on distinguishing fields.
 
     Three workflow types:
-    - PLAIN: Plain SeisSol (uses workflowConfig array, no licenses)
-    - LA: License-Aware SeisSol (has license_pool/software_id, uses constraints)
-    - HPO: Hyperparameter Optimization (string mesh, dict inputs)
+    - PLAIN: SeisSol--TinyDA (uses workflowConfig array, no licence fields)
+    - LA: licence-constrained SeisSol--TinyDA (has license_pool/software_id, uses constraints)
+    - HPO: Hyperparameter Optimisation (string mesh, dict inputs)
 
     Detection hierarchy (order matters - check most specific first):
-    1. License fields (license_pool/software_id) → LA
+    1. Licence fields (license_pool/software_id) → LA
     2. String mesh → HPO
     3. workflowConfig array → PLAIN
     4. Integer mesh → PLAIN (fallback)
