@@ -180,3 +180,30 @@ python -m pytest -m smoke   # every simulated policy once against the recorded b
 ```
 
 
+
+## Publication
+
+The framework and its SeisSol–TinyDA evaluation are published as:
+
+S. Dasgupta, K. Subramaniam and M. Gerndt, "ElastiFlow: Elastic Resource
+Management for Iterative Scientific Workflows in Hybrid HPC-Cloud
+Infrastructure," *2026 IEEE/ACM 26th International Symposium on Cluster, Cloud
+and Internet Computing (CCGrid)*, 2026, pp. 64–73.
+DOI: [10.1109/CCGrid68966.2026.00016](https://doi.org/10.1109/CCGrid68966.2026.00016)
+
+```bibtex
+@inproceedings{Dasgupta2026ElastiFlow,
+  title     = {{ElastiFlow}: Elastic Resource Management for Iterative Scientific
+               Workflows in Hybrid {HPC}-Cloud Infrastructure},
+  author    = {Dasgupta, Srishti and Subramaniam, Kavitha and Gerndt, Michael},
+  booktitle = {2026 IEEE/ACM 26th International Symposium on Cluster, Cloud and
+               Internet Computing (CCGrid)},
+  pages     = {64--73},
+  year      = {2026},
+  publisher = {IEEE},
+  doi       = {10.1109/CCGrid68966.2026.00016}
+}
+```
+
+The licence-constrained extension and the hyperparameter-optimisation
+evaluation are described in the dissertation.
