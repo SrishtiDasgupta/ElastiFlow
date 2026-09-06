@@ -7,7 +7,8 @@ are the ones the sweep drivers use (see the cell runners in conftest.py), so a
 passing run means the current tree still produces the numbers printed in the
 dissertation for these cells.
 
-Runtime on the reference machine: SeisSol ~20 s, licence ~30 s, HPO < 1 s.
+Runtime on the reference machine: SeisSol ~2 s, licence ~3 s, HPO < 1 s (before
+the in-process runtime model of B4b these were ~20 s and ~30 s).
 """
 import shutil
 

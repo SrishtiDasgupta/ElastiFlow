@@ -36,7 +36,8 @@ from elastiflow.execution.backend import SimulatedBackend, register
 from elastiflow.executor import executeWorklow, processNewResources
 from elastiflow.config.constants import COLD_START_TIME
 from elastiflow.scripts.create_instance import simulated_ip
-register(sim_sched, SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorklow, on_resources=processNewResources, cold_start=COLD_START_TIME, fake_ip=simulated_ip, executor_overhead=7.7))
+from elastiflow.scripts.tinyda_runtime import iteration_runtime
+register(sim_sched, SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorklow, on_resources=processNewResources, cold_start=COLD_START_TIME, fake_ip=simulated_ip, executor_overhead=7.7, runtime_model=iteration_runtime))
 register(sim_dispatcher, SimulatedBackend(sim_dispatcher))   # sends by mailbox name from its own simulator
 
 # P1: Dispatcher sleepes for gaussian time and writes to wf mailbox

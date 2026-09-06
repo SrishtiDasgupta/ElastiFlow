@@ -160,7 +160,15 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   passes the name explicitly. Deferred: `steep_actions_HPO.py` keeps its own
   iteration runner (a retry loop and JSON parsing around the live service, no
   overhead injection); it is the HPO driver and folds in with the use-case
-  protocol. Next: the in-process runtime lookup, as its own gated step.
+  protocol. The second half (B4b, 2026-09-06): the stub's functions moved verbatim into
+  `elastiflow/scripts/tinyda_runtime.py` (`iteration_runtime(request) ->
+  {'cohesion', 'runtime'}`, pure functions over the fitted speedup curves);
+  `SimulatedBackend` takes `runtime_model` at registration and calls it
+  in-process, so a simulated run no longer spawns a subprocess per iteration or
+  round-trips the request and the result through `str()`/`eval()`. The stub
+  remains as a CLI over the same functions (live mode, and the equivalence test
+  `tests/unit/test_runtime_model_inprocess.py`, which compares both paths on a
+  grid of requests). Gate: regression, smoke against the B0 baseline.
 * **B5. In-memory channels for simulated mode.** Simulated runs stop needing
   Redis. Gate: the default suite with Redis stopped.
 * **B6. One switch.** The `SIMULATE` constants and the `sim` parameters go;

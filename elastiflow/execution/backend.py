@@ -99,10 +99,11 @@ class SimulatedBackend:
     def __init__(self, sim, mailboxes: dict | None = None, execute: Callable | None = None,
                  on_resources: Callable | None = None, cold_start: float = 0.0,
                  fake_ip: Callable | None = None, release_message: str | None = None,
-                 executor_overhead: float = 7.7):
+                 executor_overhead: float = 7.7, runtime_model: Callable | None = None):
         self.sim = sim
         self._cold_start, self._fake_ip, self._release_message = cold_start, fake_ip, release_message
         self._executor_overhead = executor_overhead
+        self._runtime_model = runtime_model      # request -> {'runtime': s, ...}; None falls back to the service stub
         mailboxes = mailboxes or {}
         self.workflows = SimulatedChannel(sim, 'wf_mb', mailboxes.get('wf_mb'))
         self.completions = SimulatedChannel(sim, 'completed_jobs_mb', mailboxes.get('completed_jobs_mb'))
@@ -139,10 +140,13 @@ class SimulatedBackend:
     def run_iteration(self, wf_id: str, service: str, args: dict, deadline: float, iteration: int) -> IterationResult:
         """One iteration in simulated time: the service (the runtime-model stub)
         reports the modelled runtime; the process sleeps for it, capped at the
-        deadline, plus the measured executor overhead. B4 keeps the subprocess
-        call; the in-process lookup is the next step."""
-        cp = subprocess.run([sys.executable, service, str(args)], check=True, capture_output=True, text=True)
-        result = eval(cp.stdout, {'np': np})
+        deadline, plus the measured executor overhead. With a registered runtime
+        model the lookup is in-process (B4b); otherwise the service stub runs."""
+        if self._runtime_model is not None:
+            result = self._runtime_model(args)
+        else:
+            cp = subprocess.run([sys.executable, service, str(args)], check=True, capture_output=True, text=True)
+            result = eval(cp.stdout, {'np': np})
         runtime = float(result['runtime'])
         sleep_time = min(runtime, max(deadline - self.now(), 0))
         self.sleep(sleep_time + self._executor_overhead)

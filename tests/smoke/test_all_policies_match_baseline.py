@@ -4,7 +4,8 @@ recorded baseline (tests/regression/baseline_all_policies.json).
 
 This is the Phase B gate: the regression tests pin three cells to the datasets
 of record; this suite pins all 16 policies to the behaviour recorded from a
-tree that passed those tests. About seven minutes; marked `smoke`, so it is
+tree that passed those tests. About half a minute since the in-process runtime
+model (B4b); marked `smoke`, so it is
 excluded from a plain `pytest` run and selected with `pytest -m smoke`.
 
 To move the reference deliberately, re-run tests/regression/record_baseline.py

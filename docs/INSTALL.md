@@ -38,8 +38,8 @@ the launcher embeds an absolute path.
 ## Checking the installation
 
 ```
-vortex_venv/bin/python3 -m pytest            # unit + regression: about one minute
-vortex_venv/bin/python3 -m pytest -m smoke   # every simulated policy once, compared exactly with the recorded baseline: about seven minutes
+vortex_venv/bin/python3 -m pytest            # unit + regression: about half a minute
+vortex_venv/bin/python3 -m pytest -m smoke   # every simulated policy once, compared exactly with the recorded baseline: about half a minute
 ```
 
 The regression tests re-run one committed cell per campaign and compare every

@@ -42,8 +42,8 @@ See `docs/INSTALL.md`. In short: a venv, `pip install -r requirements.txt`,
 `pip install -e .`, a Redis server on localhost, then
 
 ```
-python -m pytest            # unit + regression, about one minute
-python -m pytest -m smoke   # every simulated policy once, about seven minutes
+python -m pytest            # unit + regression, about half a minute
+python -m pytest -m smoke   # every simulated policy once against the recorded baseline, about half a minute
 ```
 
 The regression tests re-run one committed cell of each campaign and compare
