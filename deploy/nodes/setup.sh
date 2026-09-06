@@ -23,7 +23,7 @@ sudo apt-get install python3-pip -y
 
 # Install dependencies
 cd /fsx
-pip install numpy scipy pandas umbridge tinyDA ray
+pip install numpy scipy pandas umbridge tinyDA==0.9.20 ray
 
 # Install MPI
 sudo apt-get update \
@@ -78,9 +78,10 @@ cd /tmp
 wget https://github.com/apptainer/apptainer/releases/download/v1.3.6/apptainer_1.3.6_amd64.deb
 sudo apt install -y ./apptainer_1.3.6_amd64.deb
 
-# Replace the tinyDA/chain.py file
+# Replace the tinyDA/chain.py file with ElastiFlow's patched copy (tinyDA 0.9.20 plus the
+# initial-parameters change; the checkout lives at /fsx/ElastiFlow)
 cd /fsx
-sudo cp -f chain.py /home/ubuntu/.local/lib/python3.10/site-packages/tinyDA/chain.py
+sudo cp -f /fsx/ElastiFlow/deploy/nodes/chain.py /home/ubuntu/.local/lib/python3.10/site-packages/tinyDA/chain.py
 #sudo cp -f chain.py /home/ubuntu/tinyda-seissol/lib/python3.12/site-packages/tinyDA/chain.py
 
 # Setup for starting the server
