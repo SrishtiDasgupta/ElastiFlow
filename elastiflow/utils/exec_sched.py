@@ -3,13 +3,13 @@ from typing import List, Tuple
 import re
 
 from elastiflow.config.constants import FREE_RESOURCES, MOLDABLE, RESOURCE_REQUEST_TIMEOUT, SIMULATE
-from .sim import getTime
 from .request import ExecutorRequest, getConfig, sendRequest
 from . import negotiation_log
 from elastiflow.scripts.create_instance import createInstance, deleteInstanceFromIp
 
 import yaml
 import os
+from elastiflow.execution.backend import backend_for
 
 _PORTS_YAML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'ports.yaml')
 
@@ -372,6 +372,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
     }
 
     sim = getWorkflowConfig(wf_id)['sim']
+    backend = backend_for(sim)
 
     # Mark request as pending so processNewResourcesHPO knows we're waiting.
     # Late responses (arriving after timeout) are discarded when pending=False.
@@ -381,7 +382,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
     rt_label = 'grow' if request_type == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
     t_engine_request_sent = time.time()
     if sim:
-        request['request-time'] = sim.now
+        request['request-time'] = backend.now()
         sim.sync().send(sim, 'resource_request_mb', str(request))
     else:
         sendRequest(getConfig('scheduler'), getConfig('resource-request-port'), request)
@@ -389,11 +390,11 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
     # Wait for response until timeout
     resources = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
     req_type = ExecutorRequest.FREE_RESOURCE.value # Only because less computation than merge
-    start_time, timeout = getTime(sim), 30 + request_timeout # 30 sec network latency
+    start_time, timeout = backend.now(), 30 + request_timeout # 30 sec network latency
     outcome = 'timed_out'
     t_engine_reply_received = ''
     while True:
-        (sim or time).sleep(5)
+        backend.sleep(5)
         if getWorkflowConfig(wf_id).get('new_resources', None):
             req_type, resources = getWorkflowConfig(wf_id).get('new_resources')
             t_engine_reply_received = time.time()
@@ -401,7 +402,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
             setNewResources(wf_id, None)
             setResourceRequestPending(wf_id, False)
             break
-        if getTime(sim) - start_time > timeout:
+        if backend.now() - start_time > timeout:
             print(f'Timeout reached for {wf_id}. Continuing with available resources')
             setNewResources(wf_id, None)
             setResourceRequestPending(wf_id, False)  # Reject late responses

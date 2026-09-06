@@ -10,6 +10,7 @@ import yaml
 from elastiflow.config.constants import SEED, TOTAL_WORKFLOWS
 from elastiflow.utils.validate_workflow import validate_workflow
 from elastiflow.config.paths import PACKAGE_DIR
+from elastiflow.execution.backend import backend_for
 
 # DEPRECATED
 def delay_generation(workflows):
@@ -119,18 +120,19 @@ def send_workflow(workflow):
 
 
 def dispatcher(sim, wf_mb):
+    backend = backend_for(sim)
     delays = delayGenerationFromSubmitTimes(TOTAL_WORKFLOWS)
     # delays = [1, 60, 60, 80, 100, 250, 300, 40, 120, 200, 150, 100, 1000]
-    print(f'Starting dispatcher for {TOTAL_WORKFLOWS} workflows at {sim.now}...')
+    print(f'Starting dispatcher for {TOTAL_WORKFLOWS} workflows at {backend.now()}...')
     for i in range(TOTAL_WORKFLOWS):
-        sim.sleep(delays[i])
-        print(f'Sending wf{i} at {sim.now}')
+        backend.sleep(delays[i])
+        print(f'Sending wf{i} at {backend.now()}')
         workflow = fetchWorkflow(i)
-        workflow['submit_time'] = sim.now
+        workflow['submit_time'] = backend.now()
         sim.sync().send(sim, wf_mb, str(workflow))
 
     # Send END after all requests are complete
-    sim.sleep(300000)
+    backend.sleep(300000)
     sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', f"{PACKAGE_DIR}/")))
 
 

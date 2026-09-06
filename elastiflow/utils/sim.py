@@ -1,8 +1,3 @@
-import time
-
-def getTime(sim):
-    return sim.now if sim else time.time()
-
 def removeElement(mb, queue):
     if mb:
         mb.retrieve(isall=False)

@@ -34,7 +34,8 @@ from elastiflow.resource_manager.instance import Instance, OnPremInstance, Cloud
 from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
-from elastiflow.utils.sim import getTime, peekElement, removeElement
+from elastiflow.utils.sim import peekElement, removeElement
+from elastiflow.execution.backend import backend_for
 
 
 class Scheduler_LA(ABC):
@@ -263,6 +264,7 @@ class Scheduler_LA(ABC):
         """
         Process workflow completions and release BOTH compute and licenses
         """
+        backend = backend_for(sim)
         print('Scheduler started listening to completed jobs...')
         while True:
             data = peekElement(mb, self.finish_queue)
@@ -314,10 +316,10 @@ class Scheduler_LA(ABC):
                         'complete': data.get('complete')
                     }
                 )
-                print(f'{wf_id} workflow freed at {getTime(sim)}')
+                print(f'{wf_id} workflow freed at {backend.now()}')
                 removeElement(mb, self.finish_queue)
 
-            (sim or time).sleep(60)
+            backend.sleep(60)
 
     def allocateNewResources(self, request, sim):
         """
@@ -325,7 +327,8 @@ class Scheduler_LA(ABC):
 
         Base implementation (extended in child classes with license checks)
         """
-        if getTime(sim) - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+        backend = backend_for(sim)
+        if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
 
         # LA workflows always return 7-value tuples
@@ -333,14 +336,14 @@ class Scheduler_LA(ABC):
             self.resource_manager.getWorkflow(request['wf-id'])
 
         free_resources = self.resource_manager.getResources()
-        used_budget = self.metrics.computeCost(request['wf-id'], getTime(sim))
+        used_budget = self.metrics.computeCost(request['wf-id'], backend.now())
         available_budget = max(0, budget - used_budget) / max((AVG_WORKFLOW_ITERATIONS - request['iteration']), 1)
 
         # OLD (BUGGY): available_runtime not calculated or passed
         # alloc_instances = self.checkNewResources(free_resources, instances, available_budget, request, mesh)
 
         # NEW (FIXED): Calculate available_runtime for global view deadline checking
-        available_runtime = max(0, deadline - DEADLINE_BUFFER - getTime(sim))
+        available_runtime = max(0, deadline - DEADLINE_BUFFER - backend.now())
         alloc_instances = self.checkNewResources(free_resources, instances, available_budget, available_runtime, request, mesh)
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
 
@@ -372,7 +375,7 @@ class Scheduler_LA(ABC):
         if alloc_resources:
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
             # Metrics tracking now happens in fcfs_optimized_LA.py before calling sendNewResources()
-            # self.metrics.updateResources(wf_id, alloc_resources, getTime(sim))  # OLD signature - removed
+            # self.metrics.updateResources(wf_id, alloc_resources, backend.now())  # OLD signature - removed
 
     def freeResources(self, request, sim):
         """
@@ -380,7 +383,8 @@ class Scheduler_LA(ABC):
 
         Override in child classes to handle license freeing
         """
-        if getTime(sim) - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+        backend = backend_for(sim)
+        if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
 
         # LA workflows always return 7-value tuples
@@ -388,7 +392,7 @@ class Scheduler_LA(ABC):
             self.resource_manager.getWorkflow(request['wf-id'])
 
         response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
-        available_time = max(0, deadline - getTime(sim)) / max((AVG_WORKFLOW_ITERATIONS - request['iteration']), 1)
+        available_time = max(0, deadline - backend.now()) / max((AVG_WORKFLOW_ITERATIONS - request['iteration']), 1)
         freed_count = 0
         to_free_instances = []
 
@@ -429,7 +433,7 @@ class Scheduler_LA(ABC):
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
             # Metrics tracking now happens in fcfs_optimized_LA.py before calling freeResourcesWithLicenses()
-            # self.metrics.updateResources(wf_id, to_free_instances, None, getTime(sim))  # OLD signature - removed
+            # self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())  # OLD signature - removed
 
     def checkResources(self, instances: List[Instance], min_instances: int) -> tuple[int, List[tuple[Instance, int]]]:
         """
@@ -716,8 +720,9 @@ class Scheduler_LA(ABC):
 
         Same as base scheduler
         """
+        backend = backend_for(sim)
         runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
-        if getTime(sim) + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
-            print(f"Workflow {wf_plan['id']} can no longer be executed, discarding it at {getTime(sim)}")
+        if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
+            print(f"Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
             return True
         return False

@@ -1,7 +1,6 @@
 import threading
 import sys
 import argparse
-from elastiflow.utils.sim import getTime
 from elastiflow.utils.exec_sched import setNewResources, isResourceRequestPending
 from elastiflow.scripts.create_instance_HPO import deleteInstanceFromIp
 from elastiflow.utils.request import getConfig, sendRequest
@@ -9,6 +8,7 @@ from elastiflow.workflow.steep_workflow_HPO import Steep_Workflow_HPO
 from elastiflow.server import server
 from elastiflow.wf_queue.redis_queue import Redis_Queue
 from elastiflow.config.constants_HPO import SIMULATE
+from elastiflow.execution.backend import backend_for
 
 def processQueueData(queue):
     """
@@ -41,6 +41,7 @@ def executeWorkflowHPO(data, sim=None):
     Flow:
     Scheduler → Dedicated Executor → Steep Workflow → run_hpo.py → Runner (on workers)
     """
+    backend = backend_for(sim)
     print(f"[DEBUG] executeWorkflowHPO called with data: {data.keys() if data else 'None'}")
 
     workflow_plan = data.get('wf-plan')
@@ -54,7 +55,7 @@ def executeWorkflowHPO(data, sim=None):
     # Create Steep workflow (same as SeisSol)
     try:
         workflow = Steep_Workflow_HPO(workflow_plan, sim, deadline)
-        start_time = getTime(sim)
+        start_time = backend.now()
 
         print(f'Executing HPO workflow {workflow.id} at {start_time}')
         print(f'  Workflow will use Steep engine to call service script')
@@ -89,13 +90,13 @@ def executeWorkflowHPO(data, sim=None):
     # Tell scheduler workflow execution is complete
     try:
         if sim:
-            sim.sleep(7.7)  # Executor overhead (simulation only)
+            backend.sleep(7.7)  # Executor overhead (simulation only)
 
         request = {
             "wf-id": workflow.id,
             "hosts": new_hosts,
             "start-time": start_time,
-            "finish-time": getTime(sim),
+            "finish-time": backend.now(),
             "complete": isComplete
         }
 

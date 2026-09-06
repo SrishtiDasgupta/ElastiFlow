@@ -14,11 +14,12 @@ import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.sim import getTime, peekElement, removeElement
+from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 from elastiflow.utils import negotiation_log
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
+from elastiflow.execution.backend import backend_for
 
 # HPO-specific Moldable FCFS Scheduler with Dedicated Executor Design
 # Supports full cross-type instance switching and elastic scaling
@@ -39,6 +40,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
     def run(self, sim = None, wf_mb = None, resource_request_mb = None):
 
+        backend = backend_for(sim)
         print(f'Starting HPO Moldable FCFS scheduler...')
 
         # Start a thread to periodically compute resource utilization
@@ -66,7 +68,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                                         t_scheduler_request_observed=time.time())
                 except Exception as _e:
                     print(f'[negotiation_log] obs parse fail: {_e}')
-                if getTime(sim) - resource_request['request-time'] > 300:  # 5 min timeout
+                if backend.now() - resource_request['request-time'] > 300:  # 5 min timeout
                     removeElement(resource_request_mb, self.resource_request_queue)
                     continue
                 self.processMoldableRequestHPO(resource_request, sim)
@@ -97,7 +99,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                     if ips:
                         removeElement(wf_mb, self.queue)
                         # NOTE: We start billing at this point
-                        start_time = getTime(sim)
+                        start_time = backend.now()
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
@@ -106,7 +108,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                         self.resource_manager.setResourcesAvailable(False)
                         print('No HPO moldable resources to allocate, waiting...')
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     def allocateResourcesMoldableHPO(self, constraints, sim=None):
         """
@@ -412,6 +414,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         Process moldable resource requests between HPO optimization rounds
         Decides: scale up, scale down, or maintain allocation (NO instance type switching)
         """
+        backend = backend_for(sim)
         wf_id = request['wf-id']
         (instances, budget, deadline, start_time, model) = self.resource_manager.getWorkflow(wf_id)
 
@@ -422,7 +425,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         # is too tight for the scale-up gate in HPO workloads where per-iter runtimes are short
         # (5-10 min) relative to the deadline (1-2 hr). Decoupling: full time for scale-up,
         # paced slice for scale-down.
-        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim))
+        available_time = max(0, deadline - DEADLINE_BUFFER - backend.now())
         paced_available_time = available_time * OPTIM_FCFS_DFACTOR[ind]
 
         # Current allocation
@@ -458,7 +461,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                 trials_per_instance -= 1
 
         # Allocate additional resources if needed
-        used_budget = self.metrics.computeCost(wf_id, getTime(sim))
+        used_budget = self.metrics.computeCost(wf_id, backend.now())
         available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]
 
         free_resources = self.resource_manager.getResources()
@@ -677,6 +680,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         """Send new resources to executor.
         If send fails (executor dead/unreachable), terminate any on-demand instances
         that were just created to prevent leaks."""
+        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -715,10 +719,11 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
         if alloc_resources:
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
-            self.metrics.updateResources(wf_id, alloc_resources, getTime(sim))
+            self.metrics.updateResources(wf_id, alloc_resources, backend.now())
 
     def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip, iter_idx=None):
         """Send freed resources notification to executor"""
+        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
             "initial-alloc": False,
@@ -738,7 +743,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                             t_scheduler_reply_sent=time.time())
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
-            self.metrics.updateResources(wf_id, to_free_instances, None, getTime(sim))
+            self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())
 
     def createOnDemandWorkers(self, ips, sim):
         """Create actual on-demand worker instances for allocated virtual slots.

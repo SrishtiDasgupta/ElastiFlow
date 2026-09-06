@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Import HPO-specific constants
 from elastiflow.config.constants_HPO import SIMULATE, COLD_START_TIME
 from elastiflow.scripts import cold_start_log
+from elastiflow.execution.backend import backend_for
 
 region = 'eu-north-1'  # Stockholm region for HPO testing
 
@@ -40,10 +41,11 @@ def createExecutorInstance(instance_type: str = 'g4dn.2xlarge', sim=None) -> str
     Create a dedicated executor instance for HPO workflows
     Returns single IP address for the executor
     """
+    backend = backend_for(sim)
     print(f'Creating dedicated executor instance: {instance_type}')
 
     if sim or SIMULATE:
-        (sim or time).sleep(COLD_START_TIME)
+        backend.sleep(COLD_START_TIME)
         # Generate simulated IP for executor
         digits = [10, 19] + random.choices(range(200, 255), k=2)
         executor_ip = '.'.join(map(str, digits))
@@ -58,13 +60,14 @@ def createWorkerInstances(instance_type: str, count: int, sim=None) -> List[str]
     Create homogeneous worker instances for HPO workflows
     Returns list of IP addresses for workers
     """
+    backend = backend_for(sim)
     if count < 1:
         return []
 
     print(f'Creating {count} worker instances of {instance_type}')
 
     if sim or SIMULATE:
-        (sim or time).sleep(COLD_START_TIME)
+        backend.sleep(COLD_START_TIME)
         ips = []
         for i in range(count):
             # Generate simulated IPs for workers

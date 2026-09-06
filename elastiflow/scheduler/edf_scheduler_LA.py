@@ -24,9 +24,10 @@ from typing import List
 from elastiflow.config.constants_LA import WORKFLOW_POLLING, TOTAL_WORKFLOWS
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
-from elastiflow.utils.sim import getTime, getAllElements, peekElement, removeElement
+from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
+from elastiflow.execution.backend import backend_for
 
 
 class EDF_Scheduler_LA(Scheduler_LA):
@@ -58,6 +59,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
         self.is_moldable = False
 
     def run(self, sim=None, wf_mb=None, resource_request_mb=None):
+        backend = backend_for(sim)
         print(f'Starting EDF-LA Baseline (Static EDF with License Awareness) Scheduler...')
         print(f'  - Non-moldable: Resources allocated once at workflow start')
         print(f'  - EDF ordering: Workflows prioritized by earliest deadline')
@@ -79,7 +81,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
             # Advance the license ledger clock (honest Token-Hours billing — same
             # basis as the moldable schedulers, so cost is comparable across policies).
             if sim is not None:
-                self.license_manager.set_sim_time(getTime(sim))
+                self.license_manager.set_sim_time(backend.now())
 
             # === PHASE 1: Handle resource requests (minimal for non-moldable) ===
             resource_request = peekElement(resource_request_mb, self.resource_request_queue)
@@ -94,7 +96,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                     # Handle freeing (when workflow completes or releases resources)
                     self.freeResources(resource_request, sim)
                 removeElement(resource_request_mb, self.resource_request_queue)
-                sim and sim.sleep(0.2)
+                sim and backend.sleep(0.2)
                 continue
 
             # === PHASE 2: Schedule new workflows in EDF order ===
@@ -115,7 +117,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_Static_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            getTime(sim) if sim is not None else self.license_manager.sim_now))
+                            backend.now() if sim is not None else self.license_manager.sim_now))
                     break
 
                 # Skip rejected workflows
@@ -140,7 +142,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                         self.popWorkflow(self.workflow_heap)
                         removeElement(wf_mb, self.queue)
 
-                        start_time = getTime(sim)
+                        start_time = backend.now()
 
                         # Send to executor
                         self.sendWorkflowForExecution(
@@ -199,7 +201,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                     # Resources not available - wait
                     pass
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     # =========================================================================
     # EDF HEAP MANAGEMENT (from edf_optimized_LA.py)

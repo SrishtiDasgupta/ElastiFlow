@@ -42,11 +42,12 @@ from elastiflow.scripts.speedup import getRuntime
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
 from elastiflow.resource_manager.license.exceptions import LicenseError, InsufficientTokens
-from elastiflow.utils.sim import getTime, getAllElements, peekElement, removeElement
+from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow, getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
 
 import os
+from elastiflow.execution.backend import backend_for
 
 # ---------------------------------------------------------------------------
 # HSM phase-transition policy (licence-aware static -> moldable gate)
@@ -140,6 +141,7 @@ class EDF_HSM_LA(Scheduler_LA):
         """
         Main scheduler loop with EDF ordering
         """
+        backend = backend_for(sim)
         print(f'Starting HSM (Hybrid Static-Moldable) scheduler...')
         print(f'  - Iteration 0: STATIC allocation (no scaling)')
         print(f'  - Iterations 1-5: MOLDABLE (EDF-LAMF triggers + guards)')
@@ -168,11 +170,11 @@ class EDF_HSM_LA(Scheduler_LA):
             # Advance the license ledger clock so every token hold/release this cycle
             # is billed at the correct sim timestamp (honest Token-Hours billing).
             if sim is not None:
-                self.license_manager.set_sim_time(getTime(sim))
+                self.license_manager.set_sim_time(backend.now())
 
             # Progress indicator every 1000 iterations (reduced frequency)
             if loop_counter % 1000 == 0:
-                current_time = getTime(sim)
+                current_time = backend.now()
                 active_wfs = len(self.resource_manager.workflows)
                 completed_wfs = self.metrics.workflow_count if hasattr(self.metrics, 'workflow_count') else 0
                 wf_heap_size = len(self.workflow_heap)
@@ -190,13 +192,13 @@ class EDF_HSM_LA(Scheduler_LA):
                     print(f"\n{'='*70}")
                     print(f"✓ All workflows completed. Terminating scheduler.")
                     print(f"  Total loops: {loop_counter}")
-                    print(f"  Final simulated time: {getTime(sim):.1f}s")
+                    print(f"  Final simulated time: {backend.now():.1f}s")
                     print(f"{'='*70}\n")
                     from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            getTime(sim) if sim is not None else self.license_manager.sim_now))
+                            backend.now() if sim is not None else self.license_manager.sim_now))
                     break
                 elif idle_loop_count == 1:
                     print(f"\n[INFO] No active workflows detected. Waiting for termination (idle_count={idle_loop_count}/10)...")
@@ -217,7 +219,7 @@ class EDF_HSM_LA(Scheduler_LA):
                     # Process with deadline-urgency awareness
                     start = time.time()
 
-                    if getTime(sim) - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+                    if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
                         self.popWorkflow(self.resource_request_heap)
                         removeElement(resource_request_mb, self.resource_request_queue)
                         continue
@@ -255,7 +257,7 @@ class EDF_HSM_LA(Scheduler_LA):
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            getTime(sim) if sim is not None else self.license_manager.sim_now))
+                            backend.now() if sim is not None else self.license_manager.sim_now))
                     break
 
                 # Skip rejected workflows
@@ -287,7 +289,7 @@ class EDF_HSM_LA(Scheduler_LA):
                         removeElement(wf_mb, self.queue)
 
                         # Start billing
-                        start_time = getTime(sim)
+                        start_time = backend.now()
 
                         # Send to executor
                         self.sendWorkflowForExecution(
@@ -344,7 +346,7 @@ class EDF_HSM_LA(Scheduler_LA):
                     if loop_counter % 10000 == 0:
                         print(f'[DEBUG] Resources marked as unavailable, skipping allocation (heap_size={len(self.workflow_heap)})')
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     # =========================================================================
     # EDF HEAP MANAGEMENT (from HEFTResourceManager)
@@ -752,6 +754,7 @@ class EDF_HSM_LA(Scheduler_LA):
         A workflow already in MOLDABLE stays there. STATIC_PHASE_ITERS is a hard
         floor: the gate cannot fire while ind <= STATIC_PHASE_ITERS.
         """
+        backend = backend_for(sim)
         wf_id = request['wf-id']
         if self.hsm_phase.get(wf_id, 'STATIC') == 'MOLDABLE':
             return False  # already moldable -- stay moldable
@@ -771,7 +774,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
         last_iter = max(OPTIM_FCFS_DFACTOR)          # highest iteration index
         remaining_iters = max(0, last_iter - ind)    # iterations still to run
-        now = getTime(sim)
+        now = backend.now()
         projected_finish = now + remaining_iters * runtime_per_iter
         slack = (deadline - DEADLINE_BUFFER) - projected_finish
         window = max(1e-9, deadline - start_time)
@@ -819,6 +822,7 @@ class EDF_HSM_LA(Scheduler_LA):
         4. Urgency-based boost factors (1.2× → 2.0×)
         5. Smart scale-down guards (license pool, late iteration, deadline proximity)
         """
+        backend = backend_for(sim)
         # LA workflows always return 7-value tuples
         instances, budget, deadline, start_time, mesh, software_id, license_holds = \
             self.resource_manager.getWorkflow(request['wf-id'])
@@ -839,7 +843,7 @@ class EDF_HSM_LA(Scheduler_LA):
             software_id, ind, sim)
 
         # === HSM: MOLDABLE PHASE (logic below; scale-down gated by hsm_static) ===
-        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
+        available_time = max(0, deadline - DEADLINE_BUFFER - backend.now()) * OPTIM_FCFS_DFACTOR[ind]
 
         cur_instance: Instance = instances[-1][0]
         cur_count = instances[-1][1]
@@ -851,16 +855,16 @@ class EDF_HSM_LA(Scheduler_LA):
         print(f"\n🔍 [HSM MOLDABLE-PHASE] processFreeRequestWithLicenses called:")
         print(f"  wf-id: {request['wf-id']}, iteration: {ind} (MOLDABLE)")
         print(f"  current instances: {cur_count}, chains: {request['chains']}, tinyda-iterations: {request['tinyda-iterations']}")
-        print(f"  deadline: {deadline:.1f}s, current time: {getTime(sim):.1f}s")
+        print(f"  deadline: {deadline:.1f}s, current time: {backend.now():.1f}s")
         print(f"  available_time (after OPTIM factor {OPTIM_FCFS_DFACTOR[ind]}): {available_time:.1f}s")
 
         # === PROGRESS-BASED TRIGGER (from LAMF) ===
         # Check if workflow is falling behind schedule - if so, skip scale-down and go to scale-up
-        elapsed_time = getTime(sim) - start_time
+        elapsed_time = backend.now() - start_time
         total_time = deadline - start_time
         time_progress = elapsed_time / total_time if total_time > 0 else 0.0
 
-        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+        used_budget = self.metrics.computeCurrentCost(request['wf-id'], backend.now())
         budget_progress = used_budget / budget if budget > 0 else 0.0
 
         skip_scale_down = False
@@ -868,7 +872,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
         # === DEADLINE-FIRST TRIGGERS (EDF-LAMF v5) ===
         # Calculate deadline urgency for direct deadline monitoring
-        time_remaining = deadline - getTime(sim)
+        time_remaining = deadline - backend.now()
         deadline_urgency = time_remaining / total_time if total_time > 0 else 0.0
 
         # Track urgency mode for boost factor
@@ -973,7 +977,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
                     # GUARD 3: Deadline proximity (NEW - don't scale down if <50% time remaining)
                     if should_scale_down:
-                        time_remaining_now = deadline - getTime(sim)
+                        time_remaining_now = deadline - backend.now()
                         total_time_now = deadline - start_time
                         deadline_urgency_check = time_remaining_now / total_time_now if total_time_now > 0 else 0.0
 
@@ -984,7 +988,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
                     # GUARD 4: Time progress check (unchanged)
                     if should_scale_down:
-                        elapsed_time = getTime(sim) - start_time
+                        elapsed_time = backend.now() - start_time
                         total_time = deadline - start_time
                         time_progress = elapsed_time / total_time if total_time > 0 else 1.0
                         time_progress = float(abs(time_progress)) if isinstance(time_progress, complex) else float(time_progress)
@@ -996,7 +1000,7 @@ class EDF_HSM_LA(Scheduler_LA):
 
                     # GUARD 5: Budget/time progress (more conservative: 40% vs 50%)
                     if should_scale_down:
-                        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+                        used_budget = self.metrics.computeCurrentCost(request['wf-id'], backend.now())
                         budget_progress = used_budget / budget if budget > 0 else 1.0
 
                         if budget_progress > 0.40 or time_progress > 0.40:
@@ -1016,7 +1020,7 @@ class EDF_HSM_LA(Scheduler_LA):
                         print(f"⬇ Scaling down: freeing {request['count']} instances (guards passed)")
 
                         # Track resource deallocation
-                        current_time = getTime(sim)
+                        current_time = backend.now()
                         self.metrics.updateResources(
                             request['wf-id'], cur_instance, request['count'], current_time, 'remove'
                         )
@@ -1050,7 +1054,7 @@ class EDF_HSM_LA(Scheduler_LA):
             print(f"  → Scale-down check complete. Moving to scale-up check.\n")
 
         # === SCALE UP CHECK (with DEADLINE-AWARE GRADUATED BOOST) ===
-        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+        used_budget = self.metrics.computeCurrentCost(request['wf-id'], backend.now())
 
         # DEADLINE-AWARE GRADUATED BOOST (EDF-LAMF v5):
         # More aggressive intervention for deadline-critical workflows
@@ -1117,7 +1121,7 @@ class EDF_HSM_LA(Scheduler_LA):
             ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
 
             # Track resource allocation
-            current_time = getTime(sim)
+            current_time = backend.now()
             instances_added = sum(c for _, c, _ in alloc_resources)
             cores_added = sum(inst.cores * count for inst, count, _ in alloc_resources)
 

@@ -30,11 +30,12 @@ import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.sim import getTime, getAllElements, peekElement, removeElement
+from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 from elastiflow.utils import negotiation_log
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
+from elastiflow.execution.backend import backend_for
 
 
 class EDF_Optimized_HPO(Scheduler_HPO):
@@ -66,6 +67,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
     def run(self, sim=None, wf_mb=None, resource_request_mb=None):
 
+        backend = backend_for(sim)
         print(f'Starting HPO Moldable EDF scheduler...')
         print(f'  - EDF ordering: Workflows prioritized by earliest deadline')
         print(f'  - Moldable: Dynamic resource reallocation between iterations')
@@ -102,7 +104,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
             if resource_request:
                 start = time.time()
-                if getTime(sim) - resource_request['request-time'] > 300:  # 5 min timeout
+                if backend.now() - resource_request['request-time'] > 300:  # 5 min timeout
                     self.popWorkflow(self.resource_request_heap)
                     # NOTE: do NOT pop from resource_request_queue. getAllElements
                     # already drained it when we heap-pushed (same data5-bug pattern).
@@ -152,7 +154,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                         # NOTE: see END branch above — wf_queue.pop() here would
                         # silently discard any newly-arrived wf. The wf was already
                         # drained from the queue when it landed in the heap.
-                        start_time = getTime(sim)
+                        start_time = backend.now()
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
@@ -167,7 +169,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 print(f"[HEAP] size={len(self.workflow_heap)} ids={heap_ids}")
                 self._heap_log_counter = 0
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     # =========================================================================
     # EDF HEAP MANAGEMENT
@@ -520,6 +522,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         - WARNING (<50% time remaining): 1.5x budget boost
         - Regular (falling behind): 1.2x budget boost
         """
+        backend = backend_for(sim)
         wf_id = request['wf-id']
         (instances, budget, deadline, start_time, model) = self.resource_manager.getWorkflow(wf_id)
 
@@ -529,7 +532,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         # is too tight for the scale-up gate in HPO workloads where per-iter runtimes are short
         # (5-10 min) relative to the deadline (1-2 hr). Decoupling: full time for scale-up,
         # paced slice for scale-down.
-        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim))
+        available_time = max(0, deadline - DEADLINE_BUFFER - backend.now())
         paced_available_time = available_time * OPTIM_FCFS_DFACTOR[ind]
 
         # Current allocation
@@ -538,14 +541,14 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         current_trials = sum(count for _, count, _ in instances)
 
         # === DEADLINE URGENCY ASSESSMENT ===
-        elapsed_time = getTime(sim) - start_time
+        elapsed_time = backend.now() - start_time
         total_time = deadline - start_time
         time_progress = elapsed_time / total_time if total_time > 0 else 0.0
 
-        used_budget = self.metrics.computeCost(wf_id, getTime(sim))
+        used_budget = self.metrics.computeCost(wf_id, backend.now())
         budget_progress = used_budget / budget if budget > 0 else 0.0
 
-        time_remaining = deadline - getTime(sim)
+        time_remaining = deadline - backend.now()
         deadline_urgency = time_remaining / total_time if total_time > 0 else 0.0
 
         urgency_mode = 'NORMAL'
@@ -597,7 +600,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 trials_per_instance -= 1
 
         # === SCALE UP CHECK WITH DEADLINE URGENCY BOOST ===
-        used_budget = self.metrics.computeCost(wf_id, getTime(sim))
+        used_budget = self.metrics.computeCost(wf_id, backend.now())
 
         # Graduated boost factor based on urgency
         if urgency_mode == 'CRITICAL':
@@ -819,6 +822,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         """Send new resources to executor.
         If send fails (executor dead/unreachable), terminate any on-demand instances
         that were just created to prevent leaks."""
+        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -857,10 +861,11 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         if alloc_resources:
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
-            self.metrics.updateResources(wf_id, alloc_resources, getTime(sim))
+            self.metrics.updateResources(wf_id, alloc_resources, backend.now())
 
     def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip, iter_idx=None):
         """Send freed resources notification to executor"""
+        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
             "initial-alloc": False,
@@ -880,7 +885,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                             t_scheduler_reply_sent=time.time())
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
-            self.metrics.updateResources(wf_id, to_free_instances, None, getTime(sim))
+            self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())
 
     def createOnDemandWorkers(self, ips, sim):
         """Create actual on-demand worker instances for allocated virtual slots.

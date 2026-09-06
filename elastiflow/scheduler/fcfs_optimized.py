@@ -8,9 +8,10 @@ from elastiflow.config.constants import CHAINS_PER_NODE, CLOSENESS_TOLERANCE, CO
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.resource_manager.resource_manager import ResourceManager
-from elastiflow.utils.sim import getTime, peekElement, removeElement
+from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.scheduler.scheduler import Scheduler
+from elastiflow.execution.backend import backend_for
 
 # If requested resources are available, they are granted. Else the workflow waits
 class FCFS_Optimized(Scheduler):
@@ -24,6 +25,7 @@ class FCFS_Optimized(Scheduler):
 
     def run(self, sim = None, wf_mb = None, resource_request_mb = None):
         
+        backend = backend_for(sim)
         print(f'Starting scheduler...')
 
         # Start a thread to periodically compute resource utilization
@@ -42,7 +44,7 @@ class FCFS_Optimized(Scheduler):
                 # Allocate new resources
                 start = time.time()
                 resource_request = eval(resource_request)
-                if getTime(sim) - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+                if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
                     removeElement(resource_request_mb, self.resource_request_queue)
                     continue
                 self.processFreeRequest(resource_request, sim)
@@ -81,7 +83,7 @@ class FCFS_Optimized(Scheduler):
                     if ips:
                         removeElement(wf_mb, self.queue)
                         # NOTE: We start billing at this point
-                        start_time = getTime(sim)
+                        start_time = backend.now()
                         self.sendWorkflowForExecution(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
@@ -91,7 +93,7 @@ class FCFS_Optimized(Scheduler):
                         # NOTE: Can also suspend process and resume when resources are available again 
                         print('No resources to allocate, waiting...')
             
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     
     # request = {"wf-id": wf_id, "count": n, "iteration": ind, "tinyda-iterations": m}
@@ -229,12 +231,13 @@ class FCFS_Optimized(Scheduler):
         return any(map(closeness, runtimes_list))
         
     def processFreeRequest(self, request, sim):
+        backend = backend_for(sim)
         (instances, budget, deadline, _, mesh) = self.resource_manager.getWorkflow(request['wf-id'])
         
         # Check if additional resources are needed
         # request['iteration'] can be 0, 1, 2, 3, 4, 5
         ind = request['iteration']
-        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
+        available_time = max(0, deadline - DEADLINE_BUFFER - backend.now()) * OPTIM_FCFS_DFACTOR[ind]
         
         cur_instance: Instance = instances[-1][0]
         cur_count = instances[-1][1]
@@ -265,7 +268,7 @@ class FCFS_Optimized(Scheduler):
                 chains_per_node -= 1
 
         # Allocate resources
-        used_budget = self.metrics.computeCost(request['wf-id'], getTime(sim))
+        used_budget = self.metrics.computeCost(request['wf-id'], backend.now())
         available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]
         free_resources = self.resource_manager.getResources()
         if request['count'] == None:

@@ -11,9 +11,10 @@ from elastiflow.resource_manager.resource_manager import ResourceManager
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, OnPremInstance
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.sim import getTime, peekElement, removeElement
+from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
+from elastiflow.execution.backend import backend_for
 
 # HPO-specific FCFS Scheduler with Dedicated Executor Design
 # Static version - no moldable resource allocation
@@ -30,7 +31,8 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
     def run(self, sim = None, wf_mb = None, resource_request_mb = None):
 
-        print(f'Starting HPO FCFS scheduler at {getTime(sim)}...')
+        backend = backend_for(sim)
+        print(f'Starting HPO FCFS scheduler at {backend.now()}...')
 
         # Start a thread to periodically compute resource utilization
         if sim:
@@ -68,13 +70,13 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
                     constraints = getConstraintsFromWorkflow(wf_plan)
                     ips, alloc_resources = self.allocateResourcesHPO(constraints, sim)
-                    print(f"{wf_plan['id']} allocated at {getTime(sim)}:", ips)
+                    print(f"{wf_plan['id']} allocated at {backend.now()}:", ips)
 
                     # Remove the element if we found the resources needed.
                     if ips:
                         removeElement(wf_mb, self.queue)
                         # NOTE: We start billing at this point
-                        start_time = getTime(sim)
+                        start_time = backend.now()
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
@@ -83,7 +85,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
                         self.resource_manager.setResourcesAvailable(False)
                         print('No HPO resources to allocate, waiting...')
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     def allocateResourcesHPO(self, constraints, sim=None):
         """

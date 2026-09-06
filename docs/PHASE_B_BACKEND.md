@@ -101,9 +101,17 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   `tests/regression/baseline_all_policies.json`, with a test that compares them
   exactly. The current tree reproduces the tagged cells, so this baseline is the
   tag's behaviour for every policy, not just three. No framework change.
-* **B1. Clock.** `backend.now()` / `backend.sleep()` replace the 203 clock
-  sites. `sim` is still passed, but only to build the backend. Mechanical;
-  behaviour identical by construction.
+* **B1. Clock** (done 2026-09-06). `elastiflow/execution/backend.py` defines
+  `ExecutionBackend` (clock operations for now), `SimulatedBackend(sim)`,
+  `LiveBackend`, and the bridge `backend_for(sim)`. All 192 code sites (plus 3
+  in comments) in 59 functions across 32 files now read `backend.now()` /
+  `backend.sleep()`, where `backend = backend_for(sim)` is a local bound from the
+  function's `sim` parameter, or, in the three functions that fetch `sim` from
+  the workflow registry, right after that binding. `utils/sim.getTime` is
+  retired; a missed site fails at import. The licence manager's clock arrives
+  as `backend.now()` from its five callers (`set_sim_time`); owning a backend
+  reference comes with injection in B6. Gate: regression 11/11, smoke against
+  the B0 baseline.
 * **B2. Channels and messages.** The three `Channel`s replace the mailbox/queue
   pairs and the 8 send sites; `start_workflow` / `notify_resources` replace the
   13 `sim.process`-or-HTTP pairs; `spawn` replaces the 19 sampler starts.
