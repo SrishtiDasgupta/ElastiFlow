@@ -6,7 +6,6 @@ from typing import List
 
 from elastiflow.config.constants_HPO import (
     COLD_START_TIME,
-    WORKFLOW_POLLING,
     MIN_TRIALS,
     MAX_TRIALS,
     DEADLINE_BUFFER,
@@ -19,7 +18,7 @@ import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
+from elastiflow.utils.resource import getEstimate
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 from elastiflow.utils import negotiation_log
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO_Elastic
@@ -41,71 +40,36 @@ class FCFS_Optimized_HPO(Scheduler_HPO_Elastic):
         self.resource_manager.sortResourcesByFunction(func)
         super().__init__(queue, finish_queue, resource_request_queue)
 
-    def run(self, backend):
+    def printBanner(self, backend):
         print(f'Starting HPO Moldable FCFS scheduler...')
 
-        # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
+    def serviceResourceRequests(self, backend) -> bool:
+        # Check queue for moldable resource requests
+        resource_request = backend.resource_requests.peek()
+        if not resource_request:
+            return False
+        # Process moldable resource requests
+        start = time.time()
+        resource_request = eval(resource_request)
+        try:
+            _rt_label = 'grow' if resource_request.get('request') == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
+            negotiation_log.log('scheduler',
+                                wf_id=resource_request.get('wf-id', '?'),
+                                iter_idx=resource_request.get('iteration', ''),
+                                request_type=_rt_label,
+                                t_scheduler_request_observed=time.time())
+        except Exception as _e:
+            print(f'[negotiation_log] obs parse fail: {_e}')
+        if backend.now() - resource_request['request-time'] > 300:  # 5 min timeout
+            backend.resource_requests.pop()
+            return True
+        self.processMoldableRequestHPO(resource_request, backend)
+        print(f"HPO Moldable resource processing overhead: {time.time() - start}")
+        backend.resource_requests.pop()
+        return True
 
-        while True:
-
-            # Check queue for moldable resource requests
-            resource_request = backend.resource_requests.peek()
-
-            if resource_request:
-                # Process moldable resource requests
-                start = time.time()
-                resource_request = eval(resource_request)
-                try:
-                    _rt_label = 'grow' if resource_request.get('request') == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
-                    negotiation_log.log('scheduler',
-                                        wf_id=resource_request.get('wf-id', '?'),
-                                        iter_idx=resource_request.get('iteration', ''),
-                                        request_type=_rt_label,
-                                        t_scheduler_request_observed=time.time())
-                except Exception as _e:
-                    print(f'[negotiation_log] obs parse fail: {_e}')
-                if backend.now() - resource_request['request-time'] > 300:  # 5 min timeout
-                    backend.resource_requests.pop()
-                    continue
-                self.processMoldableRequestHPO(resource_request, backend)
-                print(f"HPO Moldable resource processing overhead: {time.time() - start}")
-                backend.resource_requests.pop()
-                continue
-
-            # Check the queue for new jobs
-            workflow_plan = backend.workflows.peek()
-
-            if workflow_plan:
-                wf_plan = eval(workflow_plan) # Convert string back to dictionary
-
-                # End the simulation and compute metrics
-                if wf_plan['id'] == 'END':
-                    backend.workflows.pop()
-                    self.metrics.computeMetrics(file_prefix=self.file_prefix)
-                    break
-
-                # Moldable scheduling
-                if self.resource_manager.getResourcesAvailable():
-
-                    constraints = getConstraintsFromWorkflow(wf_plan)
-                    ips, alloc_resources = self.allocateResourcesMoldableHPO(constraints, backend)
-                    print(f"{wf_plan['id']} moldable allocation: ", ips)
-
-                    # Remove the element if we found the resources needed.
-                    if ips:
-                        backend.workflows.pop()
-                        # NOTE: We start billing at this point
-                        start_time = backend.now()
-                        self.sendWorkflowForExecutionHPO(wf_plan, ips, backend, constraints['deadline'])
-                        wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
-                        self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
-                    else:
-                        # Wait until resources become available
-                        self.resource_manager.setResourcesAvailable(False)
-                        print('No HPO moldable resources to allocate, waiting...')
-
-            backend.sleep(WORKFLOW_POLLING)
+    def printAllocation(self, wf_plan, ips, backend, constraints=None):
+        print(f"{wf_plan['id']} moldable allocation: ", ips)
 
     def processMoldableRequestHPO(self, request, backend):
         """

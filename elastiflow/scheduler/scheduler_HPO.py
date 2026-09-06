@@ -2,11 +2,11 @@ import math
 import time
 from typing import List
 
-from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, COLD_START_TIME, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD
+from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, COLD_START_TIME, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
 from elastiflow.scripts.create_instance_HPO import createWorkerInstances, deleteInstanceFromIp
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 from elastiflow.utils.metrics_HPO import MetricsHPO
-from elastiflow.utils.resource import getEstimate
+from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.resource_manager.instance import Instance, OnPremInstance
 from elastiflow.utils import negotiation_log
 from elastiflow.utils.request import ExecutorRequest, getConfig, sendRequest
@@ -31,6 +31,8 @@ class Scheduler_HPO(Scheduler):
     policy_label = ''           # 'EDF ' in the EDF policies: their log lines say so
     mode_label = ''             # 'Moldable ' in the elastic layer
     moldable_request = False    # the elastic layer flags its start requests
+    polling = WORKFLOW_POLLING
+    wait_mode = ''              # 'moldable ' in the elastic layer (the wait line)
 
     def processJobCompletion(self, backend):
         print('HPO Scheduler started listening to completed jobs...')
@@ -247,6 +249,41 @@ class Scheduler_HPO(Scheduler):
 
         # Send to executor
         backend.start_workflow(request, executor_ip)
+
+    # ------------------------------------------------------------------
+    # The request loop's hooks for the HPO policies (B7.4): one admission
+    # body with the layer's allocation and the policy's log lines; metrics
+    # written under the policy's file prefix.
+    # ------------------------------------------------------------------
+    def finish(self, wf_plan, backend):
+        # End the simulation and compute metrics
+        self.dropWorkflow(backend)
+        self.metrics.computeMetrics(file_prefix=self.file_prefix)
+
+    def allocateForAdmission(self, constraints, backend):
+        raise NotImplementedError
+
+    def admit(self, wf_plan, backend):
+        # Scheduling
+        if self.resource_manager.getResourcesAvailable():
+            constraints = getConstraintsFromWorkflow(wf_plan)
+            ips, alloc_resources = self.allocateForAdmission(constraints, backend)
+            self.printAllocation(wf_plan, ips, backend, constraints)
+            # Remove the element if we found the resources needed.
+            if ips:
+                self.dropWorkflow(backend)
+                # NOTE: We start billing at this point
+                start_time = backend.now()
+                self.sendWorkflowForExecutionHPO(wf_plan, ips, backend, constraints['deadline'])
+                wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
+                self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
+            else:
+                # Wait until resources become available
+                self.resource_manager.setResourcesAvailable(False)
+                print(f'No HPO {self.policy_label}{self.wait_mode}resources to allocate, waiting...')
+
+    def printAllocation(self, wf_plan, ips, backend, constraints=None):
+        print(f"{wf_plan['id']} allocated at {backend.now()}:", ips)
 
 
 # ---------------------------------------------------------------------------
@@ -483,6 +520,15 @@ class Scheduler_HPO_Static(Scheduler_HPO):
         print(f"Selected: {best_num_hosts} × {best_instance_type} for {trials} trials (cost: ${best_cost:.2f}, runtime: {best_runtime:.0f}s)")
         return (best_instance_type, best_num_hosts)
 
+    scheduler_overhead = False    # the static loops charge nothing after an (ignored) request
+
+    def handleRequest(self, request, backend):
+        # Static scheduler - limited resource request handling
+        print(f"HPO {self.policy_label}Static Scheduler: Resource request received but ignored (static mode)")
+
+    def allocateForAdmission(self, constraints, backend):
+        return self.allocateResourcesHPO(constraints, backend)
+
 
 class Scheduler_HPO_Elastic(Scheduler_HPO):
     """The elastic HPO policies (Elastic-FCFS, Elastic-EDF): on-demand workers
@@ -492,6 +538,7 @@ class Scheduler_HPO_Elastic(Scheduler_HPO):
 
     mode_label = 'Moldable '
     moldable_request = True
+    wait_mode = 'moldable '
 
     def _runtimeFunctionFor(self, instance_type):
         """The runtime model checkNewResourcesHPO uses for a cloud scale-up of
@@ -1032,3 +1079,6 @@ class Scheduler_HPO_Elastic(Scheduler_HPO):
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
             self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())
+
+    def allocateForAdmission(self, constraints, backend):
+        return self.allocateResourcesMoldableHPO(constraints, backend)

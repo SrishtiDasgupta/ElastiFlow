@@ -22,7 +22,6 @@ from typing import List
 
 from elastiflow.config.constants_HPO import (
     COLD_START_TIME,
-    WORKFLOW_POLLING,
     MIN_TRIALS,
     MAX_TRIALS,
     DEADLINE_BUFFER,
@@ -35,7 +34,7 @@ import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
+from elastiflow.utils.resource import getEstimate
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 from elastiflow.utils import negotiation_log
 from elastiflow.scheduler.scheduler import EDFOrderingMixin
@@ -71,105 +70,79 @@ class EDF_Optimized_HPO(EDFOrderingMixin, Scheduler_HPO_Elastic):
 
         super().__init__(queue, finish_queue, resource_request_queue)
 
-    def run(self, backend):
+    def printBanner(self, backend):
         print(f'Starting HPO Moldable EDF scheduler...')
         print(f'  - EDF ordering: Workflows prioritized by earliest deadline')
         print(f'  - Moldable: Dynamic resource reallocation between iterations')
         print(f'  - Deadline urgency boost: CRITICAL 2.0x, WARNING 1.5x, Regular 1.2x')
 
-        # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
+    def serviceResourceRequests(self, backend) -> bool:
+        # === PHASE 1: Process resource requests sorted by deadline ===
+        resource_requests = backend.resource_requests.pop_many(None)
 
-        while True:
-
-            # === PHASE 1: Process resource requests sorted by deadline ===
-            resource_requests = backend.resource_requests.pop_many(None)
-
-            if resource_requests:
-                t_obs = time.time()
-                for _raw in resource_requests:
-                    try:
-                        _rd = eval(_raw)
-                        _rt_label = 'grow' if _rd.get('request') == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
-                        negotiation_log.log('scheduler',
-                                            wf_id=_rd.get('wf-id', '?'),
-                                            iter_idx=_rd.get('iteration', ''),
-                                            request_type=_rt_label,
-                                            t_scheduler_request_observed=t_obs)
-                    except Exception as _e:
-                        print(f'[negotiation_log] obs parse fail: {_e}')
-                self.processResourceRequestsByDeadline(resource_requests)
-
-            resource_request = self.peekWorkflow(self.resource_request_heap)
-
-            if resource_request:
-                start = time.time()
-                if backend.now() - resource_request['request-time'] > 300:  # 5 min timeout
-                    self.popWorkflow(self.resource_request_heap)
-                    # NOTE: do NOT pop from resource_request_queue. getAllElements
-                    # already drained it when we heap-pushed (same data5-bug pattern).
-                    continue
-                self.processMoldableRequestHPO(resource_request, backend)
-                print(f"  HPO EDF Moldable resource processing overhead: {time.time() - start}")
-                self.popWorkflow(self.resource_request_heap)
-                # NOTE: see above — queue was already drained, do not LPOP here.
-                continue
-
-            # === PHASE 2: Schedule new workflows in EDF order ===
-            workflows = backend.workflows.pop_many(None)
-
-            if workflows:
-                # Defensive log: which wfs just left the queue?
+        if resource_requests:
+            t_obs = time.time()
+            for _raw in resource_requests:
                 try:
-                    drained_ids = [eval(w).get('id', '?') for w in workflows]
-                except Exception as e:
-                    drained_ids = [f'<eval-error: {e}>']
-                print(f"[SCHED] Drained {len(workflows)} wf(s) from queue: {drained_ids}")
-                self.processWorkflowsByDeadline(workflows)
+                    _rd = eval(_raw)
+                    _rt_label = 'grow' if _rd.get('request') == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
+                    negotiation_log.log('scheduler',
+                                        wf_id=_rd.get('wf-id', '?'),
+                                        iter_idx=_rd.get('iteration', ''),
+                                        request_type=_rt_label,
+                                        t_scheduler_request_observed=t_obs)
+                except Exception as _e:
+                    print(f'[negotiation_log] obs parse fail: {_e}')
+            self.processResourceRequestsByDeadline(resource_requests)
 
-            wf_plan = self.peekWorkflow(self.workflow_heap)
+        resource_request = self.peekWorkflow(self.resource_request_heap)
+        if not resource_request:
+            return False
+        start = time.time()
+        if backend.now() - resource_request['request-time'] > 300:  # 5 min timeout
+            self.popWorkflow(self.resource_request_heap)
+            # NOTE: do NOT pop from resource_request_queue. getAllElements
+            # already drained it when we heap-pushed (same data5-bug pattern).
+            return True
+        self.processMoldableRequestHPO(resource_request, backend)
+        print(f"  HPO EDF Moldable resource processing overhead: {time.time() - start}")
+        self.popWorkflow(self.resource_request_heap)
+        # NOTE: see above — queue was already drained, do not LPOP here.
+        return True
 
-            if wf_plan:
+    def nextWorkflow(self, backend):
+        # === PHASE 2: Schedule new workflows in EDF order ===
+        workflows = backend.workflows.pop_many(None)
 
-                # End the simulation and compute metrics
-                if wf_plan['id'] == 'END':
-                    self.popWorkflow(self.workflow_heap)
-                    # NOTE: do NOT pop from wf_queue here. getAllElements already drained
-                    # the wf out of the queue when we heap-pushed it. A trailing
-                    # queue.pop() here LPOPs whatever happens to be at the head right
-                    # now — which, if a new wf was pushed during a slow allocation,
-                    # silently discards that new wf (the data5-disappears bug from R3/R7).
-                    self.metrics.computeMetrics(file_prefix=self.file_prefix)
-                    break
+        if workflows:
+            # Defensive log: which wfs just left the queue?
+            try:
+                drained_ids = [eval(w).get('id', '?') for w in workflows]
+            except Exception as e:
+                drained_ids = [f'<eval-error: {e}>']
+            print(f"[SCHED] Drained {len(workflows)} wf(s) from queue: {drained_ids}")
+            self.processWorkflowsByDeadline(workflows)
 
-                # Moldable scheduling
-                if self.resource_manager.getResourcesAvailable():
+        return self.peekWorkflow(self.workflow_heap)
 
-                    constraints = getConstraintsFromWorkflow(wf_plan)
-                    ips, alloc_resources = self.allocateResourcesMoldableHPO(constraints, backend)
-                    print(f"{wf_plan['id']} EDF moldable allocation (deadline={constraints['deadline']:.1f}s): ", ips)
+    def dropWorkflow(self, backend):
+        self.popWorkflow(self.workflow_heap)
+        # NOTE: do NOT pop from wf_queue here. getAllElements already drained
+        # the wf out of the queue when we heap-pushed it. A trailing
+        # queue.pop() here LPOPs whatever happens to be at the head right
+        # now — which, if a new wf was pushed during a slow allocation,
+        # silently discards that new wf (the data5-disappears bug from R3/R7).
 
-                    if ips:
-                        self.popWorkflow(self.workflow_heap)
-                        # NOTE: see END branch above — wf_queue.pop() here would
-                        # silently discard any newly-arrived wf. The wf was already
-                        # drained from the queue when it landed in the heap.
-                        start_time = backend.now()
-                        self.sendWorkflowForExecutionHPO(wf_plan, ips, backend, constraints['deadline'])
-                        wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
-                        self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
-                    else:
-                        self.resource_manager.setResourcesAvailable(False)
-                        print('No HPO EDF moldable resources to allocate, waiting...')
+    def printAllocation(self, wf_plan, ips, backend, constraints=None):
+        print(f"{wf_plan['id']} EDF moldable allocation (deadline={constraints['deadline']:.1f}s): ", ips)
 
-            # Periodic heap visibility (~ every 60s assuming WORKFLOW_POLLING=5s)
-            self._heap_log_counter += 1
-            if self._heap_log_counter >= 12:
-                heap_ids = [entry[2] for entry in self.workflow_heap]
-                print(f"[HEAP] size={len(self.workflow_heap)} ids={heap_ids}")
-                self._heap_log_counter = 0
-
-            backend.sleep(WORKFLOW_POLLING)
+    def endCycle(self, backend):
+        # Periodic heap visibility (~ every 60s assuming WORKFLOW_POLLING=5s)
+        self._heap_log_counter += 1
+        if self._heap_log_counter >= 12:
+            heap_ids = [entry[2] for entry in self.workflow_heap]
+            print(f"[HEAP] size={len(self.workflow_heap)} ids={heap_ids}")
+            self._heap_log_counter = 0
 
     # =========================================================================
     # EDF HEAP MANAGEMENT

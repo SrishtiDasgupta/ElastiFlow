@@ -19,15 +19,18 @@ import threading
 import time
 
 from elastiflow.config.constants import (
-    COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST,
-    OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR, RESOURCE_REQUEST_TIMEOUT,
-    SPEEDUP_THRESHOLD, WORKFLOW_POLLING
+    COLD_START_TIME,
+    DEADLINE_BUFFER,
+    MIN_INSTANCE_COST,
+    OPTIM_FCFS_BFACTOR,
+    OPTIM_FCFS_DFACTOR,
+    RESOURCE_REQUEST_TIMEOUT,
+    SPEEDUP_THRESHOLD,
 )
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
 from elastiflow.resource_manager.license.manager import LicenseManager
-from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.utils.resource import getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA_Elastic
 
@@ -56,177 +59,91 @@ class FCFS_Optimized_LA(Scheduler_LA_Elastic):
         # LAMF is moldable (dynamic resource scaling)
         self.is_moldable = True
 
+    metrics_prefix = 'LAMF_'
+
+    def printBanner(self, backend):
+        print(f'Starting LAMF (License-Aware Moldable FCFS) Scheduler...')
+
+    def serviceResourceRequests(self, backend) -> bool:
+        # Check queue for resource requests (moldable requests from executors)
+        resource_request = backend.resource_requests.peek()
+        if not resource_request:
+            return False
+        start = time.time()
+        resource_request = eval(resource_request)
+
+        # Timeout check
+        if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+            backend.resource_requests.pop()
+            return True
+
+        # Process moldable request (with license awareness)
+        self.processFreeRequestWithLicenses(resource_request, backend)
+
+        print(f"⏱ Resource request overhead: {time.time() - start:.3f}s")
+        backend.resource_requests.pop()
+        return True
+
+    def computeFinalMetrics(self, backend):
+        from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
+        # Honest billing verification: ledger (Token-Hours) per pool.
+        _fs = self.ledgerNow(backend)
+        _bp = self.license_manager.license_cost_by_pool(_fs)
+        print(f"[HONEST-BILL] ledger license cost by pool @backend={_fs:.0f}: "
+              f"LSDYNA €{_bp.get('LSDYNA',0):.0f}  ABAQUS €{_bp.get('ABAQUS',0):.0f}  "
+              f"ANSYS €{_bp.get('ANSYS',0):.0f}  TOTAL €{sum(_bp.values()):.0f}")
+        self.metrics.computeMetrics(
+            file_prefix=f'LAMF_{TOTAL_WORKFLOWS}_',
+            license_cost_by_owner=self.license_manager.license_cost_by_owner(_fs))
+
+    def printAllocation(self, wf_plan, ips, backend, constraints=None):
+        print(f"✓ {wf_plan['id']} allocated:", ips)
+
+    def afterAdmission(self, wf_plan, alloc_resources, license_holds):
+        # FIX #1: Track initial allocation in scheduler's license_holds
+        # This ensures both tracking systems (Scheduler and ResourceManager) are synchronized from the start
+        if license_holds:
+            self.license_holds[wf_plan['id']] = license_holds
+
+        # Track initial allocation in moldability metrics (BUG FIX #1)
+        instances_added = sum(count for _, count, _ in alloc_resources)
+        cores_added = sum(inst.cores * count for inst, count, _ in alloc_resources)
+
+        # Calculate actual license tokens from holds
+        licenses_acquired = 0
+        if license_holds:
+            for hold_id in license_holds:
+                if hold_id in self.license_manager.allocations:
+                    licenses_acquired += self.license_manager.allocations[hold_id].amount
+
+        # Record as initial "scale-up" (iteration 0 allocation)
+        self.metrics.recordScaleUpAttempt(
+            success=True,
+            instances_added=instances_added,
+            cores_added=cores_added,
+            licenses_acquired=licenses_acquired,
+            workflow_id=wf_plan['id']
+        )
+        print(f"  📊 Tracked initial allocation: {instances_added} instances, {cores_added} cores, {licenses_acquired} licenses")
+
+    def wait(self, wf_plan, constraints, backend):
+        # Check if ANY compute resources are available
+        available_resources = self.resource_manager.getResources()
+        has_available_compute = any(r.getFreeSlots() > 0 for r in available_resources)
+
+        if not has_available_compute:
+            # Compute resources exhausted - block queue
+            self.resource_manager.setResourcesAvailable(False)
+            print(f'⏳ {wf_plan["id"]} waiting for compute resources...')
+        else:
+            # Temporary license shortage - don't block, just skip this workflow
+            # It will retry on next polling cycle
+            print(f'⏳ {wf_plan["id"]} insufficient licenses ({constraints.get("license_pool", "unknown")}), will retry...')
+            # Don't remove from queue - will retry later
+
     def _feasibilityChains(self, request) -> int:
         # FCFS-LAMF sizes licence feasibility with a single chain (EDF-LAMF uses the workflow's).
         return 1
-
-    def run(self, backend):
-        print(f'Starting LAMF (License-Aware Moldable FCFS) Scheduler...')
-
-        # Track workflows that are impossible to allocate (prevent infinite retries)
-        rejected_workflows = set()
-
-        # Start resource utilization collection (including license pools)
-        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager, self.license_manager)
-
-        while True:
-
-            # Advance the license ledger clock to current backend time so every token
-            # hold/release this cycle is billed at the correct backend timestamp.
-            if backend.simulated:
-                self.license_manager.set_sim_time(backend.now())
-
-            # Check queue for resource requests (moldable requests from executors)
-            resource_request = backend.resource_requests.peek()
-
-            if resource_request:
-                start = time.time()
-                resource_request = eval(resource_request)
-
-                # Timeout check
-                if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
-                    backend.resource_requests.pop()
-                    continue
-
-                # Process moldable request (with license awareness)
-                self.processFreeRequestWithLicenses(resource_request, backend)
-
-                print(f"⏱ Resource request overhead: {time.time() - start:.3f}s")
-                backend.resource_requests.pop()
-                continue
-
-            # Check the queue for new jobs
-            workflow_plan = backend.workflows.peek()
-
-            if workflow_plan:
-                wf_plan = eval(workflow_plan)
-
-                # End simulation
-                if wf_plan['id'] == 'END':
-                    backend.workflows.pop()
-                    from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
-                    # Honest billing verification: ledger (Token-Hours) per pool.
-                    _fs = backend.now() if backend.simulated else self.license_manager.sim_now
-                    _bp = self.license_manager.license_cost_by_pool(_fs)
-                    print(f"[HONEST-BILL] ledger license cost by pool @backend={_fs:.0f}: "
-                          f"LSDYNA €{_bp.get('LSDYNA',0):.0f}  ABAQUS €{_bp.get('ABAQUS',0):.0f}  "
-                          f"ANSYS €{_bp.get('ANSYS',0):.0f}  TOTAL €{sum(_bp.values()):.0f}")
-                    self.metrics.computeMetrics(
-                        file_prefix=f'LAMF_{TOTAL_WORKFLOWS}_',
-                        license_cost_by_owner=self.license_manager.license_cost_by_owner(_fs))
-                    break
-
-                # Skip workflows that have been rejected as impossible
-                if wf_plan['id'] in rejected_workflows:
-                    backend.workflows.pop()
-                    print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
-                    continue
-
-                # Scheduling
-                if self.resource_manager.getResourcesAvailable():
-
-                    constraints = getConstraintsFromWorkflow(wf_plan)
-
-                    # Allocate BOTH compute and licenses
-                    ips, alloc_resources, license_holds = self.allocateResourcesWithLicenses(constraints)
-
-                    if ips:
-                        print(f"✓ {wf_plan['id']} allocated:", ips)
-                        if license_holds:
-                            print(f"  with {len(license_holds)} license hold(s)")
-
-                        backend.workflows.pop()
-
-                        # Start billing
-                        start_time = backend.now()
-
-                        # Send to executor
-                        self.sendWorkflowForExecution(
-                            wf_plan, ips, backend, constraints['deadline'], license_holds
-                        )
-
-                        # Track workflow with licenses
-                        wf = self.resource_manager.addWorkflow(
-                            wf_plan['id'],
-                            alloc_resources,
-                            constraints['budget'],
-                            constraints['deadline'],
-                            start_time,
-                            constraints['mesh'],
-                            constraints.get('software_id', 0),
-                            license_holds
-                        )
-
-                        self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
-
-                        # FIX #1: Track initial allocation in scheduler's license_holds
-                        # This ensures both tracking systems (Scheduler and ResourceManager) are synchronized from the start
-                        if license_holds:
-                            self.license_holds[wf_plan['id']] = license_holds
-
-                        # Track initial allocation in moldability metrics (BUG FIX #1)
-                        instances_added = sum(count for _, count, _ in alloc_resources)
-                        cores_added = sum(inst.cores * count for inst, count, _ in alloc_resources)
-
-                        # Calculate actual license tokens from holds
-                        licenses_acquired = 0
-                        if license_holds:
-                            for hold_id in license_holds:
-                                if hold_id in self.license_manager.allocations:
-                                    licenses_acquired += self.license_manager.allocations[hold_id].amount
-
-                        # Record as initial "scale-up" (iteration 0 allocation)
-                        self.metrics.recordScaleUpAttempt(
-                            success=True,
-                            instances_added=instances_added,
-                            cores_added=cores_added,
-                            licenses_acquired=licenses_acquired,
-                            workflow_id=wf_plan['id']
-                        )
-                        print(f"  📊 Tracked initial allocation: {instances_added} instances, {cores_added} cores, {licenses_acquired} licenses")
-
-                    else:
-                        # Allocation failed - could be compute OR licenses
-                        # Check if this is an impossible allocation (exceeds pool capacity)
-
-                        # Calculate required licenses to check if impossible
-                        license_pool = constraints.get('license_pool')
-                        if license_pool:
-                            # Get hypothetical instance allocation
-                            instances = self.resource_manager.getResources()
-                            count, instance_list = self.checkResources(instances, constraints['min_instances'])
-
-                            if count >= constraints['min_instances']:
-                                total_cores = sum(inst.cores * cnt for inst, cnt in instance_list)
-                                licenses_needed = self.license_manager.calculate_tokens(
-                                    pool=license_pool,
-                                    cores=total_cores,
-                                    chains=constraints.get('chains', 1)
-                                )
-                                pool_status = self.license_manager.get_pool_status(license_pool)
-
-                                if licenses_needed > pool_status['total']:
-                                    # Impossible allocation - reject permanently
-                                    rejected_workflows.add(wf_plan['id'])
-                                    print(f'⊘ {wf_plan["id"]} REJECTED - needs {licenses_needed} tokens, pool has {pool_status["total"]}')
-                                    # Will be removed from queue on next iteration
-                                    continue
-
-                        # Check if ANY compute resources are available
-                        available_resources = self.resource_manager.getResources()
-                        has_available_compute = any(r.getFreeSlots() > 0 for r in available_resources)
-
-                        if not has_available_compute:
-                            # Compute resources exhausted - block queue
-                            self.resource_manager.setResourcesAvailable(False)
-                            print(f'⏳ {wf_plan["id"]} waiting for compute resources...')
-                        else:
-                            # Temporary license shortage - don't block, just skip this workflow
-                            # It will retry on next polling cycle
-                            print(f'⏳ {wf_plan["id"]} insufficient licenses ({constraints.get("license_pool", "unknown")}), will retry...')
-                            # Don't remove from queue - will retry later
-
-            backend.sleep(WORKFLOW_POLLING)
 
     def processFreeRequestWithLicenses(self, request, backend):
         """
