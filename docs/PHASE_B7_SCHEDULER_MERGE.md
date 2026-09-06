@@ -2,7 +2,8 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 to B7.3 and B7.5 to B7.7 are done; B7.4 is not applied yet. Every figure below was measured on that commit with
+end. B7.0 to B7.3 and B7.5 to B7.7 are done; B7.4 is in progress (the SeisSol
+family is on the skeleton). Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -452,6 +453,23 @@ subclass of the engine's with its own constructor, subprocess runner and
 (recognition of the three sample plans and the adaptive flag, the hand-over
 rules, the engine building each use case's actions, the input reader
 reached through the registry), default suite (219), smoke, all exact.
+
+**B7.4, SeisSol (2026-09-06).** The request loop is one method of
+`Scheduler`: banner, monitoring, per-run state, then per cycle a `beginCycle`
+hook that may end the run, `serviceResourceRequests` (True when a request was
+served, which restarts the cycle without sleeping, as the loops' `continue`
+did), `nextWorkflow`, the END sentinel through `finish`, `skipWorkflow`,
+`admit`, `endCycle`, and the polling sleep. The base's defaults are the
+static FCFS loop; `Scheduler_Ordered` is the six SeisSol policies that keep
+their heaps in the HEFT resource manager (draining the channel into the heap
+each cycle, admitting the head without the availability flag, purging what
+can no longer finish), with `orderWorkflows` and `orderRequests` as the
+policy's two lines and `request_heap` saying whether requests are heap-served.
+Elastic-FCFS keeps its own request phase (timeout drop, no overhead charge),
+FCFS-ST its two log lines, Elastic-Rank charges no scheduler overhead, as
+before. All eight SeisSol `run` methods are gone (about 490 lines for about
+150 of hooks). Arbiter: the smoke suite, exact on all 15 SeisSol cells (the
+11 cited and the 4 uncited); default suite 219.
 
 ## Method
 

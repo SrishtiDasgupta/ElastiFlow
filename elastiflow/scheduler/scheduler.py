@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 import heapq
 import math
 import time
@@ -8,11 +8,11 @@ from elastiflow.config.constants import (
     AVG_WORKFLOW_ITERATIONS, CHAINS_PER_NODE, CLOSENESS_TOLERANCE, COLD_START_TIME,
     DEADLINE_BUFFER, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME,
     OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR,
-    RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD,
+    RESOURCE_REQUEST_TIMEOUT, SORT_COUNT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING,
 )
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.utils.metrics import Metrics
-from elastiflow.utils.resource import getEstimate
+from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
 
@@ -25,6 +25,8 @@ class Scheduler(ABC):
     metrics_class = Metrics     # the family's metrics (MetricsLA, MetricsHPO in the subclasses)
     log_prefix = ''             # 'HPO ' in the HPO layer: its log lines carry the prefix
     request_timeout = RESOURCE_REQUEST_TIMEOUT   # the HPO layer binds its own (720 s)
+    polling = WORKFLOW_POLLING                    # the request loop's sleep between cycles
+    scheduler_overhead = True                     # simulated: 0.2 s charged after a handled request
 
     def __init__(self, queue, finish_queue, resource_request_queue):
         self.queue = queue
@@ -32,8 +34,105 @@ class Scheduler(ABC):
         self.resource_request_queue = resource_request_queue
         self.metrics = self.metrics_class()
 
-    @abstractmethod
+    # ------------------------------------------------------------------
+    # The request loop (B7.4). One skeleton for every policy; a policy fills
+    # the hooks. The defaults below are the static FCFS loop of the SeisSol
+    # family: requests served by type from the channel, workflows admitted in
+    # arrival order behind the resource manager's availability flag.
+    # ------------------------------------------------------------------
     def run(self, backend):
+        self.printBanner(backend)
+        self.startMonitoring(backend)
+        self.beforeLoop(backend)
+        while True:
+            if self.beginCycle(backend):        # a policy may end the run here
+                break
+            if self.serviceResourceRequests(backend):
+                continue
+            wf_plan = self.nextWorkflow(backend)
+            if wf_plan:
+                if wf_plan['id'] == 'END':
+                    self.finish(wf_plan, backend)
+                    break
+                if self.skipWorkflow(wf_plan, backend):
+                    continue
+                self.admit(wf_plan, backend)
+            self.endCycle(backend)
+            backend.sleep(self.polling)
+
+    def printBanner(self, backend):
+        print(f'Starting scheduler...')
+
+    def startMonitoring(self, backend):
+        # Start a thread to periodically compute resource utilization
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
+
+    def beforeLoop(self, backend):
+        pass
+
+    def beginCycle(self, backend) -> bool:
+        return False
+
+    def serviceResourceRequests(self, backend) -> bool:
+        """Serve one resource request from the channel; True when one was served
+        (the loop then starts a new cycle without sleeping)."""
+        resource_request = backend.resource_requests.peek()
+        if not resource_request:
+            return False
+        resource_request = eval(resource_request)
+        self.handleRequest(resource_request, backend)
+        backend.resource_requests.pop()
+        self.scheduler_overhead and backend.simulated and backend.sleep(0.2) # NOTE: scheduler overhead
+        return True
+
+    def handleRequest(self, request, backend):
+        # Allocate new resources, or free them, as the request says
+        if request['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
+            self.allocateNewResources(request, backend)
+        else:
+            self.freeResources(request, backend)
+
+    def nextWorkflow(self, backend):
+        """The workflow to consider this cycle, or None."""
+        workflow_plan = backend.workflows.peek()
+        return eval(workflow_plan) if workflow_plan else None   # Convert string back to dictionary
+
+    def dropWorkflow(self, backend):
+        """Take the workflow returned by nextWorkflow out of the queue."""
+        backend.workflows.pop()
+
+    def finish(self, wf_plan, backend):
+        # End the simulation and compute metrics
+        self.dropWorkflow(backend)
+        self.metrics.computeMetrics()
+
+    def skipWorkflow(self, wf_plan, backend) -> bool:
+        return False
+
+    def admit(self, wf_plan, backend):
+        # Scheduling
+        if self.resource_manager.getResourcesAvailable():
+            constraints = getConstraintsFromWorkflow(wf_plan)
+            ips, alloc_resources = self.allocateResources(constraints)
+            self.printAllocation(wf_plan, ips, backend)
+            # Remove the element if we found the resources needed.
+            if ips:
+                self.dropWorkflow(backend)
+                # NOTE: We start billing at this point
+                start_time = backend.now()
+                self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
+                wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
+                self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
+            else:
+                # Wait until resources become available
+                self.resource_manager.setResourcesAvailable(False)
+                # NOTE: Can also suspend process and resume when resources are available again
+                print('No resources to allocate, waiting...')
+
+    def printAllocation(self, wf_plan, ips, backend):
+        print(f"{wf_plan['id']} allocated: ", ips)
+
+    def endCycle(self, backend):
         pass
 
     def allocateResources(self, constraints):
@@ -486,3 +585,72 @@ class EDFOrderingMixin:
                 deadline = wf_plan['submit_time'] + wf_plan['constraints']['deadline']
                 heapq.heappush(self.workflow_heap, (deadline, self.workflow_counter, wf_plan['id'], wf_plan))
             self.workflow_counter += 1
+
+
+class Scheduler_Ordered(Scheduler):
+    """The SeisSol policies that order the queue in the HEFT resource manager's
+    heaps (EDF, priority and HEFT orderings): the loop drains the channel into
+    the heap each cycle and admits the heap's head, without the availability
+    flag; requests either come from the channel (`request_heap` False) or are
+    drained into the request heap and served from there (B7.4)."""
+
+    request_heap = False
+
+    def orderWorkflows(self, workflows, backend):
+        raise NotImplementedError
+
+    def orderRequests(self, requests, backend):
+        raise NotImplementedError
+
+    def handleRequest(self, request, backend):
+        # Moldable scale-up / scale-down via rich base-class
+        # negotiation (processFreeRequest decides internally).
+        self.processFreeRequest(request, backend)
+
+    def serviceResourceRequests(self, backend) -> bool:
+        if not self.request_heap:
+            return super().serviceResourceRequests(backend)
+        rm = self.resource_manager
+        # Sort and update resource requests list
+        self.orderRequests(backend.resource_requests.pop_many(SORT_COUNT), backend)
+        resource_request = rm.peekWorkflow(rm.resource_request_heap)
+        if not resource_request:
+            return False
+        self.processFreeRequest(resource_request, backend)
+        rm.popWorkflow(rm.resource_request_heap)
+        self.scheduler_overhead and backend.simulated and backend.sleep(0.2) # NOTE: scheduler overhead
+        return True
+
+    def nextWorkflow(self, backend):
+        rm = self.resource_manager
+        # Retrieve all new jobs in the queue, sort and update workflow list
+        self.orderWorkflows(backend.workflows.pop_many(SORT_COUNT), backend)
+        # Check the processed queue for new jobs
+        return rm.peekWorkflow(rm.workflow_heap)
+
+    def dropWorkflow(self, backend):
+        rm = self.resource_manager
+        rm.popWorkflow(rm.workflow_heap)
+
+    def skipWorkflow(self, wf_plan, backend) -> bool:
+        # If workflow cannot be executed, pop it to prevent stagnation
+        if self.purgeWorkflow(wf_plan, backend):
+            self.dropWorkflow(backend)
+            return True
+        return False
+
+    def admit(self, wf_plan, backend):
+        # Scheduling
+        constraints = getConstraintsFromWorkflow(wf_plan)
+        ips, alloc_resources = self.allocateResources(constraints)
+        self.printAllocation(wf_plan, ips, backend)
+        # Remove the element if we found the resources needed.
+        if ips:
+            self.dropWorkflow(backend)
+            # NOTE: We start billing at this point
+            start_time = backend.now()
+            self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
+            wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
+            self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
+        else:
+            print('No resources to allocate, waiting...')

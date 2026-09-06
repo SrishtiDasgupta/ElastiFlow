@@ -4,11 +4,11 @@ import threading
 import time
 from typing import List
 
-from elastiflow.config.constants import CLOSENESS_TOLERANCE, COLD_START_TIME, MIN_INSTANCE_COST, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
+from elastiflow.config.constants import CLOSENESS_TOLERANCE, COLD_START_TIME, MIN_INSTANCE_COST, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.resource_manager.resource_manager import ResourceManager
-from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
+from elastiflow.utils.resource import getEstimate
 from elastiflow.scheduler.scheduler import Scheduler
 
 # If requested resources are available, they are granted. Else the workflow waits
@@ -21,73 +21,23 @@ class FCFS_Optimized(Scheduler):
         self.resource_manager.sortResourcesByFunction(func)
         super().__init__(queue, finish_queue, resource_request_queue)
 
-    def run(self, backend):
-        print(f'Starting scheduler...')
+    def serviceResourceRequests(self, backend) -> bool:
+        # Elastic-FCFS's request phase: a request older than the timeout is dropped,
+        # the others go to the moldable negotiation; no scheduler overhead is charged.
+        resource_request = backend.resource_requests.peek()
+        if not resource_request:
+            return False
+        # Allocate new resources
+        start = time.time()
+        resource_request = eval(resource_request)
+        if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+            backend.resource_requests.pop()
+            return True
+        self.processFreeRequest(resource_request, backend)
+        print(f"Resource stuff overhead: {time.time() - start}")
+        backend.resource_requests.pop()
+        return True
 
-        # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
-        
-        while True:
-
-            # Check queue for resource requests
-            resource_request = backend.resource_requests.peek()
-
-            if resource_request:
-                # Allocate new resources
-                start = time.time()
-                resource_request = eval(resource_request)
-                if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
-                    backend.resource_requests.pop()
-                    continue
-                self.processFreeRequest(resource_request, backend)
-                print(f"Resource stuff overhead: {time.time() - start}")
-                backend.resource_requests.pop()
-                continue
-            
-            # Check the queue for new jobs
-            # sched_start_time = time.time()
-            workflow_plan = backend.workflows.peek()
-
-            if workflow_plan:
-                wf_plan = eval(workflow_plan) # Convert string back to dictionary
-
-                # End the simulation and compute metrics
-                if wf_plan['id'] == 'END':
-                    backend.workflows.pop()
-                    self.metrics.computeMetrics()
-                    break 
-
-                # If workflow cannot be executed, pop it to prevent stagnation
-                # if self.purgeWorkflow(wf_plan, backend):
-                #     backend.workflows.pop()
-                #     self.resource_manager.setResourcesAvailable(True)
-                #     continue
-            
-                # Scheduling
-                if self.resource_manager.getResourcesAvailable():
-
-                    constraints = getConstraintsFromWorkflow(wf_plan)
-                    ips, alloc_resources = self.allocateResources(constraints)
-                    print(f"{wf_plan['id']} allocated: ", ips)
-                    # print("Sched overhead: ", time.time() - sched_start_time)              
-
-                    # Remove the element if we found the resources needed.
-                    if ips:
-                        backend.workflows.pop()
-                        # NOTE: We start billing at this point
-                        start_time = backend.now()
-                        self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
-                        wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
-                        self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
-                    else:
-                        # Wait until resources become available
-                        self.resource_manager.setResourcesAvailable(False)
-                        # NOTE: Can also suspend process and resume when resources are available again 
-                        print('No resources to allocate, waiting...')
-            
-            backend.sleep(WORKFLOW_POLLING)
-
-    
     # request = {"wf-id": wf_id, "count": n, "iteration": ind, "tinyda-iterations": m}
     # current_resources = {obj: (count, ip)}
     def checkNewResourcesMoldable(self, resources: List[Instance], current_resources: List[tuple[Instance, int, List]], budget: float, available_runtime: float, request, mesh) -> List[tuple[Instance, int]]:
