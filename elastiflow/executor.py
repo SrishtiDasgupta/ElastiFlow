@@ -1,5 +1,4 @@
 import threading
-from elastiflow.utils.sim import getTime
 from elastiflow.utils.exec_sched import setNewResources
 from elastiflow.scripts.create_instance import deleteInstanceFromIp
 from elastiflow.utils.request import getConfig, sendRequest
@@ -7,6 +6,7 @@ from elastiflow.workflow.steep_workflow import Steep_Workflow
 from elastiflow.server import server 
 from elastiflow.wf_queue.redis_queue import Redis_Queue
 from elastiflow.config.constants import SIMULATE
+from elastiflow.execution.backend import backend_for
 
 def processQueueData(queue):
     while True:
@@ -23,17 +23,18 @@ def processQueueData(queue):
 
 
 def executeWorklow(data, sim=None):
+    backend = backend_for(sim)
     workflow, hosts = Steep_Workflow(data.get('wf-plan'), sim, data.get('deadline')), data.get('hosts')
-    start_time = getTime(sim)
+    start_time = backend.now()
     print(f'Executing workflow {workflow.id} at {start_time}')
     new_hosts, isComplete = workflow.execute(hosts)
     # Tell scheduler workflow execution is complete
-    if SIMULATE: sim.sleep(7.7) #Executor overhead
+    if SIMULATE: backend.sleep(7.7) #Executor overhead
     request = {
         "wf-id": workflow.id,
         "hosts": new_hosts,
         "start-time": start_time,
-        "finish-time": getTime(sim),
+        "finish-time": backend.now(),
         "complete": isComplete
     }
     print(f"Workflow {workflow.id} complete at {request['finish-time']}")

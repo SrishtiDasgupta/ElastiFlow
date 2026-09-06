@@ -25,6 +25,7 @@ from elastiflow.config.constants_LA import (
 )
 from elastiflow.utils.validate_workflow import validate_workflow
 from elastiflow.config.paths import PACKAGE_DIR
+from elastiflow.execution.backend import backend_for
 
 
 def plotSubmitTimes(submitTimes):
@@ -189,11 +190,12 @@ def dispatcher_LA(sim, wf_mb):
         sim: Simulus simulator instance
         wf_mb: Mailbox name for workflow submissions
     """
+    backend = backend_for(sim)
     delays = delayGenerationFromSubmitTimes(TOTAL_WORKFLOWS)
     # Alternative: Use fixed delays for testing
     # delays = [1, 60, 60, 80, 100, 250, 300, 40, 120, 200, 150, 100]
 
-    print(f'Starting LAMF dispatcher for {TOTAL_WORKFLOWS} workflows at {sim.now}...')
+    print(f'Starting LAMF dispatcher for {TOTAL_WORKFLOWS} workflows at {backend.now()}...')
     print(f'All workflows require licenses (ANSYS/ABAQUS/LSDYNA)')
     print('')
     print(f'Temporal Scaling Configuration (Solution 4):')
@@ -203,12 +205,12 @@ def dispatcher_LA(sim, wf_mb):
     print('')
 
     for i in range(TOTAL_WORKFLOWS):
-        sim.sleep(delays[i])
-        print(f'[{sim.now:8.1f}s] Dispatching workflow {i}...')
+        backend.sleep(delays[i])
+        print(f'[{backend.now():8.1f}s] Dispatching workflow {i}...')
 
         workflow = fetchWorkflow(i)
         if workflow:
-            workflow['submit_time'] = sim.now
+            workflow['submit_time'] = backend.now()
             sim.sync().send(sim, wf_mb, str(workflow))
         else:
             print(f'  [✗] Failed to load workflow {i}, skipping')
@@ -223,9 +225,9 @@ def dispatcher_LA(sim, wf_mb):
     # which biases every metric. Do NOT shrink this value without verifying
     # `Incomplete workflows: 0` in the summary at the highest N tested.
     print('')
-    print(f'[{sim.now:8.1f}s] All workflows dispatched, waiting for completion...')
-    sim.sleep(5_000_000)  # generous: ~58 simulated days
-    print(f'[{sim.now:8.1f}s] Sending END signal')
+    print(f'[{backend.now():8.1f}s] All workflows dispatched, waiting for completion...')
+    backend.sleep(5_000_000)  # generous: ~58 simulated days
+    print(f'[{backend.now():8.1f}s] Sending END signal')
     sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', f"{PACKAGE_DIR}")))
 
 

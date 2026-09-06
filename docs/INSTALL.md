@@ -39,12 +39,16 @@ the launcher embeds an absolute path.
 
 ```
 vortex_venv/bin/python3 -m pytest            # unit + regression: about one minute
-vortex_venv/bin/python3 -m pytest -m smoke   # every simulated policy once: about seven minutes
+vortex_venv/bin/python3 -m pytest -m smoke   # every simulated policy once, compared exactly with the recorded baseline: about seven minutes
 ```
 
 The regression tests re-run one committed cell per campaign and compare every
 metric with the dataset of record at tag `thesis-submitted-2026-09-04`; they must
-pass before and after any change to the framework.
+pass before and after any change to the framework. The smoke suite re-runs all
+16 simulated policies and compares every metric with
+`tests/regression/baseline_all_policies.json`, recorded from a tree that passed
+the regression tests. To move that reference deliberately, run
+`tests/regression/record_baseline.py` and commit the new file with the reason.
 
 ## Running a simulated cell by hand
 

@@ -8,11 +8,11 @@ import yaml
 import numpy as np
 
 from elastiflow.config.constants import SIMULATE
-from elastiflow.utils.sim import getTime
 from elastiflow.utils.exec_sched import getClientInputs, getWorkflowConfig, setWorkflowComplete
 
 from .steep_variables import Variable
 from elastiflow.config.paths import PACKAGE_DIR
+from elastiflow.execution.backend import backend_for
 
 class ActionType(Enum):
     ForEach = auto()
@@ -92,6 +92,7 @@ class ExecuteAction(Action):
         ind = self.workflow_iterator # workflow iterations
         try:
             args, hosts, sim = getClientInputs(self.wf_id, input, ind)
+            backend = backend_for(sim)
             # print(f'Executing Action with input {args}')
             start = time.time()
             #args["prior_output"] = self.output_parameters[-1]
@@ -101,8 +102,8 @@ class ExecuteAction(Action):
                 result = eval(result.stdout)
                 runtime = float(result['runtime'])
                 deadline = getWorkflowConfig(self.wf_id)['deadline']
-                sleep_time = min(runtime, max(deadline - getTime(sim), 0))
-                (sim or time).sleep(sleep_time + 7.7) # NOTE: Executor overhead
+                sleep_time = min(runtime, max(deadline - backend.now(), 0))
+                backend.sleep(sleep_time + 7.7) # NOTE: Executor overhead
                 if sleep_time < runtime:
                     print(f'Killing workflow {self.wf_id}')
                     return

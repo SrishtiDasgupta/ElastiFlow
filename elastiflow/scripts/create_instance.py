@@ -9,6 +9,7 @@ import subprocess
 # SIMULATE = False
 # COLD_START_TIME = 0.00
 from elastiflow.config.constants import SIMULATE, COLD_START_TIME
+from elastiflow.execution.backend import backend_for
 region= 'eu-north-1' #change to eu-north-1 when taking runtime of stockholm instances
 
 # Create an EC2 client
@@ -20,11 +21,12 @@ key_file_path = '/fsx/Nisarg-HPC.pem'
 
 # NOTE: Cold start time will be added here
 def createInstance(name: str, count: int = 1, sim = None) -> List[str]:
+    backend = backend_for(sim)
     if count < 1:
         return []
     print(f'Creating {count} instances of {name}')
     if sim or SIMULATE:
-        (sim or time).sleep(COLD_START_TIME)
+        backend.sleep(COLD_START_TIME)
         ips = []
         for i in range(count):
             digits = [1] + random.choices(range(255), k=3)

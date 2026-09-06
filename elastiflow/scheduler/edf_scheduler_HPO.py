@@ -25,9 +25,10 @@ from elastiflow.resource_manager.resource_manager import ResourceManager
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, OnPremInstance
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.sim import getTime, getAllElements, peekElement, removeElement
+from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
+from elastiflow.execution.backend import backend_for
 
 
 class EDF_Scheduler_HPO(Scheduler_HPO):
@@ -53,7 +54,8 @@ class EDF_Scheduler_HPO(Scheduler_HPO):
 
     def run(self, sim=None, wf_mb=None, resource_request_mb=None):
 
-        print(f'Starting HPO EDF Static scheduler at {getTime(sim)}...')
+        backend = backend_for(sim)
+        print(f'Starting HPO EDF Static scheduler at {backend.now()}...')
         print(f'  - Non-moldable: Resources allocated once at workflow start')
         print(f'  - EDF ordering: Workflows prioritized by earliest deadline')
 
@@ -98,14 +100,14 @@ class EDF_Scheduler_HPO(Scheduler_HPO):
 
                     constraints = getConstraintsFromWorkflow(wf_plan)
                     ips, alloc_resources = self.allocateResourcesHPO(constraints, sim)
-                    print(f"{wf_plan['id']} allocated at {getTime(sim)} (deadline={constraints['deadline']:.1f}s):", ips)
+                    print(f"{wf_plan['id']} allocated at {backend.now()} (deadline={constraints['deadline']:.1f}s):", ips)
 
                     # Remove the element if we found the resources needed.
                     if ips:
                         self.popWorkflow(self.workflow_heap)
                         removeElement(wf_mb, self.queue)
                         # NOTE: We start billing at this point
-                        start_time = getTime(sim)
+                        start_time = backend.now()
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
@@ -114,7 +116,7 @@ class EDF_Scheduler_HPO(Scheduler_HPO):
                         self.resource_manager.setResourcesAvailable(False)
                         print('No HPO EDF resources to allocate, waiting...')
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     # =========================================================================
     # EDF HEAP MANAGEMENT

@@ -16,6 +16,7 @@ import time
 from elastiflow.config.constants_HPO import RESOURCE_UTILIZATION_POLLING, TOTAL_WORKFLOWS
 from elastiflow.resource_manager.instance import CloudReservedInstance, CloudOnDemandInstance, OnPremInstance
 from elastiflow.resource_manager.resource_manager import ResourceManager
+from elastiflow.execution.backend import backend_for
 
 
 class MetricsHPO:
@@ -208,6 +209,7 @@ class MetricsHPO:
         Tracks (timestamp, onprem_free, cloud_free, cloud_capacity) where:
         - cloud_capacity = reserved total + on-demand in-use (dynamic)
         """
+        backend = backend_for(sim)
         while self.collectFlag:
             resources = rm.getResources()
             onprem_free, cloud_free = 0, 0
@@ -245,10 +247,10 @@ class MetricsHPO:
                     cloud_capacity += od_capacity
                     cloud_free += od_free
 
-            timestamp = (sim and sim.now) or time.time()
+            timestamp = (sim and backend.now()) or time.time()
             self.free_resources.append((timestamp, onprem_free, cloud_free, cloud_capacity))
 
-            (sim or time).sleep(RESOURCE_UTILIZATION_POLLING)
+            backend.sleep(RESOURCE_UTILIZATION_POLLING)
 
     def computeResourceUtilization(self):
         """

@@ -11,13 +11,13 @@ import json
 import os as _os
 
 from elastiflow.config.constants_HPO import SIMULATE
-from elastiflow.utils.sim import getTime
 from elastiflow.utils.exec_sched import getClientInputs, getWorkflowConfig, setWorkflowComplete
 from elastiflow.utils import negotiation_log
 
 _PORTS_YAML = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))), 'config', 'ports.yaml')
 
 from .steep_variables import Variable
+from elastiflow.execution.backend import backend_for
 
 MAX_ITERATIONS = 0
 MAX_RETRIES = 2          # Retry failed iterations (e.g. cloud SSH timeout)
@@ -203,6 +203,7 @@ class ExecuteAction(Action):
         try:
             print(f"[DEBUG] Getting client inputs for iteration {ind}")
             args, hosts, sim = getClientInputs(self.wf_id, input, ind)
+            backend = backend_for(sim)
 
             print(f"[DEBUG] Client inputs: {args}")
             print(f"[DEBUG] Service script: {self.service}")
@@ -226,8 +227,8 @@ class ExecuteAction(Action):
                 result = eval(result.stdout)
                 runtime = float(result['runtime'])
                 deadline = getWorkflowConfig(self.wf_id)['deadline']
-                sleep_time = min(runtime, max(deadline - getTime(sim), 0))
-                (sim or time).sleep(sleep_time)
+                sleep_time = min(runtime, max(deadline - backend.now(), 0))
+                backend.sleep(sleep_time)
                 if sleep_time < runtime:
                     print(f'Killing workflow {self.wf_id}')
                     return

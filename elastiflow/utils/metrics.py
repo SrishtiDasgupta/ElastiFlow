@@ -9,6 +9,7 @@ from elastiflow.resource_manager.instance import (
     CloudOnDemandInstance, CloudReservedInstance, OnPremInstance,
 )
 from elastiflow.resource_manager.resource_manager import ResourceManager
+from elastiflow.execution.backend import backend_for
 
 
 def _tier_for(instance):
@@ -430,6 +431,7 @@ class Metrics():
         # First sample also captures fleet capacity (assumes capacity is
         # constant over the run — on-demand "capacity" here is the maximum
         # provisionable, used as the denominator for the OD utilisation %).
+        backend = backend_for(sim)
         first = True
         while self.collectFlag:
             resources = rm.getResources()
@@ -462,10 +464,10 @@ class Metrics():
                 }
                 first = False
             self.free_resources.append((
-                (sim and sim.now) or time.time(),
+                (sim and backend.now()) or time.time(),
                 on_prem_free, reserved_free, on_demand_free,
             ))
-            (sim or time).sleep(RESOURCE_UTILIZATION_POLLING)
+            backend.sleep(RESOURCE_UTILIZATION_POLLING)
 
     def computeResourceUtilization(self):
         """Return (overall_pct, on_prem_pct, reserved_pct, on_demand_pct)

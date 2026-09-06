@@ -4,9 +4,10 @@ import time
 from elastiflow.config.constants import BUDGET_FACTOR, DEADLINE_FACTOR, SORT_COUNT, WORKFLOW_POLLING
 from elastiflow.resource_manager.heft_rm import HEFTResourceManager
 from elastiflow.utils.request import ExecutorRequest
-from elastiflow.utils.sim import getAllElements, getTime, peekElement, removeElement
+from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler import Scheduler
+from elastiflow.execution.backend import backend_for
 
 # Workflows are sorted based on priorities. Priorities are computed based on deadline and budget. Lower deadline and lower budget have lower rank and are executed first
 class PriorityFCFS(Scheduler):
@@ -19,6 +20,7 @@ class PriorityFCFS(Scheduler):
         super().__init__(queue, finish_queue, resource_request_queue)
 
     def run(self, sim = None, wf_mb = None, resource_request_mb = None):
+        backend = backend_for(sim)
         print(f'Starting scheduler...')
 
         # Start a thread to periodically compute resource utilization
@@ -39,7 +41,7 @@ class PriorityFCFS(Scheduler):
                 resource_request = eval(resource_request)
                 self.processFreeRequest(resource_request, sim)
                 removeElement(resource_request_mb, self.resource_request_queue)
-                sim and sim.sleep(0.2) # NOTE: scheduler overhead
+                sim and backend.sleep(0.2) # NOTE: scheduler overhead
                 continue
             
             # Retrieve all new jobs in the queue
@@ -73,13 +75,13 @@ class PriorityFCFS(Scheduler):
                 if ips:
                     self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
                     # NOTE: We start billing at this point
-                    start_time = getTime(sim)
+                    start_time = backend.now()
                     self.sendWorkflowForExecution(wf_plan, ips, sim, constraints['deadline'])
                     wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                     self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
                 else:
                     print('No resources to allocate, waiting...')
             
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
 

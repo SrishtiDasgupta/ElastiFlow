@@ -29,10 +29,11 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
 from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
-from elastiflow.utils.sim import getTime, peekElement, removeElement
+from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.utils.resource import getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
+from elastiflow.execution.backend import backend_for
 
 
 class FCFS_Optimized_LA(Scheduler_LA):
@@ -61,6 +62,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
     def run(self, sim=None, wf_mb=None, resource_request_mb=None):
 
+        backend = backend_for(sim)
         print(f'Starting LAMF (License-Aware Moldable FCFS) Scheduler...')
 
         # Track workflows that are impossible to allocate (prevent infinite retries)
@@ -81,7 +83,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
             # Advance the license ledger clock to current sim time so every token
             # hold/release this cycle is billed at the correct sim timestamp.
             if sim is not None:
-                self.license_manager.set_sim_time(getTime(sim))
+                self.license_manager.set_sim_time(backend.now())
 
             # Check queue for resource requests (moldable requests from executors)
             resource_request = peekElement(resource_request_mb, self.resource_request_queue)
@@ -91,7 +93,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                 resource_request = eval(resource_request)
 
                 # Timeout check
-                if getTime(sim) - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+                if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
                     removeElement(resource_request_mb, self.resource_request_queue)
                     continue
 
@@ -113,7 +115,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     removeElement(wf_mb, self.queue)
                     from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
                     # Honest billing verification: ledger (Token-Hours) per pool.
-                    _fs = getTime(sim) if sim is not None else self.license_manager.sim_now
+                    _fs = backend.now() if sim is not None else self.license_manager.sim_now
                     _bp = self.license_manager.license_cost_by_pool(_fs)
                     print(f"[HONEST-BILL] ledger license cost by pool @sim={_fs:.0f}: "
                           f"LSDYNA €{_bp.get('LSDYNA',0):.0f}  ABAQUS €{_bp.get('ABAQUS',0):.0f}  "
@@ -145,7 +147,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                         removeElement(wf_mb, self.queue)
 
                         # Start billing
-                        start_time = getTime(sim)
+                        start_time = backend.now()
 
                         # Send to executor
                         self.sendWorkflowForExecution(
@@ -233,7 +235,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                             print(f'⏳ {wf_plan["id"]} insufficient licenses ({constraints.get("license_pool", "unknown")}), will retry...')
                             # Don't remove from queue - will retry later
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
     def processFreeRequestWithLicenses(self, request, sim):
         """
@@ -245,6 +247,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
         3. If not, check if should scale up (allocate compute + licenses)
         4. Account for license availability in all decisions
         """
+        backend = backend_for(sim)
         # LA workflows always return 7-value tuples
         instances, budget, deadline, start_time, mesh, software_id, license_holds = \
             self.resource_manager.getWorkflow(request['wf-id'])
@@ -254,7 +257,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
         # Iteration-weighted constraints (from Vortex)
         ind = request['iteration']
-        available_time = max(0, deadline - DEADLINE_BUFFER - getTime(sim)) * OPTIM_FCFS_DFACTOR[ind]
+        available_time = max(0, deadline - DEADLINE_BUFFER - backend.now()) * OPTIM_FCFS_DFACTOR[ind]
 
         cur_instance: Instance = instances[-1][0]
         cur_count = instances[-1][1]
@@ -266,16 +269,16 @@ class FCFS_Optimized_LA(Scheduler_LA):
         print(f"\n🔍 [DIAGNOSTIC] processFreeRequestWithLicenses called:")
         print(f"  wf-id: {request['wf-id']}, iteration: {ind}")
         print(f"  current instances: {cur_count}, chains: {request['chains']}, tinyda-iterations: {request['tinyda-iterations']}")
-        print(f"  deadline: {deadline:.1f}s, current time: {getTime(sim):.1f}s")
+        print(f"  deadline: {deadline:.1f}s, current time: {backend.now():.1f}s")
         print(f"  available_time (after OPTIM factor {OPTIM_FCFS_DFACTOR[ind]}): {available_time:.1f}s")
 
         # === EARLY SCALE-UP TRIGGER (Priority 3 Fix) ===
         # Check if workflow is falling behind schedule - if so, skip scale-down and go to scale-up
-        elapsed_time = getTime(sim) - start_time
+        elapsed_time = backend.now() - start_time
         total_time = deadline - start_time
         time_progress = elapsed_time / total_time if total_time > 0 else 0.0
 
-        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+        used_budget = self.metrics.computeCurrentCost(request['wf-id'], backend.now())
         budget_progress = used_budget / budget if budget > 0 else 0.0
 
         # UPDATED: More sensitive trigger (5% instead of 10%) to intervene earlier
@@ -361,7 +364,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
                     # GUARD 3: Check time progress (don't scale down late in workflow)
                     if should_scale_down:
-                        elapsed_time = getTime(sim) - start_time
+                        elapsed_time = backend.now() - start_time
                         total_time = deadline - start_time
                         time_progress = elapsed_time / total_time if total_time > 0 else 1.0
                         # Ensure time_progress is a real number
@@ -374,7 +377,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
                     # GUARD 4: Check budget progress (only scale down if ahead on budget)
                     if should_scale_down:
-                        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+                        used_budget = self.metrics.computeCurrentCost(request['wf-id'], backend.now())
                         budget_progress = used_budget / budget if budget > 0 else 1.0
 
                         # Only scale down if both time AND budget are under 50% used
@@ -396,7 +399,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                         print(f"⬇ Scaling down: freeing {request['count']} instances (guards passed)")
 
                         # Track resource deallocation in metrics (before freeing)
-                        current_time = getTime(sim)
+                        current_time = backend.now()
                         self.metrics.updateResources(
                             request['wf-id'], cur_instance, request['count'], current_time, 'remove'
                         )
@@ -439,7 +442,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
             print(f"  → Scale-down check complete. Moving to scale-up check.\n")
 
         # === SCALE UP CHECK ===
-        used_budget = self.metrics.computeCurrentCost(request['wf-id'], getTime(sim))
+        used_budget = self.metrics.computeCurrentCost(request['wf-id'], backend.now())
 
         # SCALE-UP BOOST: When forcing scale-up (early trigger or late-iteration proactive),
         # allocate 20% more budget than normal OPTIM factor allows
@@ -475,7 +478,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
             ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
 
             # Track resource allocation in metrics
-            current_time = getTime(sim)
+            current_time = backend.now()
             # Use alloc_resources (3-tuples after allocateResources mutation)
             instances_added = sum(c for _, c, _ in alloc_resources)
             cores_added = sum(inst.cores * count for inst, count, _ in alloc_resources)

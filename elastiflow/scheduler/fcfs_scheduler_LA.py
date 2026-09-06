@@ -11,9 +11,10 @@ import time
 from elastiflow.config.constants import WORKFLOW_POLLING
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
-from elastiflow.utils.sim import getTime, peekElement, removeElement
+from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow  # Use LA version for license fields
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
+from elastiflow.execution.backend import backend_for
 
 
 class FCFS_Scheduler_LA(Scheduler_LA):
@@ -39,7 +40,8 @@ class FCFS_Scheduler_LA(Scheduler_LA):
 
     def run(self, sim=None, wf_mb=None, resource_request_mb=None):
 
-        print(f'Starting License-Aware Static FCFS Scheduler at {getTime(sim)}...')
+        backend = backend_for(sim)
+        print(f'Starting License-Aware Static FCFS Scheduler at {backend.now()}...')
 
         # Track workflows that are impossible to allocate (prevent infinite waiting)
         rejected_workflows = set()
@@ -59,7 +61,7 @@ class FCFS_Scheduler_LA(Scheduler_LA):
             # Advance the license ledger clock (honest Token-Hours billing — same
             # basis as the moldable schedulers, so cost is comparable across policies).
             if sim is not None:
-                self.license_manager.set_sim_time(getTime(sim))
+                self.license_manager.set_sim_time(backend.now())
 
             # Check queue for resource requests (should be minimal in static mode)
             resource_request = peekElement(resource_request_mb, self.resource_request_queue)
@@ -72,7 +74,7 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                 else:
                     self.freeResources(resource_request, sim)
                 removeElement(resource_request_mb, self.resource_request_queue)
-                sim and sim.sleep(0.2)  # Scheduler overhead
+                sim and backend.sleep(0.2)  # Scheduler overhead
                 continue
 
             # Check the queue for new jobs
@@ -88,7 +90,7 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                     self.metrics.computeMetrics(
                         file_prefix=f'Baseline_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            getTime(sim) if sim is not None else self.license_manager.sim_now))
+                            backend.now() if sim is not None else self.license_manager.sim_now))
                     break
 
                 # Skip workflows that have been rejected as impossible
@@ -106,14 +108,14 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                     ips, alloc_resources, license_holds = self.allocateResourcesWithLicenses(constraints)
 
                     if ips:
-                        print(f"{wf_plan['id']} allocated at {getTime(sim)}:", ips)
+                        print(f"{wf_plan['id']} allocated at {backend.now()}:", ips)
                         if license_holds:
                             print(f"  with {len(license_holds)} license hold(s)")
 
                         removeElement(wf_mb, self.queue)
 
                         # Start billing
-                        start_time = getTime(sim)
+                        start_time = backend.now()
 
                         # Send workflow with license info
                         self.sendWorkflowForExecution(
@@ -162,4 +164,4 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                         self.resource_manager.setResourcesAvailable(False)
                         print(f'⏳ {wf_plan["id"]} waiting for resources or licenses...')
 
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)

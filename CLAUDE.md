@@ -15,8 +15,10 @@ refactoring plan and its status. Read those before changing anything.
 * **The tag `thesis-submitted-2026-09-04` is the reference.** No change may
   alter a number in a committed dataset or in a dissertation figure. Run
   `python -m pytest` (regression + unit, about a minute) before and after every
-  change; run `python -m pytest -m smoke` (every policy once, about seven
-  minutes) after anything that touches the framework.
+  change; run `python -m pytest -m smoke` (every policy once, compared exactly with
+  `tests/regression/baseline_all_policies.json`, about seven minutes) after
+  anything that touches the framework. Re-record the baseline only when the
+  reference is meant to move, and say so in the commit.
 * **The user commits and pushes.** Stage the change set, show
   `git diff --cached --stat`, and hand over a commit message. Never run
   `git commit` or `git push`, and never add Claude/AI authorship or session

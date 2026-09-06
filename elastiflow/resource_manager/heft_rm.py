@@ -2,10 +2,10 @@ import heapq
 from typing import List
 from elastiflow.config.constants import AVG_BUDGET, AVG_DEADLINE, AVG_TINYDA_ITERATIONS, AVG_WORKFLOW_ITERATIONS, BUDGET_FACTOR, DEADLINE_FACTOR, MIN_RUNTIME
 from elastiflow.scripts.speedup import getRuntime
-from elastiflow.utils.sim import getTime
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.resource_manager import ResourceManager
+from elastiflow.execution.backend import backend_for
 
 class HEFTResourceManager(ResourceManager):
 
@@ -76,6 +76,7 @@ class HEFTResourceManager(ResourceManager):
                 print(self.resource_request_heap)
 
     def processWorkflowsByPriority(self, workflows: List[any], sim):
+        backend = backend_for(sim)
         for wf in workflows:
             wf_plan = eval(wf)
             # Priority rank = a * budget + b * deadline
@@ -85,20 +86,21 @@ class HEFTResourceManager(ResourceManager):
             else:
                 budget_factor = BUDGET_FACTOR / AVG_BUDGET[wf_plan['config']['mesh']]
                 deadline_factor = DEADLINE_FACTOR / AVG_DEADLINE[wf_plan['config']['mesh']]
-                priority = budget_factor * wf_plan['constraints']['budget'] + deadline_factor * (wf_plan['submit_time'] + wf_plan['constraints']['deadline'] - getTime(sim))
+                priority = budget_factor * wf_plan['constraints']['budget'] + deadline_factor * (wf_plan['submit_time'] + wf_plan['constraints']['deadline'] - backend.now())
                 # In case of a tie, workflows are picked randomly, here with wf_id
                 heapq.heappush(self.workflow_heap, (priority, wf_plan['id'], wf_plan)) 
-                # print(budget_factor * wf_plan['constraints']['budget'], deadline_factor * (wf_plan['submit_time'] + wf_plan['constraints']['deadline'] - getTime(sim)), priority)
+                # print(budget_factor * wf_plan['constraints']['budget'], deadline_factor * (wf_plan['submit_time'] + wf_plan['constraints']['deadline'] - backend.now()), priority)
 
     def processResourceRequestsByPriority(self, workflows: List[any], metrics_obj, sim):
+        backend = backend_for(sim)
         for req in workflows:
             req = eval(req)
             if req['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
                 # lower priority ranks (low budget, low runtime) must be executed first - min heap
                 wf = self.getWorkflow(req['wf-id']) # (instances, budget, deadline, start_time, mesh)
-                used_budget = metrics_obj.computeCost(req['wf-id'], getTime(sim))
+                used_budget = metrics_obj.computeCost(req['wf-id'], backend.now())
                 available_budget = max(0, wf[1] - used_budget)
-                available_time = max(0, wf[2] - getTime(sim))
+                available_time = max(0, wf[2] - backend.now())
                 # Normalize budget and deadline
                 budget_factor = BUDGET_FACTOR / AVG_BUDGET[wf[4]]
                 deadline_factor = DEADLINE_FACTOR / AVG_DEADLINE[wf[4]]

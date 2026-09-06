@@ -4,9 +4,10 @@ import time
 from elastiflow.config.constants import WORKFLOW_POLLING
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager import ResourceManager
-from elastiflow.utils.sim import getTime, peekElement, removeElement
+from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler import Scheduler
+from elastiflow.execution.backend import backend_for
 
 # If requested resources are available, they are granted. Else the workflow waits
 class FCFS_Scheduler(Scheduler):
@@ -19,7 +20,8 @@ class FCFS_Scheduler(Scheduler):
 
     def run(self, sim = None, wf_mb = None, resource_request_mb = None):
         
-        print(f'Starting scheduler at {getTime(sim)}...')
+        backend = backend_for(sim)
+        print(f'Starting scheduler at {backend.now()}...')
 
         # Start a thread to periodically compute resource utilization
         if sim:
@@ -41,7 +43,7 @@ class FCFS_Scheduler(Scheduler):
                 else:
                     self.freeResources(resource_request, sim)
                 removeElement(resource_request_mb, self.resource_request_queue)
-                sim and sim.sleep(0.2) # NOTE: scheduler overhead
+                sim and backend.sleep(0.2) # NOTE: scheduler overhead
                 continue
             
             # Check the queue for new jobs
@@ -67,13 +69,13 @@ class FCFS_Scheduler(Scheduler):
 
                     constraints = getConstraintsFromWorkflow(wf_plan)
                     ips, alloc_resources = self.allocateResources(constraints)
-                    print(f"{wf_plan['id']} allocated at {getTime(sim)}:", ips)              
+                    print(f"{wf_plan['id']} allocated at {backend.now()}:", ips)              
 
                     # Remove the element if we found the resources needed.
                     if ips:
                         removeElement(wf_mb, self.queue)
                         # NOTE: We start billing at this point
-                        start_time = getTime(sim)
+                        start_time = backend.now()
                         self.sendWorkflowForExecution(wf_plan, ips, sim, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
@@ -83,6 +85,6 @@ class FCFS_Scheduler(Scheduler):
                         # NOTE: Can also suspend process and resume when resources are available again 
                         print('No resources to allocate, waiting...')
             
-            (sim or time).sleep(WORKFLOW_POLLING)
+            backend.sleep(WORKFLOW_POLLING)
 
 

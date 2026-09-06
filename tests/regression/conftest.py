@@ -31,15 +31,7 @@ if str(REPO / 'use_cases' / 'licence' / 'results') not in sys.path:
     sys.path.insert(0, str(REPO / 'use_cases' / 'licence' / 'results'))
 
 
-@pytest.fixture(scope='session')
-def repo() -> Path:
-    return REPO
-
-
-@pytest.fixture(scope='session')
-def python() -> str:
-    """Interpreter used to spawn the simulators: the one running pytest."""
-    return sys.executable
+# The `repo` and `python` fixtures live in tests/conftest.py, shared by all suites.
 
 
 def load_module(path: Path):
@@ -114,3 +106,63 @@ def assert_records_equal(ref: dict, got: dict, rel: float = 1e-12) -> None:
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+
+# --- cell runners shared by the regression tests, the smoke suite and the -------
+# --- baseline recorder: one definition of "run this cell and parse it" ---------
+
+SEISSOL_N, SEISSOL_SEED = 100, 7
+LICENCE_N, LICENCE_SEED = 150, 7
+LICENCE_POLICIES = ('FCFS-ST-LA', 'EDF-ST-LA', 'LAMF', 'EDF-LAMF', 'EDF-HSM')
+
+
+def seissol_variants() -> dict:
+    """The 11 SeisSol--TinyDA variants as sweep_PLAIN.py defines them."""
+    return load_module(REPO / 'use_cases' / 'seissol' / 'results' / 'sweep_PLAIN.py').VARIANT_ARGS
+
+
+def seissol_cell(python: str, variant: str, out_dir: Path, N: int = SEISSOL_N, seed: int = SEISSOL_SEED) -> dict:
+    """Run one SeisSol cell exactly as sweep_PLAIN.py does and parse the .out
+    file the simulator moves into out_dir with sweep_PLAIN.parse_out."""
+    sweep = load_module(REPO / 'use_cases' / 'seissol' / 'results' / 'sweep_PLAIN.py')
+    out_dir.mkdir(parents=True, exist_ok=True)
+    run([python, 'simulate_sweep.py', *sweep.VARIANT_ARGS[variant], out_dir,
+         '--seed', str(seed), '--N', str(N)], cwd=REPO / 'elastiflow')
+    outs = sorted(out_dir.glob('*.out'))
+    assert len(outs) == 1, f'expected one .out file in {out_dir}, found {outs}'
+    rec = sweep.parse_out(outs[0].read_text())
+    assert not rec.get('_parse_failed'), f'sweep_PLAIN.parse_out could not parse {variant}'
+    return rec
+
+
+def licence_cell(python: str, scheduler: str, out_dir: Path, N: int = LICENCE_N, seed: int = LICENCE_SEED) -> dict:
+    """Run one licence cell exactly as canonical_sweep.py does: capture
+    stdout+stderr, parse with parse_la_run.parse, then derive the licence
+    accounting fields from the two CSVs with license_analysis."""
+    import glob
+    parse_la_run = load_module(REPO / 'use_cases' / 'licence' / 'results' / 'parse_la_run.py')
+    LA = load_module(REPO / 'use_cases' / 'licence' / 'results' / 'license_analysis.py')
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cp = run([python, 'simulate_main_LA.py', '--scheduler', scheduler, '--N', str(N),
+              '--seed', str(seed), '--output-dir', out_dir],
+             cwd=REPO / 'elastiflow', env=la_env(scheduler))
+    rec = parse_la_run.parse(cp.stdout)
+    results_csv = sorted(out_dir.glob('*_results.csv')); usage_csv = sorted(out_dir.glob('*_license_usage.csv'))
+    assert len(results_csv) == 1 and len(usage_csv) == 1, \
+        f'expected one results and one usage CSV in {out_dir}, found {sorted(out_dir.iterdir())}'
+    r = LA.analyze_results(str(results_csv[0]))
+    rec['tot_lic'] = r['tot_lic']; rec['tot_hw'] = r['tot_hw']
+    rec['waste_frac'] = r['waste_frac']; rec['eff_lic_util'] = 100 - r['waste_frac']
+    rec['lic_per_done'] = r['lic_per_done']; rec['overhead'] = r['overhead']
+    rec['n_done'] = r['n_done']; rec['n_miss'] = r['n_miss']
+    rec['per_solver'] = {s: {'lic': round(v['lic'], 1), 'n': v['n'], 'done': v['done']}
+                         for s, v in r['per_solver'].items()}
+    u = LA.analyze_usage(str(usage_csv[0]))
+    rec['token_sec_total'] = sum(x['token_sec'] for x in u.values())
+    rec['pool_tw_util'] = {pool: round(u[pool]['tw_util'], 1) for pool in u}
+    return rec
+
+
+def strip_bookkeeping(rec: dict) -> dict:
+    """Drop the run-specific keys (wall clock, file names, exit codes)."""
+    return {k: v for k, v in rec.items() if not k.startswith('_')}

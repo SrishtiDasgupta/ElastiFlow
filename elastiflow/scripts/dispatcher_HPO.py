@@ -7,6 +7,7 @@ import numpy as np
 
 from elastiflow.config.constants_HPO import TOTAL_WORKFLOWS as DEFAULT_TOTAL_WORKFLOWS, AVG_INTERARRIVAL_TIME, WORKFLOW_ORDER
 from elastiflow.utils.validate_workflow import validate_workflow
+from elastiflow.execution.backend import backend_for
 
 
 def generate_poisson_delays(num_workflows, avg_interarrival):
@@ -80,6 +81,7 @@ def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=Fals
         poisson: use Poisson-distributed inter-arrival times
         avg_delay: average inter-arrival time in seconds (default: AVG_INTERARRIVAL_TIME)
     """
+    backend = backend_for(sim)
     if use_generated or poisson:
         # Generated workflow mode with Poisson arrivals
         if num_workflows is None:
@@ -92,18 +94,18 @@ def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=Fals
         else:
             delays = [0] + [avg_delay] * (num_workflows - 1)
 
-        print(f'Starting HPO dispatcher for {num_workflows} generated workflows at {sim.now}...')
+        print(f'Starting HPO dispatcher for {num_workflows} generated workflows at {backend.now()}...')
         print(f'  Arrival pattern: {"Poisson" if poisson else "Fixed"} (avg={avg_delay:.0f}s)')
 
         for i in range(num_workflows):
-            sim.sleep(float(delays[i]))
+            backend.sleep(float(delays[i]))
             file_idx = WORKFLOW_ORDER[i] if i < len(WORKFLOW_ORDER) else i
-            print(f'Dispatching workflow pos={i} (data{file_idx}.yaml) at t={sim.now:.0f}s')
+            print(f'Dispatching workflow pos={i} (data{file_idx}.yaml) at t={backend.now():.0f}s')
             workflow = fetchWorkflow(i, use_generated=True)
             if workflow is None:
                 print(f'  Failed to load data{i}.yaml, skipping')
                 continue
-            workflow['submit_time'] = sim.now
+            workflow['submit_time'] = backend.now()
             sim.sync().send(sim, wf_mb, str(workflow))
     else:
         # Original hand-crafted mode (5 workflows)
@@ -111,18 +113,18 @@ def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=Fals
             num_workflows = 5
         delays = [0, 100, 200, 150, 150]
 
-        print(f'Starting HPO dispatcher for {num_workflows} workflows at {sim.now}...')
+        print(f'Starting HPO dispatcher for {num_workflows} workflows at {backend.now()}...')
 
         for i in range(num_workflows):
-            sim.sleep(delays[i])
-            print(f'Dispatching workflow {i+1} at t={sim.now}s')
+            backend.sleep(delays[i])
+            print(f'Dispatching workflow {i+1} at t={backend.now()}s')
             workflow = fetchWorkflow(i, use_generated=False)
-            workflow['submit_time'] = sim.now
+            workflow['submit_time'] = backend.now()
             sim.sync().send(sim, wf_mb, str(workflow))
 
     # Send END after all workflows complete (large delay to ensure completion)
-    sim.sleep(150000)
-    print(f'Sending END signal at t={sim.now}s')
+    backend.sleep(150000)
+    print(f'Sending END signal at t={backend.now()}s')
     sim.sync().send(sim, wf_mb, str(fetchWorkflow('end')))
 
 

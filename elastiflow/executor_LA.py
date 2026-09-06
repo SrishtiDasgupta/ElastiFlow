@@ -6,7 +6,6 @@ Accepts and logs license hold information but delegates license management to sc
 """
 
 import threading
-from elastiflow.utils.sim import getTime
 from elastiflow.utils.exec_sched import setNewResources
 from elastiflow.scripts.create_instance import deleteInstanceFromIp
 from elastiflow.utils.request import getConfig, sendRequest
@@ -14,6 +13,7 @@ from elastiflow.workflow.steep_workflow import Steep_Workflow
 from elastiflow.server import server
 from elastiflow.wf_queue.redis_queue import Redis_Queue
 from elastiflow.config.constants import SIMULATE
+from elastiflow.execution.backend import backend_for
 
 
 def processQueueData(queue):
@@ -55,6 +55,7 @@ def executeWorkflowLA(data, sim=None):
             - license-holds: List of license hold IDs (optional)
         sim: SimPy environment (None for real execution)
     """
+    backend = backend_for(sim)
     workflow_plan = data.get('wf-plan')
     hosts = data.get('hosts')
     deadline = data.get('deadline')
@@ -62,7 +63,7 @@ def executeWorkflowLA(data, sim=None):
 
     # Create Steep workflow
     workflow = Steep_Workflow(workflow_plan, sim, deadline)
-    start_time = getTime(sim)
+    start_time = backend.now()
 
     print(f'Executing workflow {workflow.id} at {start_time}')
     if license_holds:
@@ -73,14 +74,14 @@ def executeWorkflowLA(data, sim=None):
 
     # Executor overhead
     if SIMULATE:
-        sim.sleep(7.7)
+        backend.sleep(7.7)
 
     # Report completion to scheduler
     request = {
         "wf-id": workflow.id,
         "hosts": new_hosts,
         "start-time": start_time,
-        "finish-time": getTime(sim),
+        "finish-time": backend.now(),
         "complete": isComplete,
         "license-holds": license_holds  # Pass back for scheduler cleanup
     }
