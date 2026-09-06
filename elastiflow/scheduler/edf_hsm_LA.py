@@ -42,7 +42,6 @@ from elastiflow.scripts.speedup import getRuntime
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
 from elastiflow.resource_manager.license.exceptions import LicenseError, InsufficientTokens
-from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow, getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
 
@@ -151,14 +150,7 @@ class EDF_HSM_LA(Scheduler_LA):
         print(f'  - License-aware guards: Pool saturation, late iteration, deadline proximity')
 
         # Start resource utilization monitoring (including license pools)
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
-        else:
-            thread = threading.Thread(
-                target=self.metrics.collectResourceUtilization,
-                args=[sim, self.resource_manager, self.license_manager]
-            )
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
 
         rejected_workflows = set()  # Track impossible workflows
         loop_counter = 0  # Track loop iterations for debugging
@@ -208,7 +200,7 @@ class EDF_HSM_LA(Scheduler_LA):
                 idle_loop_count = 0  # Reset if there's activity
 
             # === PHASE 1: Process Resource Requests (EDF ordering) ===
-            resource_requests = getAllElements(resource_request_mb, self.resource_request_queue, None)
+            resource_requests = backend.resource_requests.pop_many(None)
 
             if resource_requests:
                 # Sort resource requests by deadline (EDF)
@@ -221,18 +213,18 @@ class EDF_HSM_LA(Scheduler_LA):
 
                     if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
                         self.popWorkflow(self.resource_request_heap)
-                        removeElement(resource_request_mb, self.resource_request_queue)
+                        backend.resource_requests.pop()
                         continue
 
                     self.processFreeRequestWithLicenses(sim, wf_mb, resource_request)
                     print(f"  Resource request overhead: {time.time() - start:.3f}s")
 
                     self.popWorkflow(self.resource_request_heap)
-                    removeElement(resource_request_mb, self.resource_request_queue)
+                    backend.resource_requests.pop()
                     continue
 
             # === PHASE 2: Schedule New Workflows (EDF ordering) ===
-            workflows = getAllElements(wf_mb, self.queue, None)
+            workflows = backend.workflows.pop_many(None)
 
             # Debug heap state periodically
             if loop_counter % 10000 == 0 and len(self.workflow_heap) > 0:
@@ -252,7 +244,7 @@ class EDF_HSM_LA(Scheduler_LA):
                 # Check for END signal
                 if wf_plan['id'] == 'END':
                     self.popWorkflow(self.workflow_heap)
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_HSM_{TOTAL_WORKFLOWS}_',
@@ -263,7 +255,7 @@ class EDF_HSM_LA(Scheduler_LA):
                 # Skip rejected workflows
                 if wf_plan['id'] in rejected_workflows:
                     self.popWorkflow(self.workflow_heap)
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
                     continue
 
@@ -286,7 +278,7 @@ class EDF_HSM_LA(Scheduler_LA):
                             print(f"  with {len(license_holds)} license hold(s)")
 
                         self.popWorkflow(self.workflow_heap)
-                        removeElement(wf_mb, self.queue)
+                        backend.workflows.pop()
 
                         # Start billing
                         start_time = backend.now()
@@ -323,7 +315,7 @@ class EDF_HSM_LA(Scheduler_LA):
                             # Truly impossible (exceeds pool capacity) - permanently reject
                             rejected_workflows.add(wf_plan['id'])
                             self.popWorkflow(self.workflow_heap)
-                            removeElement(wf_mb, self.queue)
+                            backend.workflows.pop()
                             print(f"⊘ Rejecting impossible workflow {wf_plan['id']}")
                         else:
                             # Temporarily unavailable - retry on next polling cycle.

@@ -129,11 +129,11 @@ def dispatcher(sim, wf_mb):
         print(f'Sending wf{i} at {backend.now()}')
         workflow = fetchWorkflow(i)
         workflow['submit_time'] = backend.now()
-        sim.sync().send(sim, wf_mb, str(workflow))
+        backend.workflows.send(workflow)
 
     # Send END after all requests are complete
     backend.sleep(300000)
-    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', f"{PACKAGE_DIR}/")))
+    backend.workflows.send(fetchWorkflow('end', f"{PACKAGE_DIR}/"))
 
 
 if __name__ == "__main__":

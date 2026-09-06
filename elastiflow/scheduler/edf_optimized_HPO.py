@@ -30,7 +30,6 @@ import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 from elastiflow.utils import negotiation_log
@@ -74,16 +73,12 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         print(f'  - Deadline urgency boost: CRITICAL 2.0x, WARNING 1.5x, Regular 1.2x')
 
         # Start a thread to periodically compute resource utilization
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager)
-        else:
-            thread = threading.Thread(target=self.metrics.collectResourceUtilization, args=[sim, self.resource_manager])
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
 
         while True:
 
             # === PHASE 1: Process resource requests sorted by deadline ===
-            resource_requests = getAllElements(resource_request_mb, self.resource_request_queue, None)
+            resource_requests = backend.resource_requests.pop_many(None)
 
             if resource_requests:
                 t_obs = time.time()
@@ -116,7 +111,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
                 continue
 
             # === PHASE 2: Schedule new workflows in EDF order ===
-            workflows = getAllElements(wf_mb, self.queue, None)
+            workflows = backend.workflows.pop_many(None)
 
             if workflows:
                 # Defensive log: which wfs just left the queue?
@@ -831,11 +826,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
         }
         print(f"{wf_id} EDF allocated additional resources: ", ips)
         send_ok = True
-        if sim:
-            from elastiflow.executor_HPO import processNewResourcesHPO
-            sim.process(processNewResourcesHPO, new_req)
-        else:
-            send_ok = sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        send_ok = backend.notify_resources(new_req, client_ip)
         negotiation_log.log('scheduler',
                             wf_id=wf_id, iter_idx=iter_idx if iter_idx is not None else '',
                             request_type='grow',
@@ -873,11 +864,7 @@ class EDF_Optimized_HPO(Scheduler_HPO):
             "hosts": response_instances
         }
         print(f"EDF Scheduler freeing {response_instances} for {wf_id}")
-        if sim:
-            from elastiflow.executor_HPO import processNewResourcesHPO
-            sim.process(processNewResourcesHPO, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
         negotiation_log.log('scheduler',
                             wf_id=wf_id, iter_idx=iter_idx if iter_idx is not None else '',
                             request_type='shrink',
@@ -962,8 +949,4 @@ class EDF_Optimized_HPO(Scheduler_HPO):
 
         print(f"  Workers: {ips}")
 
-        if sim:
-            from elastiflow.executor_HPO import executeWorkflowHPO
-            sim.process(executeWorkflowHPO, request, sim)
-        else:
-            sendRequest(executor_ip, getConfig('executor-incoming-port'), request)
+        backend.start_workflow(request, executor_ip)

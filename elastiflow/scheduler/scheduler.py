@@ -9,13 +9,11 @@ from elastiflow.config.constants import (
     OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR,
     RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD,
 )
-from elastiflow.executor import executeWorklow, processNewResources
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.utils.metrics import Metrics
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
-from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.execution.backend import backend_for
 
 class Scheduler(ABC):
@@ -40,6 +38,7 @@ class Scheduler(ABC):
 
     def sendWorkflowForExecution(self, wf_plan, ips, sim, deadline):
         # Send to the executor node - workflow parsing must be handled there
+        backend = backend_for(sim)
         request = {
             "initial-alloc": True,
             "wf-plan": wf_plan,
@@ -51,23 +50,18 @@ class Scheduler(ABC):
         # TODO: What if executor is not created
         if on_demand_type:
             request['hosts']['on-demand'][on_demand_type] =  (request['hosts']['on-demand'][on_demand_type][0], [executor])  
-        if sim:
-            sim.process(executeWorklow, request, sim)
-        else:
-            sendRequest(executor, getConfig('executor-incoming-port'), request)                    
-
-
+        backend.start_workflow(request, executor)
     def processJobCompletion(self, sim=None, mb=None):
         backend = backend_for(sim)
         print('Scheduler started listening to completed jobs...')
         while True:
-            data = peekElement(mb, self.finish_queue)
+            data = backend.completions.peek()
             if data:
                 data = eval(data)
                 self.resource_manager.returnResources(data.get('wf-id'))
                 self.metrics.updateDataframe(data.get('wf-id'), {'exec_start_time': data.get('start-time'), 'finish_time': data.get('finish-time'), 'complete': data.get('complete')})
                 print(f'{data.get("wf-id")} workflow freed at {backend.now()}')
-                removeElement(mb, self.finish_queue)
+                backend.completions.pop()
             backend.sleep(60) # NOTE: polling interval
 
     # request = {"wf-id", "count", "iteration": ind, "tinyda-iterations", "client-ip", "request-time"}
@@ -95,10 +89,7 @@ class Scheduler(ABC):
             "hosts": ips, # {cluster: {name: (count, [ips])}}
         }
         print(f"{wf_id} allocated additional resources: ", ips)
-        if sim:
-            sim.process(processNewResources, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
         if alloc_resources:
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
             self.metrics.updateResources(wf_id, alloc_resources, backend.now())
@@ -141,10 +132,7 @@ class Scheduler(ABC):
             "hosts": response_instances # {cluster: {name: (count, ips)}}
         }
         print(f"Scheduler freeing {response_instances} for {wf_id} ")
-        if sim:
-            sim.process(processNewResources, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
             self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())

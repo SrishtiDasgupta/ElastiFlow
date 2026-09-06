@@ -24,7 +24,6 @@ from typing import List
 from elastiflow.config.constants_LA import WORKFLOW_POLLING, TOTAL_WORKFLOWS
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
-from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
 from elastiflow.execution.backend import backend_for
@@ -68,14 +67,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
         rejected_workflows = set()
 
         # Start resource utilization monitoring (including license pools)
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
-        else:
-            thread = threading.Thread(
-                target=self.metrics.collectResourceUtilization,
-                args=[sim, self.resource_manager, self.license_manager]
-            )
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
 
         while True:
             # Advance the license ledger clock (honest Token-Hours billing — same
@@ -84,7 +76,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                 self.license_manager.set_sim_time(backend.now())
 
             # === PHASE 1: Handle resource requests (minimal for non-moldable) ===
-            resource_request = peekElement(resource_request_mb, self.resource_request_queue)
+            resource_request = backend.resource_requests.peek()
 
             if resource_request:
                 resource_request = eval(resource_request)
@@ -95,12 +87,12 @@ class EDF_Scheduler_LA(Scheduler_LA):
                 else:
                     # Handle freeing (when workflow completes or releases resources)
                     self.freeResources(resource_request, sim)
-                removeElement(resource_request_mb, self.resource_request_queue)
+                backend.resource_requests.pop()
                 sim and backend.sleep(0.2)
                 continue
 
             # === PHASE 2: Schedule new workflows in EDF order ===
-            workflows = getAllElements(wf_mb, self.queue, None)
+            workflows = backend.workflows.pop_many(None)
 
             if workflows:
                 # Sort by deadline (EDF)
@@ -113,7 +105,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                 # Check for END signal
                 if wf_plan['id'] == 'END':
                     self.popWorkflow(self.workflow_heap)
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     self.metrics.computeMetrics(
                         file_prefix=f'EDF_Static_{TOTAL_WORKFLOWS}_',
                         license_cost_by_owner=self.license_manager.license_cost_by_owner(
@@ -123,7 +115,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                 # Skip rejected workflows
                 if wf_plan['id'] in rejected_workflows:
                     self.popWorkflow(self.workflow_heap)
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
                     continue
 
@@ -140,7 +132,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                             print(f"  with {len(license_holds)} license hold(s)")
 
                         self.popWorkflow(self.workflow_heap)
-                        removeElement(wf_mb, self.queue)
+                        backend.workflows.pop()
 
                         start_time = backend.now()
 
@@ -188,7 +180,7 @@ class EDF_Scheduler_LA(Scheduler_LA):
                                         # Impossible - exceeds license pool capacity
                                         rejected_workflows.add(wf_plan['id'])
                                         self.popWorkflow(self.workflow_heap)
-                                        removeElement(wf_mb, self.queue)
+                                        backend.workflows.pop()
                                         print(f'⊘ {wf_plan["id"]} REJECTED: needs {licenses_needed} {license_pool}, pool has {pool_status["total"]}')
                                         continue
                                 except Exception as e:

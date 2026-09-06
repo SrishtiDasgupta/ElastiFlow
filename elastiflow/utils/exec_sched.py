@@ -383,9 +383,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
     t_engine_request_sent = time.time()
     if sim:
         request['request-time'] = backend.now()
-        sim.sync().send(sim, 'resource_request_mb', str(request))
-    else:
-        sendRequest(getConfig('scheduler'), getConfig('resource-request-port'), request)
+    backend.resource_requests.send(request)
 
     # Wait for response until timeout
     resources = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}

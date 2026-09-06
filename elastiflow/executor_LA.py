@@ -90,10 +90,7 @@ def executeWorkflowLA(data, sim=None):
     if license_holds:
         print(f"  (scheduler will release {len(license_holds)} license hold(s))")
 
-    if sim:
-        sim.sync().send(sim, 'completed_jobs_mb', str(request))
-    else:
-        sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
+    backend.completions.send(request)
 
     # Kill newly created on-demand instances
     for node in new_hosts.get('on-demand', {}):

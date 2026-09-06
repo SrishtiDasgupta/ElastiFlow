@@ -11,7 +11,6 @@ import time
 from elastiflow.config.constants import WORKFLOW_POLLING
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
-from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow  # Use LA version for license fields
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
 from elastiflow.execution.backend import backend_for
@@ -47,14 +46,7 @@ class FCFS_Scheduler_LA(Scheduler_LA):
         rejected_workflows = set()
 
         # Start a thread to periodically compute resource utilization
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
-        else:
-            thread = threading.Thread(
-                target=self.metrics.collectResourceUtilization,
-                args=[sim, self.resource_manager, self.license_manager]
-            )
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
 
         while True:
 
@@ -64,7 +56,7 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                 self.license_manager.set_sim_time(backend.now())
 
             # Check queue for resource requests (should be minimal in static mode)
-            resource_request = peekElement(resource_request_mb, self.resource_request_queue)
+            resource_request = backend.resource_requests.peek()
 
             if resource_request:
                 # Handle resource requests (free resources mainly)
@@ -73,19 +65,19 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                     self.allocateNewResources(resource_request, sim)
                 else:
                     self.freeResources(resource_request, sim)
-                removeElement(resource_request_mb, self.resource_request_queue)
+                backend.resource_requests.pop()
                 sim and backend.sleep(0.2)  # Scheduler overhead
                 continue
 
             # Check the queue for new jobs
-            workflow_plan = peekElement(wf_mb, self.queue)
+            workflow_plan = backend.workflows.peek()
 
             if workflow_plan:
                 wf_plan = eval(workflow_plan)
 
                 # End the simulation and compute metrics
                 if wf_plan['id'] == 'END':
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
                     self.metrics.computeMetrics(
                         file_prefix=f'Baseline_{TOTAL_WORKFLOWS}_',
@@ -95,7 +87,7 @@ class FCFS_Scheduler_LA(Scheduler_LA):
 
                 # Skip workflows that have been rejected as impossible
                 if wf_plan['id'] in rejected_workflows:
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
                     continue
 
@@ -112,7 +104,7 @@ class FCFS_Scheduler_LA(Scheduler_LA):
                         if license_holds:
                             print(f"  with {len(license_holds)} license hold(s)")
 
-                        removeElement(wf_mb, self.queue)
+                        backend.workflows.pop()
 
                         # Start billing
                         start_time = backend.now()
