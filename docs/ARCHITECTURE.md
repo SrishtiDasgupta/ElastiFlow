@@ -63,8 +63,8 @@ for their family); the remaining layers are still copies. Phase B7
 |---|---|---|---|
 | runner | `simulate_sweep.py` (campaign), `simulate_main.py` (Ch. 7) | `simulate_main_LA.py` | `simulate_main_HPO.py` (live) |
 | scheduler base | `scheduler/scheduler.py` `Scheduler` (+ `EDFOrderingMixin`) | `scheduler_LA.py` `Scheduler_LA(Scheduler)`, `Scheduler_LA_Elastic` | `scheduler_HPO.py` `Scheduler_HPO(Scheduler)`, `Scheduler_HPO_Static`, `Scheduler_HPO_Elastic` |
-| dispatcher | `dispatcher.py` | `dispatcher_LA.py` | `dispatcher_HPO.py` |
-| executor | `executor.py` | `executor_LA.py` | `executor_HPO.py` |
+| dispatcher | one loop, `dispatcher.dispatcher(backend, arrivals)`; the profile `SEISSOL` | the profile `LICENCE` in `dispatcher_LA.py` | `dispatcher_HPO.arrivals(...)` |
+| executor | one node loop, `executor.processQueueData` / `serve`; SeisSol's execute function | `executor_LA.py` (execute and resource update) | `executor_HPO.py` (execute and resource update) |
 | constants | `config/constants.py` | `constants_LA.py` | `constants_HPO.py` |
 | metrics | `utils/metrics.py` | `metrics_LA.py` | `metrics_HPO.py` |
 | resource manager | `resource_manager.py` | `resource_manager_LA.py` | HPO instance model |
@@ -75,7 +75,10 @@ for their family); the remaining layers are still copies. Phase B7
 
 The mapping below is code: `elastiflow/policies.py` is the registry the
 entry points resolve through (name → class, constructor arguments, whether
-the name is offered). The four SeisSol policies the dissertation does not
+the name is offered), `python -m elastiflow run ... --policy NAME` translates a
+name into the runner's own arguments, and `elastiflow/config/profiles.py`
+names the constants module each use case runs with (the three modules stay
+where they are: `constants.py`, `constants_LA.py`, `constants_HPO.py`). The four SeisSol policies the dissertation does not
 cite (`fcfs_scheduler`, the policy of the live `main.py`; `earliest_deadline_fcfs`;
 `priority_fcfs`; `heft_fcfs_req`) are registered by module name, the last
 three as inactive, and each has one cell in the smoke baseline.

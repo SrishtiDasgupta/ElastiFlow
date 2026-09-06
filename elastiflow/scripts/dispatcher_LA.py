@@ -1,17 +1,15 @@
 """
 License-Aware Dispatcher for LAMF Simulation
 
-Loads and dispatches license-aware workflows from sample_workflows_LA/ directory.
-All workflows are guaranteed to have license requirements (ANSYS/ABAQUS/LSDYNA).
+The licence-constrained arrival process (`LICENCE`, for `dispatcher.dispatcher`):
+workflows from sample_workflows_LA/, all with license requirements
+(ANSYS/ABAQUS/LSDYNA), on the compressed and jittered submission trace.
 """
 
 import time
 import math
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import requests
 import yaml
 import sys
 import os
@@ -25,28 +23,7 @@ from elastiflow.config.constants_LA import (
 )
 from elastiflow.utils.validate_workflow import validate_workflow
 from elastiflow.config.paths import PACKAGE_DIR
-
-
-def plotSubmitTimes(submitTimes):
-    """Plot workflow submission time distribution"""
-    df = submitTimes.copy()
-    df['count'] = ""
-    df.set_index('submit times', inplace=True)
-
-    # Resample to create continuous time series
-    resampled_data = df.resample('20min').count()
-    resampled_data = resampled_data.reset_index()
-
-    # Plot
-    plt.figure(figsize=(12, 6))
-    sns.lineplot(data=resampled_data, x=resampled_data.index, y=resampled_data['delays'], marker='o')
-    plt.title('Submit Times Distribution (LAMF Workflows)')
-    plt.xlabel('Submit Times')
-    plt.ylabel('Number of Submissions')
-    plt.xticks(rotation=45)
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig('submitTimes_LA.png')
+from elastiflow.scripts.dispatcher import Arrivals, send_workflow
 
 
 def delayGenerationFromSubmitTimes(workflows):
@@ -160,39 +137,8 @@ def fetchWorkflow(i, path=None):
     return workflow
 
 
-def send_workflow(workflow):
-    """
-    Send workflow via HTTP POST (for real execution mode)
-
-    Not used in simulation mode, but kept for compatibility.
-    """
-    proxies = {
-        "http": None,
-        "https": None
-    }
-    print(workflow)
-    response = requests.post('http://0.0.0.0:8080', proxies=proxies, json=workflow)
-    if response.status_code == 200:
-        print('Success:', response.json())
-    else:
-        print('Error:', response.status_code, response.text)
-
-
-def dispatcher_LA(backend):
-    """
-    LAMF Dispatcher - SimPy process
-
-    Loads license-aware workflows from sample_workflows_LA/ and sends them
-    to the scheduler at realistic intervals.
-
-    Args:
-        backend: the execution backend (its clock, and its workflows channel to submit on)
-    """
-    delays = delayGenerationFromSubmitTimes(TOTAL_WORKFLOWS)
-    # Alternative: Use fixed delays for testing
-    # delays = [1, 60, 60, 80, 100, 250, 300, 40, 120, 200, 150, 100]
-
-    print(f'Starting LAMF dispatcher for {TOTAL_WORKFLOWS} workflows at {backend.now()}...')
+def _banner(n, backend):
+    print(f'Starting LAMF dispatcher for {n} workflows at {backend.now()}...')
     print(f'All workflows require licenses (ANSYS/ABAQUS/LSDYNA)')
     print('')
     print(f'Temporal Scaling Configuration (Solution 4):')
@@ -201,31 +147,30 @@ def dispatcher_LA(backend):
     print(f'  - Arrival rate multiplier: {1/TEMPORAL_COMPRESSION_FACTOR:.1f}×')
     print('')
 
-    for i in range(TOTAL_WORKFLOWS):
-        backend.sleep(delays[i])
-        print(f'[{backend.now():8.1f}s] Dispatching workflow {i}...')
 
-        workflow = fetchWorkflow(i)
-        if workflow:
-            workflow['submit_time'] = backend.now()
-            backend.workflows.send(workflow)
-        else:
-            print(f'  [✗] Failed to load workflow {i}, skipping')
-
-    # Send END signal after all workflows have had time to finish.
-    # The buffer is set generously large (~58 simulated days) so even the
-    # slowest workflow at the largest workload size finishes before END
-    # fires. Simulus advances through empty simulated time near-instantly,
-    # so an oversized buffer adds negligible wall-clock cost — but a buffer
-    # that is too small causes still-running workflows to be marked
-    # "incomplete" and silently excluded from the cost / miss-rate averages,
-    # which biases every metric. Do NOT shrink this value without verifying
+def _before_end(backend):
+    # The buffer before END is set generously large (~58 simulated days) so even
+    # the slowest workflow at the largest workload size finishes before END
+    # fires. Simulus advances through empty simulated time near-instantly, so
+    # an oversized buffer adds negligible wall-clock cost, but a buffer that is
+    # too small causes still-running workflows to be marked "incomplete" and
+    # silently excluded from the cost / miss-rate averages, which biases every
+    # metric. Do NOT shrink LICENCE.end_delay without verifying
     # `Incomplete workflows: 0` in the summary at the highest N tested.
     print('')
     print(f'[{backend.now():8.1f}s] All workflows dispatched, waiting for completion...')
-    backend.sleep(5_000_000)  # generous: ~58 simulated days
-    print(f'[{backend.now():8.1f}s] Sending END signal')
-    backend.workflows.send(fetchWorkflow('end', f"{PACKAGE_DIR}"))
+
+
+# The licence-constrained arrival process: the compressed, jittered replay of
+# the submission trace above, the sample_workflows_LA plans, END after ~58 days.
+LICENCE = Arrivals(
+    'licence', TOTAL_WORKFLOWS, delayGenerationFromSubmitTimes, fetchWorkflow, end_delay=5_000_000,
+    banner=_banner,
+    announce=lambda i, backend: print(f'[{backend.now():8.1f}s] Dispatching workflow {i}...'),
+    missing=lambda i: print(f'  [✗] Failed to load workflow {i}, skipping'),
+    before_end=_before_end,
+    at_end=lambda backend: print(f'[{backend.now():8.1f}s] Sending END signal'),
+)
 
 
 if __name__ == "__main__":

@@ -1,37 +1,15 @@
 """
 License-Aware Executor
 
-Extends the base executor to handle license-aware workflow execution.
+The licence use case's execute and resource-update functions for the executor
+node loop in executor.py (B7.6).
 Accepts and logs license hold information but delegates license management to scheduler.
 """
 
-import threading
 from elastiflow.utils.exec_sched import setNewResources
 from elastiflow.scripts.create_instance import deleteInstanceFromIp
 from elastiflow.utils.request import getConfig, sendRequest
 from elastiflow.workflow.steep_workflow import Steep_Workflow
-from elastiflow.server import server
-from elastiflow.wf_queue.redis_queue import Redis_Queue
-
-
-def processQueueData(queue, backend):
-    """
-    Process incoming workflow execution requests
-
-    Handles both initial allocations and resource updates (moldable scheduling).
-    """
-    while True:
-        data = queue.peek()
-        if data:
-            data = eval(data)
-            if data["initial-alloc"]:
-                # New workflow - create execution thread
-                thread = threading.Thread(target=executeWorkflowLA, args=[data, backend])
-                thread.start()
-            else:
-                # Resource update (moldable reallocation)
-                processNewResourcesLA(data)
-            queue.pop()
 
 
 def executeWorkflowLA(data, backend):
@@ -134,30 +112,9 @@ if __name__ == "__main__":
     print('  - Compatible with moldable resource adjustments')
     print('=' * 60)
 
-    # Setup executor queue
-    queue = Redis_Queue(queue_name='exec-queue')
     from elastiflow.execution.backend import LiveBackend
-    backend = LiveBackend()   # the executor node: wall clock, HTTP to the scheduler, boto3 release
-
-    # Start HTTP server thread
-    server_thread = threading.Thread(
-        target=server.run,
-        kwargs={'queue': queue, 'port': getConfig('executor-incoming-port')}
-    )
-    server_thread.start()
-
-    # Start queue listener daemon thread
-    queue_listener = threading.Thread(target=processQueueData, args=[queue, backend])
-    queue_listener.daemon = True
-    queue_listener.start()
-
-    print(f'License-Aware Executor started successfully!')
-    print(f'Listening for workflows on port {getConfig("executor-incoming-port")}...')
-    print('Press Ctrl+C to stop')
-    print('')
-
-    try:
-        server_thread.join()
-        queue_listener.join()
-    except KeyboardInterrupt:
-        print("\n\nExecutor shutting down...")
+    from elastiflow.executor import serve
+    serve(LiveBackend(), executeWorkflowLA, processNewResourcesLA,   # the executor node: wall clock, HTTP to the scheduler, boto3 release
+          started=('License-Aware Executor started successfully!',
+                   f'Listening for workflows on port {getConfig("executor-incoming-port")}...',
+                   'Press Ctrl+C to stop', ''))

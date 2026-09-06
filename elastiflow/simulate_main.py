@@ -8,7 +8,7 @@ from elastiflow.scheduler.heft_heft_req import HEFT_HEFT_REQ
 from elastiflow.scheduler.heft_fcfs_req import HEFT_FCFS_REQ
 from elastiflow.scheduler.fcfs_scheduler import FCFS_Scheduler
 from elastiflow.wf_queue.redis_queue import Redis_Queue
-from elastiflow.scripts.dispatcher import dispatcher
+from elastiflow.scripts.dispatcher import SEISSOL, dispatcher
 
 # Create a queue for communication
 queue = Redis_Queue(queue_name='wf-queue')
@@ -41,7 +41,7 @@ backend_sched = SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb'
 backend_disp = SimulatedBackend(sim_dispatcher)   # sends by mailbox name from its own simulator
 
 # P1: Dispatcher sleepes for gaussian time and writes to wf mailbox
-sim_dispatcher.process(dispatcher, backend_disp)
+sim_dispatcher.process(dispatcher, backend_disp, SEISSOL)
 # P2. Sceduler reads wf-mb at reguler intervals, allocates resources, creates a mb and an exec process
 # PN: Exec process sleeps appropriately and writes to completed_jobs_mb
 sim_sched.process(sched.run, backend_sched, name='fcfs_sched')
