@@ -179,36 +179,4 @@ python -m pytest            # unit + regression, about half a minute
 python -m pytest -m smoke   # every simulated policy once against the recorded baseline, about 40 s
 ```
 
-The regression tests re-run one committed cell of each campaign and compare
-every metric with the dataset of record at tag `thesis-submitted-2026-09-04`.
-They are the contract for any change to the framework.
 
-## Reproducing results
-
-* One simulated cell: `python -m elastiflow run --mode simulated --use-case seissol --policy Elastic-EDF_c ...`
-  (`docs/INSTALL.md`, section "Running a simulated cell by hand"); `--mode live`
-  starts the live scheduler process instead. `elastiflow/policies.py` maps the
-  dissertation's policy names to the classes; `elastiflow/config/profiles.py`
-  maps each use case to its constants module.
-* A campaign: `use_cases/seissol/results/sweep_PLAIN.py` and
-  `use_cases/licence/results/canonical_sweep.py` (they merge into the dataset
-  files in place; run them on a branch).
-* A figure: every dissertation figure is mapped to its dataset, generator and
-  committed output in `thesis/figures.yaml` (rendered in `docs/PROVENANCE.md`);
-  `python thesis/sync_figures.py check --thesis-images DIR` compares the committed
-  files with the submitted images, `regenerate` re-runs a generator in a
-  throw-away worktree and compares.
-* HPO ran live; its driver on AWS is `elastiflow/simulate_main_HPO.py` with
-  `deploy/runners/run_hpo.py` on the cluster, and the batch-size sweep used the
-  calibrated model under `use_cases/hpo/results/r7_n7_actual_vs_modeled/`.
-
-## What is verified, and what is not
-
-The simulated mode reproduces the dissertation's data of record: both test
-suites pass from a fresh clone, every simulated policy matches its recorded
-baseline field for field, and every data figure of the dissertation has exactly
-one writer whose output matches the submitted image. The live mode (AWS, SLURM,
-Ray, SeisSol through UM-Bridge) cannot be run here; it has an import
-composition test only, and that limit is stated wherever it matters. Before
-publication: a history scrub of credentials and private addresses, and the
-licence under which the code is published, which has not yet been chosen.
