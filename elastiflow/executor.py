@@ -42,7 +42,7 @@ def executeWorklow(data, sim=None):
 
     # kill newly created on-demand instances
     for node in new_hosts['on-demand']:
-        deleteInstanceFromIp(new_hosts['on-demand'][node][1])
+        deleteInstanceFromIp(new_hosts['on-demand'][node][1], sim)
 
 def processNewResources(data):
     # Update workflow config

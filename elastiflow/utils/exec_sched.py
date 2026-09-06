@@ -5,7 +5,6 @@ import re
 from elastiflow.config.constants import FREE_RESOURCES, MOLDABLE, RESOURCE_REQUEST_TIMEOUT, SIMULATE
 from .request import ExecutorRequest, getConfig, sendRequest
 from . import negotiation_log
-from elastiflow.scripts.create_instance import createInstance, deleteInstanceFromIp
 
 import yaml
 import os

@@ -8,7 +8,6 @@ import subprocess
 
 # SIMULATE = False
 # COLD_START_TIME = 0.00
-from elastiflow.config.constants import SIMULATE, COLD_START_TIME
 from elastiflow.execution.backend import backend_for
 region= 'eu-north-1' #change to eu-north-1 when taking runtime of stockholm instances
 
@@ -20,27 +19,22 @@ user = 'ubuntu'
 key_file_path = '/fsx/Nisarg-HPC.pem'
 
 # NOTE: Cold start time will be added here
+def simulated_ip() -> str:
+    """A synthetic private IP for a simulated instance (the same draw as before B3)."""
+    digits = [1] + random.choices(range(255), k=3)
+    return '.'.join(map(str, digits))
+
+
 def createInstance(name: str, count: int = 1, sim = None) -> List[str]:
     backend = backend_for(sim)
     if count < 1:
         return []
     print(f'Creating {count} instances of {name}')
-    if sim or SIMULATE:
-        backend.sleep(COLD_START_TIME)
-        ips = []
-        for i in range(count):
-            digits = [1] + random.choices(range(255), k=3)
-            ips.append('.'.join(map(str, digits)))
-        return ips
-    else: 
-        return launchInstance(name, count)
+    return backend.provision(name, count)
 
-def deleteInstanceFromIp(instances: List[str]):
+def deleteInstanceFromIp(instances: List[str], sim=None):
     print('Terminating instances', instances)
-    if not SIMULATE:
-         return terminateInstance(instances)
-    if not SIMULATE:
-         return terminateInstance(instances)
+    return backend_for(sim).release(instances)
 
 def launchInstance(instanceName: str, count):
     instance_details = []

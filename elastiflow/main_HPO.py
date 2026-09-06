@@ -61,7 +61,8 @@ def main(scheduler_type='moldable', algo='fcfs', wf_count=None, infra='hybrid'):
     finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
     resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
     from elastiflow.execution.backend import LiveBackend, register
-    register(None, LiveBackend(queue, finish_queue, resource_request_queue))
+    from elastiflow.scripts.create_instance_HPO import launch_workers, terminate_live
+    register(None, LiveBackend(queue, finish_queue, resource_request_queue, launch=launch_workers, terminate=terminate_live))
 
     # Select scheduler based on algo + mode
     if algo == 'fcfs' and scheduler_type == 'static':

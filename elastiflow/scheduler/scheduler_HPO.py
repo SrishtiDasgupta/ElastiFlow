@@ -125,7 +125,7 @@ class Scheduler_HPO(ABC):
         if ondemand_ips:
             print(f"[SAFETY-NET] Terminating on-demand instances for {wf_id}: {ondemand_ips}")
             try:
-                deleteInstanceFromIp(ondemand_ips)
+                deleteInstanceFromIp(ondemand_ips, sim)
             except Exception as e:
                 print(f"[ERROR] Safety-net termination failed for {wf_id}: {e}")
 
@@ -191,7 +191,7 @@ class Scheduler_HPO(ABC):
                     if instance.type == 'on-demand' and ips:
                         print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
                         try:
-                            deleteInstanceFromIp(ips)
+                            deleteInstanceFromIp(ips, sim)
                         except Exception as e:
                             print(f"[ERROR] Scale-down termination failed: {e}")
 

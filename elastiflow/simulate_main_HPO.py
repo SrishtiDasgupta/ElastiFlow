@@ -47,7 +47,9 @@ completed_jobs_mb = sim_sched.mailbox('completed_jobs_mb', 1)
 resource_request_mb = sim_sched.mailbox('resource_request_mb', 1)
 from elastiflow.execution.backend import SimulatedBackend, register
 from elastiflow.executor_HPO import executeWorkflowHPO, processNewResourcesHPO
-register(sim_sched, SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorkflowHPO, on_resources=processNewResourcesHPO))
+from elastiflow.config.constants_HPO import COLD_START_TIME
+from elastiflow.scripts.create_instance_HPO import simulated_worker_ip
+register(sim_sched, SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorkflowHPO, on_resources=processNewResourcesHPO, cold_start=COLD_START_TIME, fake_ip=simulated_worker_ip, release_message='Simulated termination of {ips}'))
 register(sim_dispatcher, SimulatedBackend(sim_dispatcher))   # sends by mailbox name from its own simulator
 
 # P1: Dispatcher sleeps for specified time and writes to wf mailbox

@@ -129,8 +129,22 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   path (a three-attempt retry loop) is kept verbatim under its `if sim:` guard,
   since B2 must not change live behaviour. Gate: regression 11/11, unit 90/90,
   smoke against the B0 baseline.
-* **B3. Provisioning.** `provision` / `release` replace `createInstance` /
-  `terminateInstance` and their `SIMULATE` guards.
+* **B3. Provisioning** (done 2026-09-06). `provision(instance_type, count)` and
+  `release(ips)` on the backend. `SimulatedBackend` takes `cold_start` and a
+  `fake_ip` generator at registration (SeisSol and licence: 400.5 s and the
+  `1.x.x.x` draw from `create_instance.simulated_ip`; HPO: 530 s and the
+  `10.19.x.x` draw from `create_instance_HPO.simulated_worker_ip`), so the
+  cold-start sleep and the random draws happen in the same order as before;
+  `LiveBackend` takes `launch` and `terminate` (`launchInstance` /
+  `terminateInstance`, or the HPO `launch_workers` / `terminate_live`).
+  `createInstance`, `createWorkerInstances` and `deleteInstanceFromIp` stay as
+  thin wrappers that print what they printed and call the backend;
+  `deleteInstanceFromIp` gained a `sim` parameter, passed at its eleven call
+  sites, because the branch is now decided by the backend rather than by the
+  `SIMULATE` constant. The SeisSol module no longer imports `SIMULATE` or
+  `COLD_START_TIME`; the HPO module keeps them for its CLI-only helpers
+  (`createExecutorInstance`, `getInstanceRole`, `listHPOInstances`). Gate:
+  regression 11/11, smoke against the B0 baseline.
 * **B4. Iteration execution.** `run_iteration` replaces the execute action's
   branch. First as a move that keeps the subprocess call to the service stub in
   the simulated implementation (so the numbers cannot move), then, as a separate

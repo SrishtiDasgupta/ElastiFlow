@@ -667,7 +667,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                 if instance.type == 'on-demand' and ips:
                     print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
                     try:
-                        deleteInstanceFromIp(ips)
+                        deleteInstanceFromIp(ips, sim)
                     except Exception as e:
                         print(f"[ERROR] Scale-down termination failed: {e}")
 
@@ -700,7 +700,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             if leaked_ips:
                 print(f"[CLEANUP] Send to executor failed for {wf_id}, terminating on-demand scale-up instances: {leaked_ips}")
                 try:
-                    deleteInstanceFromIp(leaked_ips)
+                    deleteInstanceFromIp(leaked_ips, sim)
                 except Exception as e:
                     print(f"[CLEANUP] Failed to terminate leaked scale-up instances: {e}")
             # Return allocated slots to resource manager
@@ -765,7 +765,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             if created_ips and not sim and not SIMULATE:
                 print(f"[CLEANUP] Rolling back {len(created_ips)} successfully created instances: {created_ips}")
                 try:
-                    deleteInstanceFromIp(created_ips)
+                    deleteInstanceFromIp(created_ips, sim)
                 except Exception as cleanup_err:
                     print(f"[CLEANUP] Rollback termination failed: {cleanup_err}")
             # Zero out all on-demand IPs so caller sees creation failed

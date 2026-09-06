@@ -129,7 +129,7 @@ def executeWorkflowHPO(data, sim=None):
                     ips = val[1]
                     print(f"[CLEANUP] Terminating on-demand instances: {ips}")
                     try:
-                        deleteInstanceFromIp(ips)
+                        deleteInstanceFromIp(ips, sim)
                     except Exception as e:
                         print(f"[ERROR] Termination failed for {ips}: {e}")
 

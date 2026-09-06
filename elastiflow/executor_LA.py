@@ -95,7 +95,7 @@ def executeWorkflowLA(data, sim=None):
     # Kill newly created on-demand instances
     for node in new_hosts.get('on-demand', {}):
         if isinstance(new_hosts['on-demand'][node], tuple):
-            deleteInstanceFromIp(new_hosts['on-demand'][node][1])
+            deleteInstanceFromIp(new_hosts['on-demand'][node][1], sim)
 
 
 def processNewResourcesLA(data):
