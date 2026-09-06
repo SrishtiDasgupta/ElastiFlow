@@ -14,7 +14,6 @@ import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow, getEstimate
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 from elastiflow.utils import negotiation_log
@@ -44,16 +43,12 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         print(f'Starting HPO Moldable FCFS scheduler...')
 
         # Start a thread to periodically compute resource utilization
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager)
-        else:
-            thread = threading.Thread(target=self.metrics.collectResourceUtilization, args=[sim, self.resource_manager])
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
 
         while True:
 
             # Check queue for moldable resource requests
-            resource_request = peekElement(resource_request_mb, self.resource_request_queue)
+            resource_request = backend.resource_requests.peek()
 
             if resource_request:
                 # Process moldable resource requests
@@ -69,22 +64,22 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
                 except Exception as _e:
                     print(f'[negotiation_log] obs parse fail: {_e}')
                 if backend.now() - resource_request['request-time'] > 300:  # 5 min timeout
-                    removeElement(resource_request_mb, self.resource_request_queue)
+                    backend.resource_requests.pop()
                     continue
                 self.processMoldableRequestHPO(resource_request, sim)
                 print(f"HPO Moldable resource processing overhead: {time.time() - start}")
-                removeElement(resource_request_mb, self.resource_request_queue)
+                backend.resource_requests.pop()
                 continue
 
             # Check the queue for new jobs
-            workflow_plan = peekElement(wf_mb, self.queue)
+            workflow_plan = backend.workflows.peek()
 
             if workflow_plan:
                 wf_plan = eval(workflow_plan) # Convert string back to dictionary
 
                 # End the simulation and compute metrics
                 if wf_plan['id'] == 'END':
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     self.metrics.computeMetrics(file_prefix=self.file_prefix)
                     break
 
@@ -97,7 +92,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
 
                     # Remove the element if we found the resources needed.
                     if ips:
-                        removeElement(wf_mb, self.queue)
+                        backend.workflows.pop()
                         # NOTE: We start billing at this point
                         start_time = backend.now()
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
@@ -689,11 +684,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         }
         print(f"{wf_id} allocated additional resources: ", ips)
         send_ok = True
-        if sim:
-            from elastiflow.executor_HPO import processNewResourcesHPO
-            sim.process(processNewResourcesHPO, new_req)
-        else:
-            send_ok = sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        send_ok = backend.notify_resources(new_req, client_ip)
         negotiation_log.log('scheduler',
                             wf_id=wf_id, iter_idx=iter_idx if iter_idx is not None else '',
                             request_type='grow',
@@ -731,11 +722,7 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
             "hosts": response_instances
         }
         print(f"Scheduler freeing {response_instances} for {wf_id} ")
-        if sim:
-            from elastiflow.executor_HPO import processNewResourcesHPO
-            sim.process(processNewResourcesHPO, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
         negotiation_log.log('scheduler',
                             wf_id=wf_id, iter_idx=iter_idx if iter_idx is not None else '',
                             request_type='shrink',
@@ -828,10 +815,4 @@ class FCFS_Optimized_HPO(Scheduler_HPO):
         print(f"  Workers: {ips}")
 
         # Send to executor
-        if sim:
-            # In simulation mode, process directly
-            from elastiflow.executor_HPO import executeWorkflowHPO
-            sim.process(executeWorkflowHPO, request, sim)
-        else:
-            # Send to executor instance
-            sendRequest(executor_ip, getConfig('executor-incoming-port'), request)
+        backend.start_workflow(request, executor_ip)

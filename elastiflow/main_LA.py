@@ -30,6 +30,8 @@ if __name__ == "__main__":
     queue = Redis_Queue(queue_name='wf-queue')
     finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
     resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
+    from elastiflow.execution.backend import LiveBackend, register
+    register(None, LiveBackend(queue, finish_queue, resource_request_queue))
 
     # Initialize LAMF scheduler
     sched = FCFS_Optimized_LA(

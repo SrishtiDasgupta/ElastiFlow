@@ -103,7 +103,7 @@ def executeWorkflowHPO(data, sim=None):
         print(f"HPO Workflow {workflow.id} complete at {request['finish-time']}")
 
         if sim:
-            sim.sync().send(sim, 'completed_jobs_mb', str(request))
+            backend.completions.send(request)
         else:
             # Retry completion notification up to 3 times.
             # A lost notification means the scheduler never frees this

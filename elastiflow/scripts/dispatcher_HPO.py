@@ -106,7 +106,7 @@ def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=Fals
                 print(f'  Failed to load data{i}.yaml, skipping')
                 continue
             workflow['submit_time'] = backend.now()
-            sim.sync().send(sim, wf_mb, str(workflow))
+            backend.workflows.send(workflow)
     else:
         # Original hand-crafted mode (5 workflows)
         if num_workflows is None:
@@ -120,12 +120,12 @@ def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=Fals
             print(f'Dispatching workflow {i+1} at t={backend.now()}s')
             workflow = fetchWorkflow(i, use_generated=False)
             workflow['submit_time'] = backend.now()
-            sim.sync().send(sim, wf_mb, str(workflow))
+            backend.workflows.send(workflow)
 
     # Send END after all workflows complete (large delay to ensure completion)
     backend.sleep(150000)
     print(f'Sending END signal at t={backend.now()}s')
-    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end')))
+    backend.workflows.send(fetchWorkflow('end'))
 
 
 if __name__ == "__main__":

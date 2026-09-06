@@ -26,7 +26,6 @@ from elastiflow.config.constants import (
     AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME,
     RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, COLD_START_TIME, DEADLINE_BUFFER
 )
-from elastiflow.executor import executeWorklow, processNewResources
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.utils.metrics_LA import MetricsLA as Metrics
 from elastiflow.utils.resource import getEstimate
@@ -34,7 +33,6 @@ from elastiflow.resource_manager.instance import Instance, OnPremInstance, Cloud
 from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
-from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.execution.backend import backend_for
 
 
@@ -240,6 +238,7 @@ class Scheduler_LA(ABC):
 
         Extended to include license hold IDs in the request
         """
+        backend = backend_for(sim)
         request = {
             "initial-alloc": True,
             "wf-plan": wf_plan,
@@ -255,11 +254,7 @@ class Scheduler_LA(ABC):
                 [executor]
             )
 
-        if sim:
-            sim.process(executeWorklow, request, sim)
-        else:
-            sendRequest(executor, getConfig('executor-incoming-port'), request)
-
+        backend.start_workflow(request, executor)
     def processJobCompletion(self, sim=None, mb=None):
         """
         Process workflow completions and release BOTH compute and licenses
@@ -267,7 +262,7 @@ class Scheduler_LA(ABC):
         backend = backend_for(sim)
         print('Scheduler started listening to completed jobs...')
         while True:
-            data = peekElement(mb, self.finish_queue)
+            data = backend.completions.peek()
             if data:
                 data = eval(data)
                 wf_id = data.get('wf-id')
@@ -317,7 +312,7 @@ class Scheduler_LA(ABC):
                     }
                 )
                 print(f'{wf_id} workflow freed at {backend.now()}')
-                removeElement(mb, self.finish_queue)
+                backend.completions.pop()
 
             backend.sleep(60)
 
@@ -355,6 +350,7 @@ class Scheduler_LA(ABC):
 
         Extended to include license hold IDs
         """
+        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -367,10 +363,7 @@ class Scheduler_LA(ABC):
         if license_holds:
             print(f"  with licenses: {license_holds}")
 
-        if sim:
-            sim.process(processNewResources, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
 
         if alloc_resources:
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
@@ -416,6 +409,7 @@ class Scheduler_LA(ABC):
         """
         Send freed resources notification to executor
         """
+        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
             "initial-alloc": False,
@@ -425,10 +419,7 @@ class Scheduler_LA(ABC):
 
         print(f"Scheduler freeing {response_instances} for {wf_id}")
 
-        if sim:
-            sim.process(processNewResources, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
 
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)

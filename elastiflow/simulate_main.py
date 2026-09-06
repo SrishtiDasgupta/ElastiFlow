@@ -32,6 +32,10 @@ wf_mb = sim_sched.mailbox('wf_mb', 1)
 completed_jobs_mb = sim_sched.mailbox('completed_jobs_mb', 1)
 # Executor writes to resource request mb, and scheduler reads it
 resource_request_mb = sim_sched.mailbox('resource_request_mb', 1)
+from elastiflow.execution.backend import SimulatedBackend, register
+from elastiflow.executor import executeWorklow, processNewResources
+register(sim_sched, SimulatedBackend(sim_sched, {'wf_mb': wf_mb, 'completed_jobs_mb': completed_jobs_mb, 'resource_request_mb': resource_request_mb}, execute=executeWorklow, on_resources=processNewResources))
+register(sim_dispatcher, SimulatedBackend(sim_dispatcher))   # sends by mailbox name from its own simulator
 
 # P1: Dispatcher sleepes for gaussian time and writes to wf mailbox
 sim_dispatcher.process(dispatcher, sim_dispatcher, 'wf_mb')

@@ -211,7 +211,7 @@ def dispatcher_LA(sim, wf_mb):
         workflow = fetchWorkflow(i)
         if workflow:
             workflow['submit_time'] = backend.now()
-            sim.sync().send(sim, wf_mb, str(workflow))
+            backend.workflows.send(workflow)
         else:
             print(f'  [✗] Failed to load workflow {i}, skipping')
 
@@ -228,7 +228,7 @@ def dispatcher_LA(sim, wf_mb):
     print(f'[{backend.now():8.1f}s] All workflows dispatched, waiting for completion...')
     backend.sleep(5_000_000)  # generous: ~58 simulated days
     print(f'[{backend.now():8.1f}s] Sending END signal')
-    sim.sync().send(sim, wf_mb, str(fetchWorkflow('end', f"{PACKAGE_DIR}")))
+    backend.workflows.send(fetchWorkflow('end', f"{PACKAGE_DIR}"))
 
 
 if __name__ == "__main__":

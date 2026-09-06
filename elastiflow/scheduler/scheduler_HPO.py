@@ -3,14 +3,12 @@ import time
 from typing import List
 
 from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, MIN_RUNTIME, RESOURCE_REQUEST_TIMEOUT, SIMULATE
-from elastiflow.executor_HPO import executeWorkflowHPO, processNewResourcesHPO
 from elastiflow.scripts.create_instance_HPO import deleteInstanceFromIp
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 from elastiflow.utils.metrics_HPO import MetricsHPO as Metrics
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.instance import Instance, OnPremInstance
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
-from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.execution.backend import backend_for
 
 class Scheduler_HPO(ABC):
@@ -42,6 +40,7 @@ class Scheduler_HPO(ABC):
         Note: HPO schedulers should override this with sendWorkflowForExecutionHPO
         This base implementation is for compatibility but should not be called directly
         """
+        backend = backend_for(sim)
         # Send to the executor node - workflow parsing must be handled there
         request = {
             "initial-alloc": True,
@@ -54,18 +53,13 @@ class Scheduler_HPO(ABC):
         # TODO: What if executor is not created
         if on_demand_type:
             request['hosts']['on-demand'][on_demand_type] =  (request['hosts']['on-demand'][on_demand_type][0], [executor])
-        if sim:
-            sim.process(executeWorkflowHPO, request, sim)
-        else:
-            sendRequest(executor, getConfig('executor-incoming-port'), request)
-
-
+        backend.start_workflow(request, executor)
     def processJobCompletion(self, sim=None, mb=None):
         backend = backend_for(sim)
         print('HPO Scheduler started listening to completed jobs...')
         while True:
             try:
-                data = peekElement(mb, self.finish_queue)
+                data = backend.completions.peek()
                 if data:
                     data = eval(data)
                     wf_id = data.get('wf-id')
@@ -75,7 +69,7 @@ class Scheduler_HPO(ABC):
                     # workflow would KeyError and crash this thread permanently.
                     if not self.resource_manager.getWorkflow(wf_id):
                         print(f'[WARN] Duplicate completion for {wf_id}, ignoring')
-                        removeElement(mb, self.finish_queue)
+                        backend.completions.pop()
                         backend.sleep(1)
                         continue
 
@@ -90,14 +84,14 @@ class Scheduler_HPO(ABC):
                     print(f'{wf_id} workflow freed at {backend.now()}')
                     with open('workflow_status.log', 'a') as f:
                         f.write(f'{wf_id} COMPLETED at {backend.now()}\n')
-                    removeElement(mb, self.finish_queue)
+                    backend.completions.pop()
             except Exception as e:
                 print(f'[ERROR] processJobCompletion exception: {e}')
                 import traceback
                 traceback.print_exc()
                 # Don't crash the thread — skip this message and continue
                 try:
-                    removeElement(mb, self.finish_queue)
+                    backend.completions.pop()
                 except Exception:
                     pass
             backend.sleep(60) # NOTE: polling interval
@@ -160,10 +154,7 @@ class Scheduler_HPO(ABC):
             "hosts": ips, # {cluster: {name: (count, [ips])}}
         }
         print(f"{wf_id} allocated additional resources: ", ips)
-        if sim:
-            sim.process(processNewResourcesHPO, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
         if alloc_resources:
             self.resource_manager.updateWorkflowResources(wf_id, alloc_resources)
             self.metrics.updateResources(wf_id, alloc_resources, backend.now())
@@ -217,10 +208,7 @@ class Scheduler_HPO(ABC):
             "hosts": response_instances # {cluster: {name: (count, ips)}}
         }
         print(f"HPO Scheduler freeing {response_instances} for {wf_id} ")
-        if sim:
-            sim.process(processNewResourcesHPO, new_req)
-        else:
-            sendRequest(client_ip, getConfig('executor-incoming-port'), new_req)
+        backend.notify_resources(new_req, client_ip)
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
             self.metrics.updateResources(wf_id, to_free_instances, None, backend.now())

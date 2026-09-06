@@ -11,7 +11,6 @@ from elastiflow.resource_manager.resource_manager import ResourceManager
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, OnPremInstance
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
-from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
 from elastiflow.execution.backend import backend_for
@@ -35,33 +34,29 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         print(f'Starting HPO FCFS scheduler at {backend.now()}...')
 
         # Start a thread to periodically compute resource utilization
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager)
-        else:
-            thread = threading.Thread(target=self.metrics.collectResourceUtilization, args=[sim, self.resource_manager])
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
 
         while True:
 
             # Check queue for resource requests (minimal for static version)
-            resource_request = peekElement(resource_request_mb, self.resource_request_queue)
+            resource_request = backend.resource_requests.peek()
 
             if resource_request:
                 # Static scheduler - limited resource request handling
                 resource_request = eval(resource_request)
                 print(f"HPO Static Scheduler: Resource request received but ignored (static mode)")
-                removeElement(resource_request_mb, self.resource_request_queue)
+                backend.resource_requests.pop()
                 continue
 
             # Check the queue for new jobs
-            workflow_plan = peekElement(wf_mb, self.queue)
+            workflow_plan = backend.workflows.peek()
 
             if workflow_plan:
                 wf_plan = eval(workflow_plan) # Convert string back to dictionary
 
                 # End the simulation and compute metrics
                 if wf_plan['id'] == 'END':
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     self.metrics.computeMetrics(file_prefix=self.file_prefix)
                     break
 
@@ -74,7 +69,7 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
                     # Remove the element if we found the resources needed.
                     if ips:
-                        removeElement(wf_mb, self.queue)
+                        backend.workflows.pop()
                         # NOTE: We start billing at this point
                         start_time = backend.now()
                         self.sendWorkflowForExecutionHPO(wf_plan, ips, sim, constraints['deadline'])
@@ -343,10 +338,4 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
         print(f"  Workers: {ips}")
 
         # Send to executor
-        if sim:
-            # In simulation mode, process directly
-            from elastiflow.executor_HPO import executeWorkflowHPO
-            sim.process(executeWorkflowHPO, request, sim)
-        else:
-            # Send to executor instance
-            sendRequest(executor_ip, getConfig('executor-incoming-port'), request)
+        backend.start_workflow(request, executor_ip)

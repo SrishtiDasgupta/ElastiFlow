@@ -29,7 +29,6 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
 from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
-from elastiflow.utils.sim import peekElement, removeElement
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.utils.resource import getEstimate
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
@@ -69,14 +68,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
         rejected_workflows = set()
 
         # Start resource utilization collection (including license pools)
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
-        else:
-            thread = threading.Thread(
-                target=self.metrics.collectResourceUtilization,
-                args=[sim, self.resource_manager, self.license_manager]
-            )
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager, self.license_manager)
 
         while True:
 
@@ -86,7 +78,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                 self.license_manager.set_sim_time(backend.now())
 
             # Check queue for resource requests (moldable requests from executors)
-            resource_request = peekElement(resource_request_mb, self.resource_request_queue)
+            resource_request = backend.resource_requests.peek()
 
             if resource_request:
                 start = time.time()
@@ -94,25 +86,25 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
                 # Timeout check
                 if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
-                    removeElement(resource_request_mb, self.resource_request_queue)
+                    backend.resource_requests.pop()
                     continue
 
                 # Process moldable request (with license awareness)
                 self.processFreeRequestWithLicenses(resource_request, sim)
 
                 print(f"⏱ Resource request overhead: {time.time() - start:.3f}s")
-                removeElement(resource_request_mb, self.resource_request_queue)
+                backend.resource_requests.pop()
                 continue
 
             # Check the queue for new jobs
-            workflow_plan = peekElement(wf_mb, self.queue)
+            workflow_plan = backend.workflows.peek()
 
             if workflow_plan:
                 wf_plan = eval(workflow_plan)
 
                 # End simulation
                 if wf_plan['id'] == 'END':
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
                     # Honest billing verification: ledger (Token-Hours) per pool.
                     _fs = backend.now() if sim is not None else self.license_manager.sim_now
@@ -127,7 +119,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
 
                 # Skip workflows that have been rejected as impossible
                 if wf_plan['id'] in rejected_workflows:
-                    removeElement(wf_mb, self.queue)
+                    backend.workflows.pop()
                     print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
                     continue
 
@@ -144,7 +136,7 @@ class FCFS_Optimized_LA(Scheduler_LA):
                         if license_holds:
                             print(f"  with {len(license_holds)} license hold(s)")
 
-                        removeElement(wf_mb, self.queue)
+                        backend.workflows.pop()
 
                         # Start billing
                         start_time = backend.now()

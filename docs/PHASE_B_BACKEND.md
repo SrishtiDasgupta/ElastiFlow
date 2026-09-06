@@ -112,9 +112,23 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   as `backend.now()` from its five callers (`set_sim_time`); owning a backend
   reference comes with injection in B6. Gate: regression 11/11, smoke against
   the B0 baseline.
-* **B2. Channels and messages.** The three `Channel`s replace the mailbox/queue
-  pairs and the 8 send sites; `start_workflow` / `notify_resources` replace the
-  13 `sim.process`-or-HTTP pairs; `spawn` replaces the 19 sampler starts.
+* **B2. Channels and messages** (done 2026-09-06). `Channel` (send, peek, pop,
+  pop_many) with `SimulatedChannel` (a named simulus mailbox; sending goes
+  through the sync group by name from the sender's own simulator, so the
+  mailbox's minimum delay and cross-simulator delivery are exactly as before)
+  and `LiveChannel` (a Redis queue fed by a Gateway HTTP endpoint). The backend
+  gained `workflows`, `completions`, `resource_requests`, `start_workflow`,
+  `notify_resources` and `spawn`; `register(sim, backend)` lets each runner bind
+  a fully wired backend to its simulator (mailbox objects, executor callables)
+  and the live entry points bind `LiveBackend(queues)` to `None`. All 45 event
+  sites and all receive calls now go through the backend; `utils/sim.py` is
+  retired; the scheduler modules no longer import the executors (the backend
+  holds the callables), which removes the scheduler-executor import cycle.
+  Messages keep the `str(dict)` encoding and the consumers' `eval`; decoding
+  moves into the channels in a later step. The HPO executor's live completion
+  path (a three-attempt retry loop) is kept verbatim under its `if sim:` guard,
+  since B2 must not change live behaviour. Gate: regression 11/11, unit 90/90,
+  smoke against the B0 baseline.
 * **B3. Provisioning.** `provision` / `release` replace `createInstance` /
   `terminateInstance` and their `SIMULATE` guards.
 * **B4. Iteration execution.** `run_iteration` replaces the execute action's

@@ -38,10 +38,7 @@ def executeWorklow(data, sim=None):
         "complete": isComplete
     }
     print(f"Workflow {workflow.id} complete at {request['finish-time']}")
-    if sim:
-        sim.sync().send(sim, 'completed_jobs_mb', str(request))
-    else:
-        sendRequest(getConfig('scheduler'), getConfig('workflow-complete-port'), request)
+    backend.completions.send(request)
 
     # kill newly created on-demand instances
     for node in new_hosts['on-demand']:

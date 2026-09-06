@@ -4,7 +4,6 @@ import time
 from elastiflow.config.constants import BUDGET_FACTOR, DEADLINE_FACTOR, SORT_COUNT, WORKFLOW_POLLING
 from elastiflow.resource_manager.heft_rm import HEFTResourceManager
 from elastiflow.utils.request import ExecutorRequest
-from elastiflow.utils.sim import getAllElements, peekElement, removeElement
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler import Scheduler
 from elastiflow.execution.backend import backend_for
@@ -24,16 +23,12 @@ class PriorityPriority(Scheduler):
         print(f'Starting scheduler...')
 
         # Start a thread to periodically compute resource utilization
-        if sim:
-            sim.process(self.metrics.collectResourceUtilization, sim, self.resource_manager)
-        else:
-            thread = threading.Thread(target=self.metrics.collectResourceUtilization, args=[sim, self.resource_manager])
-            thread.start()
+        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
         
         while True:
 
              # Check queue for resource requests
-            resource_requests = getAllElements(resource_request_mb, self.resource_request_queue, SORT_COUNT)
+            resource_requests = backend.resource_requests.pop_many(SORT_COUNT)
             # Sort and update resource requests list 
             self.resource_manager.processResourceRequestsByPriority(resource_requests, self.metrics, sim)
             resource_request = self.resource_manager.peekWorkflow(self.resource_manager.resource_request_heap)
@@ -47,7 +42,7 @@ class PriorityPriority(Scheduler):
                 continue
             
             # Retrieve all new jobs in the queue
-            workflows = getAllElements(wf_mb, self.queue, SORT_COUNT)
+            workflows = backend.workflows.pop_many(SORT_COUNT)
             # Sort and update workflow list 
             self.resource_manager.processWorkflowsByPriority(workflows, sim)
 
