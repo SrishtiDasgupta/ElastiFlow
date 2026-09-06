@@ -4,7 +4,8 @@ Usage:
     python simulate_sweep.py <algo> <mode> <out_dir>
                              [--closeness-tolerance VALUE]
                              [--speedup-threshold VALUE]
-        algo ∈ {fcfs, edf, heft}
+        algo ∈ {fcfs, edf, heft, rank}, or any SeisSol policy name of
+               elastiflow/policies.py (the uncited policies, by module name)
         mode ∈ {moldable, static}
         out_dir: directory where the metrics CSV(s) will be moved
         --closeness-tolerance VALUE  override CLOSENESS_TOLERANCE (default 0.15)
@@ -51,7 +52,8 @@ _parser.add_argument('--iter0-factor', type=float, default=None,
                           'whether FACTOR[0] is ever operative.')
 _args = _parser.parse_args()
 ALGO, MODE, OUT_DIR = _args.algo, _args.mode, _args.out_dir
-assert ALGO in {"fcfs", "edf", "heft", "rank"}
+from elastiflow.policies import resolve_seissol
+POLICY = resolve_seissol(ALGO, MODE, _args.sort_key)   # fails here on an unknown name; imports nothing yet
 # rank is always moldable in the appendix (Md.Rank only); we still allow
 # `static` here so the harness can sanity-check the static variant if
 # ever wanted, but the canonical sweep will only use rank+moldable.
@@ -100,23 +102,12 @@ sort_key_str = (
     'runtime_per_iteration' if _args.sort_key == 'runtime' else 'cost_per_iteration'
 )
 
-# Scheduler selection
-if ALGO == "fcfs":
-    from elastiflow.scheduler.fcfs_optimized import FCFS_Optimized as SchedCls
-    sched_kwargs = {"sort_key": sort_key_str}
-elif ALGO == "edf":
-    from elastiflow.scheduler.earliest_deadline_edf import EarliestDeadlineEDF as SchedCls
-    sched_kwargs = {"sort_key": sort_key_str}
-elif ALGO == "heft":
-    # St.HEFT in the appendix has no _r/_c variant — the scheduler does
-    # not accept a sort_key. We deliberately ignore --sort-key for heft.
-    from elastiflow.scheduler.heft_heft_req import HEFT_HEFT_REQ as SchedCls
-    sched_kwargs = {}
-elif ALGO == "rank":
-    # Md.Rank in the appendix uses PriorityPriority with the
-    # (BUDGET_FACTOR, DEADLINE_FACTOR) pair patched above.
-    from elastiflow.scheduler.priority_priority import PriorityPriority as SchedCls
-    sched_kwargs = {}
+# Scheduler selection through the registry. The class is imported only now,
+# after the constants were patched above. HEFT-ST has no _r/_c variant and
+# takes no sort key (--sort-key is ignored for it); Elastic-Rank takes the
+# (BUDGET_FACTOR, DEADLINE_FACTOR) pair patched above.
+SchedCls = POLICY.load()
+sched_kwargs = POLICY.kwargs(sort_key_str)
 
 queue = Redis_Queue(queue_name="wf-queue")
 finish_queue = Redis_Queue(queue_name="completed-jobs-queue")

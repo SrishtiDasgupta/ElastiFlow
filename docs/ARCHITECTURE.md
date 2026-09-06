@@ -53,13 +53,16 @@ simulated backend serves SeisSol and licence.
 
 ## The three per-use-case forks
 
-The framework exists in three parallel copies, one per experiment, with
-unrelated abstract base classes. Phase B merges them.
+The framework exists in three parallel copies, one per experiment. Since
+B7.1 the scheduler bases form one hierarchy (`Scheduler`, with
+`Scheduler_LA` and `Scheduler_HPO` as subclasses that override what differs
+for their family); the remaining layers are still copies. Phase B7
+(`docs/PHASE_B7_SCHEDULER_MERGE.md`) merges them step by step.
 
 | layer | SeisSol | licence | HPO |
 |---|---|---|---|
 | runner | `simulate_sweep.py` (campaign), `simulate_main.py` (Ch. 7) | `simulate_main_LA.py` | `simulate_main_HPO.py` (live) |
-| scheduler base | `scheduler/scheduler.py` `Scheduler` | `scheduler_LA.py` `Scheduler_LA` | `scheduler_HPO.py` `Scheduler_HPO` |
+| scheduler base | `scheduler/scheduler.py` `Scheduler` (+ `EDFOrderingMixin`) | `scheduler_LA.py` `Scheduler_LA(Scheduler)`, `Scheduler_LA_Elastic` | `scheduler_HPO.py` `Scheduler_HPO(Scheduler)`, `Scheduler_HPO_Static`, `Scheduler_HPO_Elastic` |
 | dispatcher | `dispatcher.py` | `dispatcher_LA.py` | `dispatcher_HPO.py` |
 | executor | `executor.py` | `executor_LA.py` | `executor_HPO.py` |
 | constants | `config/constants.py` | `constants_LA.py` | `constants_HPO.py` |
@@ -69,6 +72,13 @@ unrelated abstract base classes. Phase B merges them.
 | workloads | `sample_workflows/` (400) | `workflow/sample_workflows_LA/` (800) | `workflow/sample_workflows_HPO/` (20) |
 
 ### Policies as the dissertation names them
+
+The mapping below is code: `elastiflow/policies.py` is the registry the
+entry points resolve through (name → class, constructor arguments, whether
+the name is offered). The four SeisSol policies the dissertation does not
+cite (`fcfs_scheduler`, the policy of the live `main.py`; `earliest_deadline_fcfs`;
+`priority_fcfs`; `heft_fcfs_req`) are registered by module name, the last
+three as inactive, and each has one cell in the smoke baseline.
 
 SeisSol–TinyDA, via `simulate_sweep.py <algo> <mode> [--sort-key runtime|cost]`:
 

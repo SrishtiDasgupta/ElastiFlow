@@ -121,12 +121,24 @@ def seissol_variants() -> dict:
     return load_module(REPO / 'use_cases' / 'seissol' / 'results' / 'sweep_PLAIN.py').VARIANT_ARGS
 
 
+# The four SeisSol policies the dissertation does not cite, kept and resolvable
+# by module name through elastiflow/policies.py (docs/PHASE_B7_SCHEDULER_MERGE.md,
+# B7.0). One cell each in the smoke baseline, so they cannot rot unnoticed.
+UNCITED_SEISSOL_VARIANTS = {
+    'fcfs_scheduler_static':         ['fcfs_scheduler', 'static', '--sort-key', 'cost'],
+    'earliest_deadline_fcfs_static': ['earliest_deadline_fcfs', 'static', '--sort-key', 'cost'],
+    'priority_fcfs_static':          ['priority_fcfs', 'static'],
+    'heft_fcfs_req_static':          ['heft_fcfs_req', 'static'],
+}
+
+
 def seissol_cell(python: str, variant: str, out_dir: Path, N: int = SEISSOL_N, seed: int = SEISSOL_SEED) -> dict:
     """Run one SeisSol cell exactly as sweep_PLAIN.py does and parse the .out
     file the simulator moves into out_dir with sweep_PLAIN.parse_out."""
     sweep = load_module(REPO / 'use_cases' / 'seissol' / 'results' / 'sweep_PLAIN.py')
     out_dir.mkdir(parents=True, exist_ok=True)
-    run([python, 'simulate_sweep.py', *sweep.VARIANT_ARGS[variant], out_dir,
+    args = sweep.VARIANT_ARGS.get(variant) or UNCITED_SEISSOL_VARIANTS[variant]
+    run([python, 'simulate_sweep.py', *args, out_dir,
          '--seed', str(seed), '--N', str(N)], cwd=REPO / 'elastiflow')
     outs = sorted(out_dir.glob('*.out'))
     assert len(outs) == 1, f'expected one .out file in {out_dir}, found {outs}'

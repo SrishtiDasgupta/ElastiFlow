@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import heapq
 import math
 import time
 from typing import List
@@ -16,12 +17,20 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
 
 class Scheduler(ABC):
+    """The scheduler base of every policy (B7.1). The licence and HPO layers
+    subclass it (`scheduler_LA.Scheduler_LA`, `scheduler_HPO.Scheduler_HPO`)
+    and override what differs for them; the two class attributes below are
+    the only per-family bindings the shared methods need."""
+
+    metrics_class = Metrics     # the family's metrics (MetricsLA, MetricsHPO in the subclasses)
+    log_prefix = ''             # 'HPO ' in the HPO layer: its log lines carry the prefix
+    request_timeout = RESOURCE_REQUEST_TIMEOUT   # the HPO layer binds its own (720 s)
 
     def __init__(self, queue, finish_queue, resource_request_queue):
         self.queue = queue
         self.finish_queue = finish_queue
         self.resource_request_queue = resource_request_queue
-        self.metrics = Metrics()
+        self.metrics = self.metrics_class()
 
     @abstractmethod
     def run(self, backend):
@@ -63,7 +72,7 @@ class Scheduler(ABC):
 
     # request = {"wf-id", "count", "iteration": ind, "tinyda-iterations", "client-ip", "request-time"}
     def allocateNewResources(self, request, backend):
-        if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+        if backend.now() - request['request-time'] > self.request_timeout:
             return
         
         (instances, budget, _, start_time, mesh) = self.resource_manager.getWorkflow(request['wf-id'])
@@ -92,9 +101,9 @@ class Scheduler(ABC):
 
     # request = {"wf-id", "count", "request-time", "client-ip"} 
     def freeResources(self, request, backend):
-        if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+        if backend.now() - request['request-time'] > self.request_timeout:
             return
-        (instances, _, deadline, _, _) = self.resource_manager.getWorkflow(request['wf-id'])
+        (instances, _, deadline, *_) = self.resource_manager.getWorkflow(request['wf-id'])   # 5 fields, 7 in the licence layer
         
         response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
         # Only free resources if next iteration can happen in available time
@@ -124,7 +133,7 @@ class Scheduler(ABC):
             "wf-id": wf_id,
             "hosts": response_instances # {cluster: {name: (count, ips)}}
         }
-        print(f"Scheduler freeing {response_instances} for {wf_id} ")
+        print(f"{self.log_prefix}Scheduler freeing {response_instances} for {wf_id} ")
         backend.notify_resources(new_req, client_ip)
         if to_free_instances:
             self.resource_manager.updateFreedResources(wf_id, instances)
@@ -198,7 +207,7 @@ class Scheduler(ABC):
         # NOTE: We can have 2 workflow iterations at the least
         runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
         if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
-            print(f"Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
+            print(f"{self.log_prefix}Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
             return True
         return False
 
@@ -447,3 +456,33 @@ class Scheduler(ABC):
                 node_count -= 1
 
         return acquired_instances
+
+
+class EDFOrderingMixin:
+    """Deadline ordering of the workflow channel, shared by the EDF policies of
+    the licence and HPO layers (B7.2): the policy keeps a heap of the
+    workflows it has peeked and admits the earliest deadline first. The FCFS
+    policies read the channel in arrival order and do not use it."""
+
+    def peekWorkflow(self, heap):
+        """Peek at top of heap without removing"""
+        return heap and heap[0][3]  # Index 3: (deadline, counter, wf_id, data)
+
+    def popWorkflow(self, heap):
+        """Remove top of heap"""
+        try:
+            heapq.heappop(heap)
+        except Exception as e:
+            print(f'HEAP POP ERROR: {e}')
+            print(heap)
+
+    def processWorkflowsByDeadline(self, workflows: List[any]):
+        """Sort workflows by deadline (EDF ordering)"""
+        for wf in workflows:
+            wf_plan = eval(wf)
+            if wf_plan['id'] == 'END':
+                heapq.heappush(self.workflow_heap, (1000000, self.workflow_counter, wf_plan['id'], wf_plan))
+            else:
+                deadline = wf_plan['submit_time'] + wf_plan['constraints']['deadline']
+                heapq.heappush(self.workflow_heap, (deadline, self.workflow_counter, wf_plan['id'], wf_plan))
+            self.workflow_counter += 1

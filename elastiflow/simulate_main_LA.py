@@ -13,6 +13,8 @@ import argparse
 import os
 import sys
 
+from elastiflow import policies   # names only; scheduler classes are imported after the constants are patched
+
 # ---------------------------------------------------------------------------
 # Argument parsing — must happen BEFORE the simulator config modules are
 # imported, so we can override TOTAL_WORKFLOWS and seed np.random before any
@@ -21,8 +23,7 @@ import sys
 _parser = argparse.ArgumentParser(
     description='Run a single (scheduler, N, seed) cell of the LA experiment.')
 _parser.add_argument('--scheduler', default='EDF-HSM',
-                     choices=['LAMF', 'EDF-LAMF', 'FCFS-ST-LA', 'EDF-ST-LA',
-                              'EDF-HSM'],
+                     choices=policies.names('licence', with_aliases=True),
                      help='Which LA scheduling policy to run.')
 _parser.add_argument('--N', type=int, default=None,
                      help='Number of workflows. Overrides TOTAL_WORKFLOWS '
@@ -74,27 +75,13 @@ from elastiflow.config.constants_LA import (  # noqa: E402
 )
 
 # ---------------------------------------------------------------------------
-# Conditional scheduler import based on --scheduler. Done lazily here so the
-# wrong scheduler module never gets imported.
+# Scheduler selection through the registry (elastiflow/policies.py); the
+# class is imported only here, after the constants were patched above.
 # ---------------------------------------------------------------------------
 SCHEDULER_NAME = _args.scheduler
-if SCHEDULER_NAME == 'LAMF':
-    from elastiflow.scheduler.fcfs_optimized_LA import FCFS_Optimized_LA as _SchedClass
-    SCHEDULER_DESC = 'License-Aware Moldable FCFS'
-elif SCHEDULER_NAME == 'EDF-LAMF':
-    from elastiflow.scheduler.edf_optimized_LA import EDF_Optimized_LA as _SchedClass
-    SCHEDULER_DESC = 'License-Aware Moldable EDF'
-elif SCHEDULER_NAME == 'FCFS-ST-LA':
-    from elastiflow.scheduler.fcfs_scheduler_LA import FCFS_Scheduler_LA as _SchedClass
-    SCHEDULER_DESC = 'Static FCFS with license awareness'
-elif SCHEDULER_NAME == 'EDF-ST-LA':
-    from elastiflow.scheduler.edf_scheduler_LA import EDF_Scheduler_LA as _SchedClass
-    SCHEDULER_DESC = 'Static EDF with license awareness'
-elif SCHEDULER_NAME == 'EDF-HSM':
-    from elastiflow.scheduler.edf_hsm_LA import EDF_HSM_LA as _SchedClass
-    SCHEDULER_DESC = 'Hybrid Static-Moldable EDF'
-else:
-    raise ValueError(f'unknown scheduler: {SCHEDULER_NAME}')
+_policy = policies.get('licence', SCHEDULER_NAME)
+_SchedClass = _policy.load()
+SCHEDULER_DESC = _policy.note
 
 # ---------------------------------------------------------------------------
 # Banner

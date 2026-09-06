@@ -8,10 +8,7 @@ from elastiflow.server import server
 from elastiflow.wf_queue.redis_queue import Redis_Queue
 
 # Import HPO-specific schedulers
-from elastiflow.scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
-from elastiflow.scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
-from elastiflow.scheduler.edf_scheduler_HPO import EDF_Scheduler_HPO
-from elastiflow.scheduler.edf_optimized_HPO import EDF_Optimized_HPO
+from elastiflow.policies import resolve_hpo
 
 # Map --infra flag to resource config files
 _INFRA_CONFIG_MAP = {
@@ -64,31 +61,12 @@ def main(scheduler_type='moldable', algo='fcfs', wf_count=None, infra='hybrid'):
     from elastiflow.scripts.create_instance_HPO import launch_workers, terminate_live
     backend = LiveBackend(queue, finish_queue, resource_request_queue, launch=launch_workers, terminate=terminate_live)
 
-    # Select scheduler based on algo + mode
-    if algo == 'fcfs' and scheduler_type == 'static':
-        print("Using Static HPO FCFS Scheduler")
-        sched = FCFS_Scheduler_HPO(queue, finish_queue, resource_request_queue,
-                                   sort_key='cost_per_trial',
-                                   resource_config=resource_config,
-                                   file_prefix=file_prefix)
-    elif algo == 'fcfs' and scheduler_type == 'moldable':
-        print("Using Moldable HPO FCFS Scheduler")
-        sched = FCFS_Optimized_HPO(queue, finish_queue, resource_request_queue,
-                                   sort_key='cost_per_trial',
-                                   resource_config=resource_config,
-                                   file_prefix=file_prefix)
-    elif algo == 'edf' and scheduler_type == 'static':
-        print("Using Static HPO EDF Scheduler")
-        sched = EDF_Scheduler_HPO(queue, finish_queue, resource_request_queue,
-                                  sort_key='cost_per_trial',
-                                  resource_config=resource_config,
-                                  file_prefix=file_prefix)
-    elif algo == 'edf' and scheduler_type == 'moldable':
-        print("Using Moldable HPO EDF Scheduler")
-        sched = EDF_Optimized_HPO(queue, finish_queue, resource_request_queue,
-                                  sort_key='cost_per_trial',
-                                  resource_config=resource_config,
-                                  file_prefix=file_prefix)
+    # Select scheduler based on algo + mode, through the registry
+    print(f"Using {scheduler_type.capitalize()} HPO {algo.upper()} Scheduler")
+    sched = resolve_hpo(algo, scheduler_type).load()(queue, finish_queue, resource_request_queue,
+                                                     sort_key='cost_per_trial',
+                                                     resource_config=resource_config,
+                                                     file_prefix=file_prefix)
 
     print(f"Scheduler initialized: {sched.__class__.__name__}")
 

@@ -25,10 +25,11 @@ from elastiflow.config.constants_LA import WORKFLOW_POLLING, TOTAL_WORKFLOWS
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
+from elastiflow.scheduler.scheduler import EDFOrderingMixin
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
 
 
-class EDF_Scheduler_LA(Scheduler_LA):
+class EDF_Scheduler_LA(EDFOrderingMixin, Scheduler_LA):
     """
     Static EDF scheduler with license-awareness
 
@@ -197,18 +198,6 @@ class EDF_Scheduler_LA(Scheduler_LA):
     # EDF HEAP MANAGEMENT (from edf_optimized_LA.py)
     # =========================================================================
 
-    def processWorkflowsByDeadline(self, workflows: List[any]):
-        """Sort workflows by deadline (EDF ordering)"""
-        for wf in workflows:
-            wf_plan = eval(wf)
-            if wf_plan['id'] == 'END':
-                heapq.heappush(self.workflow_heap, (1000000, self.workflow_counter, wf_plan['id'], wf_plan))
-            else:
-                # Calculate absolute deadline
-                deadline = wf_plan['submit_time'] + wf_plan['constraints']['deadline']
-                heapq.heappush(self.workflow_heap, (deadline, self.workflow_counter, wf_plan['id'], wf_plan))
-            self.workflow_counter += 1
-
     def processResourceRequestsByDeadline(self, requests: List[any]):
         """Sort resource requests by deadline (EDF ordering)"""
         for req in requests:
@@ -224,14 +213,3 @@ class EDF_Scheduler_LA(Scheduler_LA):
             heapq.heappush(self.resource_request_heap, (deadline, self.resource_request_counter, req_dict['wf-id'], req_dict))
             self.resource_request_counter += 1
 
-    def peekWorkflow(self, heap):
-        """Peek at top of heap without removing"""
-        return heap and heap[0][3]  # Index 3: (deadline, counter, wf_id, data)
-
-    def popWorkflow(self, heap):
-        """Remove top of heap"""
-        try:
-            heapq.heappop(heap)
-        except Exception as e:
-            print(f'HEAP POP ERROR: {e}')
-            print(heap)

@@ -4,7 +4,7 @@ import threading
 import time
 from typing import List
 
-from elastiflow.config.constants import CHAINS_PER_NODE, CLOSENESS_TOLERANCE, COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST, OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
+from elastiflow.config.constants import CLOSENESS_TOLERANCE, COLD_START_TIME, MIN_INSTANCE_COST, RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD, WORKFLOW_POLLING
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.resource_manager.resource_manager import ResourceManager
@@ -90,7 +90,13 @@ class FCFS_Optimized(Scheduler):
     
     # request = {"wf-id": wf_id, "count": n, "iteration": ind, "tinyda-iterations": m}
     # current_resources = {obj: (count, ip)}
-    def checkNewResources(self, resources: List[Instance], current_resources: List[tuple[Instance, int, List]], budget: float, available_runtime: float, request, mesh) -> List[tuple[Instance, int]]:
+    def checkNewResourcesMoldable(self, resources: List[Instance], current_resources: List[tuple[Instance, int, List]], budget: float, available_runtime: float, request, mesh) -> List[tuple[Instance, int]]:
+        """Elastic-FCFS's scale-up planner, reached from the base's processFreeRequest.
+
+        The base's Scheduler.checkNewResourcesMoldable (Elastic-EDF, Elastic-Rank) is
+        this method without the `else: continue` in the cost-ranked fallback: there a
+        candidate slower than 1.2x the fleet's slowest with a single free node is
+        taken, here it is skipped. Both are cited results, so both stay (B7.3)."""
     
         # 1. If on-prem is already allocated, allocate possible on-prem instances
         instance = current_resources[0][0]
@@ -222,70 +228,3 @@ class FCFS_Optimized(Scheduler):
         closeness = lambda x: math.isclose(runtime, x, rel_tol=CLOSENESS_TOLERANCE)
         return any(map(closeness, runtimes_list))
         
-    def processFreeRequest(self, request, backend):
-        (instances, budget, deadline, _, mesh) = self.resource_manager.getWorkflow(request['wf-id'])
-        
-        # Check if additional resources are needed
-        # request['iteration'] can be 0, 1, 2, 3, 4, 5
-        ind = request['iteration']
-        available_time = max(0, deadline - DEADLINE_BUFFER - backend.now()) * OPTIM_FCFS_DFACTOR[ind]
-        
-        cur_instance: Instance = instances[-1][0]
-        cur_count = instances[-1][1]
-        if not isinstance(instances[0][0], OnPremInstance):
-            cur_count = 0
-            for inst_tuple in instances:
-                cur_count += inst_tuple[1]
-
-        # Check safeness without moldability
-        # Can the workflow be completed with CHAINS_PER_NODE, ..., 2, 1 chains per node?
-        chains_per_node = CHAINS_PER_NODE
-        request['count'] = None
-        min_needed_count = request['chains']
-        runtime_per_model = getRuntime(1, mesh, cur_instance.name)
-        while chains_per_node > 0:
-            runtime = chains_per_node * runtime_per_model * request['tinyda-iterations']
-            if runtime < available_time: # can be completed
-                # free to keep only chains / chains_per_node
-                min_needed_count = request['chains'] // chains_per_node + bool(request['chains'] % chains_per_node)
-                if cur_count >= min_needed_count:
-                    request['count'] = cur_count - min_needed_count
-                    self.freeResources(instances, request, backend)
-                    self.metrics.recordScaleDownAttempt(request, request['count'])
-                    return
-                else: # allocate resources
-                    break
-            else:
-                chains_per_node -= 1
-
-        # Allocate resources
-        used_budget = self.metrics.computeCost(request['wf-id'], backend.now())
-        available_budget = max(0, budget - used_budget) * OPTIM_FCFS_BFACTOR[ind]
-        free_resources = self.resource_manager.getResources()
-        if request['count'] == None:
-            request['count'] = min_needed_count - cur_count
-        alloc_instances = self.checkNewResources(free_resources, instances, available_budget, available_time, request, mesh) # {obj: count}
-        # Path = 'on_prem' if workflow's first held instance is slurm,
-        # 'cloud' otherwise. Locked in at initial allocation.
-        path = 'on_prem' if isinstance(instances[0][0], OnPremInstance) else 'cloud'
-        self.metrics.recordScaleUpAttempt(request, alloc_instances, path=path)
-        ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances) # alloc_resource = {obj: (count, [ips])}
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None))
-
-    def freeResources(self, instances, request, backend):
-        response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
-        freed_count = 0
-        to_free_instances = []   
-        # Free the last n instances
-        if request['count'] > 0:
-            for i in range(len(instances)):
-                instance, count, ips = instances[i]
-                to_free = min(request['count']-freed_count, count)
-                to_free_instances.append((instance, to_free, ips[-to_free:])) # last n vals
-                instances[i] = (instance, count - to_free, ips[:-to_free])
-                response_instances[instance.type][instance.name] = (to_free, ips[-to_free:])
-                freed_count += to_free
-                if freed_count == request['count']:
-                    break
-            self.resource_manager.returnResources(request['wf-id'], to_free_instances)
-        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None))

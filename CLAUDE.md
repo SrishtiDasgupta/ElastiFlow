@@ -16,8 +16,9 @@ refactoring plan and its status. Read those before changing anything.
   alter a number in a committed dataset or in a dissertation figure. Run
   `python -m pytest` (regression + unit, about half a minute) before and after every
   change; run `python -m pytest -m smoke` (every policy once, compared exactly with
-  `tests/regression/baseline_all_policies.json`, about half a minute) after
-  anything that touches the framework. Re-record the baseline only when the
+  `tests/regression/baseline_all_policies.json`, about 40 s) after
+  anything that touches the framework. The HPO schedulers are pinned by
+  `tests/regression/baseline_hpo_allocation.json` (in the default suite). Re-record the baseline only when the
   reference is meant to move, and say so in the commit.
 * **The user commits and pushes.** Stage the change set, show
   `git diff --cached --stat`, and hand over a commit message. Never run

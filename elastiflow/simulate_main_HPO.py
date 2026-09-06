@@ -1,9 +1,6 @@
 import argparse
 import simulus
-from elastiflow.scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO
-from elastiflow.scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO
-from elastiflow.scheduler.edf_scheduler_HPO import EDF_Scheduler_HPO
-from elastiflow.scheduler.edf_optimized_HPO import EDF_Optimized_HPO
+from elastiflow.policies import resolve_hpo
 from elastiflow.wf_queue.redis_queue import Redis_Queue
 from elastiflow.scripts.dispatcher_HPO import dispatcher
 
@@ -23,19 +20,9 @@ queue = Redis_Queue(queue_name='hpo-wf-queue')
 finish_queue = Redis_Queue(queue_name='hpo-completed-jobs-queue')
 resource_request_queue = Redis_Queue(queue_name='hpo-resource-request-queue')
 
-# Select scheduler based on algo + mode
-if SCHEDULER_ALGO == 'fcfs' and SCHEDULER_MODE == 'static':
-    sched = FCFS_Scheduler_HPO(queue, finish_queue, resource_request_queue)
-    print("Running HPO FCFS Static Scheduler Simulation")
-elif SCHEDULER_ALGO == 'fcfs' and SCHEDULER_MODE == 'moldable':
-    sched = FCFS_Optimized_HPO(queue, finish_queue, resource_request_queue)
-    print("Running HPO FCFS Moldable Scheduler Simulation")
-elif SCHEDULER_ALGO == 'edf' and SCHEDULER_MODE == 'static':
-    sched = EDF_Scheduler_HPO(queue, finish_queue, resource_request_queue)
-    print("Running HPO EDF Static Scheduler Simulation")
-elif SCHEDULER_ALGO == 'edf' and SCHEDULER_MODE == 'moldable':
-    sched = EDF_Optimized_HPO(queue, finish_queue, resource_request_queue)
-    print("Running HPO EDF Moldable Scheduler Simulation")
+# Select scheduler based on algo + mode, through the registry
+sched = resolve_hpo(SCHEDULER_ALGO, SCHEDULER_MODE).load()(queue, finish_queue, resource_request_queue)
+print(f"Running HPO {SCHEDULER_ALGO.upper()} {SCHEDULER_MODE.capitalize()} Scheduler Simulation")
 
 # NOTE: Assume network latency is negligible
 sim_dispatcher = simulus.simulator('dispatcher')
