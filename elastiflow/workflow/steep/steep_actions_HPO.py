@@ -10,14 +10,12 @@ import json
 
 import os as _os
 
-from elastiflow.config.constants_HPO import SIMULATE
 from elastiflow.utils.exec_sched import getClientInputs, getWorkflowConfig, setWorkflowComplete
 from elastiflow.utils import negotiation_log
 
 _PORTS_YAML = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))), 'config', 'ports.yaml')
 
 from .steep_variables import Variable
-from elastiflow.execution.backend import backend_for
 
 MAX_ITERATIONS = 0
 MAX_RETRIES = 2          # Retry failed iterations (e.g. cloud SSH timeout)
@@ -96,7 +94,7 @@ class ExecuteAction(Action):
     def _run_subprocess(self, args, command, env):
         """Run the HPO subprocess with retry logic for transient cloud failures.
         Returns (parsed_result, sim_flag) on success, raises on permanent failure."""
-        sim = args.get('_sim_ref')  # stored by caller
+        backend = args.get('_backend')  # stored by caller
         last_error = None
 
         for attempt in range(1, MAX_RETRIES + 1):
@@ -126,8 +124,8 @@ class ExecuteAction(Action):
                 except Exception as log_err:
                     print(f"[WARN] Could not write log file: {log_err}")
 
-                if sim or SIMULATE:
-                    return result, True  # caller handles sim path
+                if backend.simulated:
+                    return result, True  # caller handles the simulated path
 
                 # Parse output for config
                 output_lines = result.stdout.splitlines()
@@ -202,8 +200,7 @@ class ExecuteAction(Action):
         ind = self.workflow_iterator # workflow iterations
         try:
             print(f"[DEBUG] Getting client inputs for iteration {ind}")
-            args, hosts, sim = getClientInputs(self.wf_id, input, ind)
-            backend = backend_for(sim)
+            args, hosts, backend = getClientInputs(self.wf_id, input, ind)
 
             print(f"[DEBUG] Client inputs: {args}")
             print(f"[DEBUG] Service script: {self.service}")
@@ -216,8 +213,8 @@ class ExecuteAction(Action):
             # Explicitly pass environment to subprocess (required for boto3 to find AWS credentials)
             env = os.environ.copy()
 
-            # Store sim ref for _run_subprocess
-            args['_sim_ref'] = sim
+            # Store the backend for _run_subprocess
+            args['_backend'] = backend
 
             # Run with retry logic
             result, is_sim = self._run_subprocess(args, command, env)
@@ -247,7 +244,7 @@ class ExecuteAction(Action):
                     print(f"[WARN] Could not write results JSONL: {log_err}")
 
             # if on-prem, add back the port that was assigned for the next iteration or another workflow to use
-            if not SIMULATE and len(args['hosts'].get('on-prem', [])) != 0:
+            if not backend.simulated and len(args['hosts'].get('on-prem', [])) != 0:
                 port = args['port']
                 with open(_PORTS_YAML, "r") as f:
                     data = yaml.safe_load(f)

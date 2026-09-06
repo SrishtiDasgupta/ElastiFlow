@@ -7,10 +7,8 @@ from elastiflow.utils.request import getConfig, sendRequest
 from elastiflow.workflow.steep_workflow_HPO import Steep_Workflow_HPO
 from elastiflow.server import server
 from elastiflow.wf_queue.redis_queue import Redis_Queue
-from elastiflow.config.constants_HPO import SIMULATE
-from elastiflow.execution.backend import backend_for
 
-def processQueueData(queue):
+def processQueueData(queue, backend):
     """
     Process incoming workflow execution requests
     Same pattern as SeisSol executor
@@ -21,7 +19,7 @@ def processQueueData(queue):
             data = eval(data)
             if data["initial-alloc"]:
                 # NOTE: For every request to the executor, we create a new thread
-                thread = threading.Thread(target=executeWorkflowHPO, args=[data])
+                thread = threading.Thread(target=executeWorkflowHPO, args=[data, backend])
                 thread.start()
             else:
                 # Resource update for moldable scheduling
@@ -29,7 +27,7 @@ def processQueueData(queue):
             queue.pop()
 
 
-def executeWorkflowHPO(data, sim=None):
+def executeWorkflowHPO(data, backend):
     """
     Execute HPO workflow using Steep workflow engine
 
@@ -41,7 +39,6 @@ def executeWorkflowHPO(data, sim=None):
     Flow:
     Scheduler → Dedicated Executor → Steep Workflow → run_hpo.py → Runner (on workers)
     """
-    backend = backend_for(sim)
     print(f"[DEBUG] executeWorkflowHPO called with data: {data.keys() if data else 'None'}")
 
     workflow_plan = data.get('wf-plan')
@@ -54,7 +51,7 @@ def executeWorkflowHPO(data, sim=None):
 
     # Create Steep workflow (same as SeisSol)
     try:
-        workflow = Steep_Workflow_HPO(workflow_plan, sim, deadline)
+        workflow = Steep_Workflow_HPO(workflow_plan, backend, deadline)
         start_time = backend.now()
 
         print(f'Executing HPO workflow {workflow.id} at {start_time}')
@@ -89,7 +86,7 @@ def executeWorkflowHPO(data, sim=None):
 
     # Tell scheduler workflow execution is complete
     try:
-        if sim:
+        if backend.simulated:
             backend.sleep(7.7)  # Executor overhead (simulation only)
 
         request = {
@@ -102,7 +99,7 @@ def executeWorkflowHPO(data, sim=None):
 
         print(f"HPO Workflow {workflow.id} complete at {request['finish-time']}")
 
-        if sim:
+        if backend.simulated:
             backend.completions.send(request)
         else:
             # Retry completion notification up to 3 times.
@@ -122,14 +119,14 @@ def executeWorkflowHPO(data, sim=None):
     finally:
         # ALWAYS clean up on-demand instances, even if notification failed
         # Note: JSON serialization converts tuples to lists, so check both
-        if not sim and not SIMULATE:
+        if not backend.simulated:
             for node in new_hosts.get('on-demand', {}):
                 val = new_hosts['on-demand'][node]
                 if isinstance(val, (tuple, list)) and len(val) >= 2:
                     ips = val[1]
                     print(f"[CLEANUP] Terminating on-demand instances: {ips}")
                     try:
-                        deleteInstanceFromIp(ips, sim)
+                        deleteInstanceFromIp(ips, backend)
                     except Exception as e:
                         print(f"[ERROR] Termination failed for {ips}: {e}")
 
@@ -179,6 +176,9 @@ if __name__ == "__main__":
 
     # Setup main executor queue (same as SeisSol)
     queue = Redis_Queue(queue_name='exec-queue')
+    from elastiflow.execution.backend import LiveBackend
+    from elastiflow.scripts.create_instance_HPO import launch_workers, terminate_live
+    backend = LiveBackend(launch=launch_workers, terminate=terminate_live)   # the executor node: HPO's own provisioning
 
     # Start HTTP server thread
     server_thread = threading.Thread(
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     server_thread.start()
 
     # Start queue listener daemon thread
-    queue_listener = threading.Thread(target=processQueueData, args=[queue])
+    queue_listener = threading.Thread(target=processQueueData, args=[queue, backend])
     queue_listener.daemon = True
     queue_listener.start()
 

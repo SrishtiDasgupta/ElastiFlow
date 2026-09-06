@@ -30,9 +30,9 @@ if __name__ == "__main__":
     queue = Redis_Queue(queue_name='wf-queue')
     finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
     resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
-    from elastiflow.execution.backend import LiveBackend, register
+    from elastiflow.execution.backend import LiveBackend
     from elastiflow.scripts.create_instance import launchInstance, terminateInstance
-    register(None, LiveBackend(queue, finish_queue, resource_request_queue, launch=launchInstance, terminate=terminateInstance))
+    backend = LiveBackend(queue, finish_queue, resource_request_queue, launch=launchInstance, terminate=terminateInstance)
 
     # Initialize LAMF scheduler
     sched = FCFS_Optimized_LA(
@@ -55,6 +55,7 @@ if __name__ == "__main__":
     # Thread 2: LAMF scheduler (main scheduling loop)
     thread2 = threading.Thread(
         target=sched.run,
+        args=[backend],
         name='LAMFScheduler'
     )
 
@@ -72,6 +73,7 @@ if __name__ == "__main__":
     # Thread 4: Process completed workflows (release compute + licenses)
     thread4 = threading.Thread(
         target=sched.processJobCompletion,
+        args=[backend],
         name='CompletionProcessor'
     )
 

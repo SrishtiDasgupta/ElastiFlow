@@ -8,7 +8,6 @@ from . import negotiation_log
 
 import yaml
 import os
-from elastiflow.execution.backend import backend_for
 
 _PORTS_YAML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'ports.yaml')
 
@@ -75,10 +74,10 @@ def getWorkflowOnpremPort():
 
     return popped
 
-def setWorkflowConfig(id, workflow, sim, deadline):
+def setWorkflowConfig(id, workflow, backend, deadline):
     workflow_config[id] = workflow['config']
     workflow_config[id]['constraints'] = workflow.get('constraints', {})  # Store constraints (chains, tinydaIterations)
-    workflow_config[id]['sim'] = sim
+    workflow_config[id]['backend'] = backend
     workflow_config[id]['deadline'] = deadline
     workflow_config[id]['complete'] = False
 
@@ -112,15 +111,14 @@ def getClientInputs_Plain(wf_id, input: Tuple, ind):
     Input format: (cohesion_value, hosts) where cohesion_value is numeric/string scalar.
     """
     mesh = getWorkflowConfig(wf_id)['mesh']
-    sim = getWorkflowConfig(wf_id)['sim']
-    backend = backend_for(sim)
+    backend = getWorkflowConfig(wf_id)['backend']
     workflow_config_array = getWorkflowConfig(wf_id)['workflowConfig']
 
     # Extract from pre-planned workflowConfig array
     chains = workflow_config_array[ind]['chains']
     tinyda_iterations = workflow_config_array[ind]['tinydaIterations']
 
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, MOLDABLE, chains)
 
     port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
 
@@ -132,7 +130,7 @@ def getClientInputs_Plain(wf_id, input: Tuple, ind):
         'tinyda_iterations': tinyda_iterations,
         'mesh': mesh,
         'port': port
-    }, hosts, sim
+    }, hosts, backend
 
 
 def getClientInputs_LA(wf_id, input: Tuple, ind):
@@ -146,8 +144,7 @@ def getClientInputs_LA(wf_id, input: Tuple, ind):
     Input format: (cohesion_value, hosts) where cohesion_value is numeric scalar.
     """
     mesh = getWorkflowConfig(wf_id)['mesh']
-    sim = getWorkflowConfig(wf_id)['sim']
-    backend = backend_for(sim)
+    backend = getWorkflowConfig(wf_id)['backend']
 
     # Read from workflowConfig if present (for moldable LAMF scheduling)
     # This allows chains to vary per iteration, triggering resource requests
@@ -166,7 +163,7 @@ def getClientInputs_LA(wf_id, input: Tuple, ind):
     # chains = constraints.get('chains', 1)
     # tinyda_iterations = constraints.get('tinydaIterations', 1)
 
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, MOLDABLE, chains)
 
     port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
 
@@ -178,7 +175,7 @@ def getClientInputs_LA(wf_id, input: Tuple, ind):
         'tinyda_iterations': tinyda_iterations,
         'mesh': mesh,
         'port': port
-    }, hosts, sim
+    }, hosts, backend
 
 
 def getClientInputs_HPO(wf_id, input: Tuple, ind):
@@ -189,8 +186,7 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
     Input format: (config_dict, hosts) where config_dict has epochs/next_trials keys.
     """
     mesh = getWorkflowConfig(wf_id)['mesh']
-    sim = getWorkflowConfig(wf_id)['sim']
-    backend = backend_for(sim)
+    backend = getWorkflowConfig(wf_id)['backend']
 
     # Iteration 0: input[0] is initial config from workflow YAML (has 'epochs', 'next_trials')
     # Iteration 1+: input[0] is HPO pipeline output (has 'epoch', 'next_trials')
@@ -208,7 +204,7 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
     from elastiflow.config.constants_HPO import MOLDABLE as HPO_MOLDABLE
     from elastiflow.config.constants_HPO import FREE_RESOURCES as HPO_FREE_RESOURCES
     from elastiflow.config.constants_HPO import RESOURCE_REQUEST_TIMEOUT as HPO_TIMEOUT
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, HPO_MOLDABLE, chains,
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, HPO_MOLDABLE, chains,
                                                HPO_FREE_RESOURCES, HPO_TIMEOUT)
 
     port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
@@ -221,7 +217,7 @@ def getClientInputs_HPO(wf_id, input: Tuple, ind):
         'tinyda_iterations': tinyda_iterations,
         'mesh': mesh,
         'port': port
-    }, hosts, sim
+    }, hosts, backend
 
 
 def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
@@ -237,8 +233,7 @@ def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
     """
     cfg = getWorkflowConfig(wf_id)
     mesh = cfg['mesh']
-    sim = cfg['sim']
-    backend = backend_for(sim)
+    backend = cfg['backend']
     constraints = cfg.get('constraints', {})
 
     inner = input[0] if isinstance(input[0], dict) else {'cohesion': input[0]}
@@ -252,7 +247,7 @@ def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
         tinyda_iterations = int(inner.get('next_links',
                                           constraints.get('tinydaIterations', 2)))
 
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, sim, MOLDABLE, chains)
+    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, MOLDABLE, chains)
 
     port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
 
@@ -268,7 +263,7 @@ def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
         'mesh': mesh,
         'port': port,
         'cumulative_links_cap': cumulative_cap,
-    }, hosts, sim
+    }, hosts, backend
 
 
 def getClientInputs(wf_id, input: Tuple, ind):
@@ -298,7 +293,7 @@ def getClientInputs(wf_id, input: Tuple, ind):
 
 # hosts = {'on-prem': {}, 'reserved': {name: (n, [ips])}, 'on-demand': {}}
 # cur_hosts = {name: [ips]}
-def getHostsForIteration(wf_id, hosts: dict, ind, sim, moldable, chains=0,
+def getHostsForIteration(wf_id, hosts: dict, ind, backend, moldable, chains=0,
                          free_resources=None, request_timeout=None):
     if free_resources is None:
         free_resources = FREE_RESOURCES
@@ -362,8 +357,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
         "chains": chains
     }
 
-    sim = getWorkflowConfig(wf_id)['sim']
-    backend = backend_for(sim)
+    backend = getWorkflowConfig(wf_id)['backend']
 
     # Mark request as pending so processNewResourcesHPO knows we're waiting.
     # Late responses (arriving after timeout) are discarded when pending=False.
@@ -372,7 +366,7 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
 
     rt_label = 'grow' if request_type == ExecutorRequest.REQUEST_RESOURCE.value else 'shrink'
     t_engine_request_sent = time.time()
-    if sim:
+    if backend.simulated:
         request['request-time'] = backend.now()
     backend.resource_requests.send(request)
 
@@ -405,9 +399,9 @@ def sendAndFetchResponse(wf_id, request_type, hosts, ind, cur_hosts, n, chains, 
     if req_type == ExecutorRequest.FREE_RESOURCE.value:
         return freeResources(resources, hosts, cur_hosts)
     else:
-        return mergeNewResources(resources, hosts, wf_id, ind, sim)
+        return mergeNewResources(resources, hosts, wf_id, ind, backend)
 
-def mergeNewResources(new_resources, hosts, wf_id, ind, sim):
+def mergeNewResources(new_resources, hosts, wf_id, ind, backend):
     # Merge new_resources with total hosts
     for cluster in ['on-prem', 'reserved', 'on-demand']:
         for instance in new_resources[cluster]:
@@ -416,7 +410,7 @@ def mergeNewResources(new_resources, hosts, wf_id, ind, sim):
                 current[0] + new_resources[cluster][instance][0],
                 current[1] + new_resources[cluster][instance][1]
             )
-    return getHostsForIteration(wf_id, hosts, ind, sim, False)
+    return getHostsForIteration(wf_id, hosts, ind, backend, False)
 
 def freeResources(to_free_resources, hosts, cur_hosts):
     # Remove elements in new_resources from total and allocated hosts

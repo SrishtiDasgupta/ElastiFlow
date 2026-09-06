@@ -169,14 +169,44 @@ then `pytest -m smoke`. From B5 on, also the default suite with Redis stopped.
   remains as a CLI over the same functions (live mode, and the equivalence test
   `tests/unit/test_runtime_model_inprocess.py`, which compares both paths on a
   grid of requests). Gate: regression, smoke against the B0 baseline.
-* **B5. In-memory channels for simulated mode.** Simulated runs stop needing
-  Redis. Gate: the default suite with Redis stopped.
-* **B6. One switch.** The `SIMULATE` constants and the `sim` parameters go;
-  `python -m elastiflow run --mode simulated|live --use-case ... --policy ...`
-  builds the backend once and hands it to the scheduler, engine and dispatcher.
+* **B5. In-memory channels for simulated mode.** Dropped by the author's
+  decision (2026-09-06): the simulated runs keep constructing the three Redis
+  queues at start-up exactly as the submitted code did, and carry their
+  messages over simulus mailboxes as before. Nothing about Redis changed in
+  Phase B.
+* **B6. One switch** (done 2026-09-06). The three `SIMULATE` constants and every
+  `sim` parameter are gone. The entry points construct one backend and pass it
+  down: the simulated runners build `SimulatedBackend(sim_sched, mailboxes,
+  execute=..., on_resources=..., cold_start=..., fake_ip=..., runtime_model=...)`
+  for the scheduler's simulator and a bare `SimulatedBackend(sim_dispatcher)`
+  for the dispatcher's; the live entry points (`main*.py`, and the executor
+  node processes `executor*.py`) build a `LiveBackend`. Schedulers now run as
+  `run(backend)` and `processJobCompletion(backend)`, dispatchers as
+  `dispatcher(backend)`, and the workflow registry stores the backend instead
+  of the simulator. The 39 remaining mode branches read `backend.simulated`
+  (a class attribute, `True`/`False`), the registry `register`/`backend_for`
+  is deleted, and `sim` survives only as the simulator attribute inside
+  `SimulatedBackend`. `python -m elastiflow run --mode simulated|live
+  --use-case seissol|licence|hpo [runner options]` (`elastiflow/cli.py`, also
+  installed as the `elastiflow` console script) selects the entry point and
+  hands the runner its own options unchanged. Two live-only paths were corrected
+  on the way: the executor node processes now receive a `LiveBackend` explicitly
+  (before B6 they resolved the live backend through the registry; the HPO
+  executor node keeps HPO's own termination path), and `executor_LA.py`
+  branched on the licence fork's `SIMULATE = True` even on a live node. One
+  timestamp changed: the utilisation sampler's first row at simulated time 0
+  now reads 0 (the `(sim and now) or time.time()` idiom fell through to the
+  wall clock at 0); no recorded number depends on it because the utilisation
+  average starts at the first busy sample. Gate: regression, smoke against
+  the B0 baseline, `tests/regression/test_cli_entry.py` (the same SeisSol and
+  licence cells through the CLI reproduce the datasets of record), and the
+  import composition of every live module. HPO is unchanged in behaviour:
+  `simulate_main_HPO.py` gets a `SimulatedBackend` (it was the hybrid driver,
+  simulus clock over live services, see decision 3), `main_HPO.py` a
+  `LiveBackend`.
 * **B7. Merge the scheduler forks.** With `sim` out of every signature, the
   three abstract bases differ only in their licence and HPO extension points;
-  that merge is planned as its own document once B6 is in.
+  that merge is planned as its own document now that B6 is in.
 
 ## What does not change
 
@@ -196,3 +226,10 @@ reverted, not tuned.
    HPO is live-only by the author's decision, and its scheduler gets the live
    backend only, which also removes the misleading `simulate_main_HPO.py` name
    in B6 (it becomes the live HPO driver).
+   *Correction (B6):* the tagged `simulate_main_HPO.py` was not a plain live
+   driver but a hybrid, simulus processes and mailboxes with `SIMULATE = False`,
+   so its schedulers slept on the simulated clock while the services ran live.
+   B6 preserves that wiring exactly (`SimulatedBackend` for
+   `simulate_main_HPO.py`, `LiveBackend` for `main_HPO.py`) rather than
+   deciding it away; renaming or retiring the hybrid driver is a separate
+   decision for the author.

@@ -6,7 +6,6 @@ from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager import ResourceManager
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler import Scheduler
-from elastiflow.execution.backend import backend_for
 
 # If requested resources are available, they are granted. Else the workflow waits
 class FCFS_Scheduler(Scheduler):
@@ -17,13 +16,11 @@ class FCFS_Scheduler(Scheduler):
         super().__init__(queue, finish_queue, resource_request_queue)
 
 
-    def run(self, sim = None, wf_mb = None, resource_request_mb = None):
-        
-        backend = backend_for(sim)
+    def run(self, backend):
         print(f'Starting scheduler at {backend.now()}...')
 
         # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
         
         while True:
 
@@ -34,11 +31,11 @@ class FCFS_Scheduler(Scheduler):
                 # Allocate new resources
                 resource_request = eval(resource_request)
                 if resource_request['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
-                    self.allocateNewResources(resource_request, sim)
+                    self.allocateNewResources(resource_request, backend)
                 else:
-                    self.freeResources(resource_request, sim)
+                    self.freeResources(resource_request, backend)
                 backend.resource_requests.pop()
-                sim and backend.sleep(0.2) # NOTE: scheduler overhead
+                backend.simulated and backend.sleep(0.2) # NOTE: scheduler overhead
                 continue
             
             # Check the queue for new jobs
@@ -54,7 +51,7 @@ class FCFS_Scheduler(Scheduler):
                     break 
 
                 # If workflow cannot be executed, pop it to prevent stagnation
-                # if self.purgeWorkflow(wf_plan, sim):
+                # if self.purgeWorkflow(wf_plan, backend):
                 #     backend.workflows.pop()
                 #     self.resource_manager.setResourcesAvailable(True)
                 #     continue
@@ -71,7 +68,7 @@ class FCFS_Scheduler(Scheduler):
                         backend.workflows.pop()
                         # NOTE: We start billing at this point
                         start_time = backend.now()
-                        self.sendWorkflowForExecution(wf_plan, ips, sim, constraints['deadline'])
+                        self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
                         wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                         self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
                     else:

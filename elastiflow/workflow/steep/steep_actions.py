@@ -11,7 +11,6 @@ from elastiflow.utils.exec_sched import getClientInputs, getWorkflowConfig, setW
 
 from .steep_variables import Variable
 from elastiflow.config.paths import PACKAGE_DIR
-from elastiflow.execution.backend import backend_for
 
 class ActionType(Enum):
     ForEach = auto()
@@ -90,8 +89,7 @@ class ExecuteAction(Action):
         result = None
         ind = self.workflow_iterator # workflow iterations
         try:
-            args, hosts, sim = getClientInputs(self.wf_id, input, ind)
-            backend = backend_for(sim)
+            args, hosts, backend = getClientInputs(self.wf_id, input, ind)
             # print(f'Executing Action with input {args}')
             start = time.time()
             #args["prior_output"] = self.output_parameters[-1]

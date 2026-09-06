@@ -11,20 +11,20 @@ if __name__ == "__main__":
     queue = Redis_Queue(queue_name='wf-queue')
     finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
     resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
-    from elastiflow.execution.backend import LiveBackend, register
+    from elastiflow.execution.backend import LiveBackend
     from elastiflow.scripts.create_instance import launchInstance, terminateInstance
-    register(None, LiveBackend(queue, finish_queue, resource_request_queue, launch=launchInstance, terminate=terminateInstance))
+    backend = LiveBackend(queue, finish_queue, resource_request_queue, launch=launchInstance, terminate=terminateInstance)
     sched = FCFS_Scheduler(queue, finish_queue, resource_request_queue, sort_key='cost_per_iteration')
 
     # Create threads
     # Thread to listen to user jobs
     thread1 = threading.Thread(target=server.run, kwargs={'queue': queue})
     # Scheduler thread
-    thread2 = threading.Thread(target=sched.run)
+    thread2 = threading.Thread(target=sched.run, args=[backend])
     # Thread to listen to the executor for job completion
     thread3 = threading.Thread(target=server.run, kwargs={'queue': finish_queue, 'port': getConfig('workflow-complete-port'), 'handler_class': server.FinishJobHandler}) 
     # Thread to process completed jobs
-    thread4 = threading.Thread(target=sched.processJobCompletion)
+    thread4 = threading.Thread(target=sched.processJobCompletion, args=[backend])
     # Thread to listen to resource requests
     thread5 = threading.Thread(target=server.run, kwargs={'queue': resource_request_queue, 'port': getConfig('resource-request-port'), 'handler_class': server.ResourceRequestHandler}) 
 

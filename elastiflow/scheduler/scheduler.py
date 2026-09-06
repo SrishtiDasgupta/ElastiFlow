@@ -14,7 +14,6 @@ from elastiflow.utils.metrics import Metrics
 from elastiflow.utils.resource import getEstimate
 from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
 from elastiflow.utils.request import ExecutorRequest, getConfig, getExecutor, sendRequest
-from elastiflow.execution.backend import backend_for
 
 class Scheduler(ABC):
 
@@ -25,7 +24,7 @@ class Scheduler(ABC):
         self.metrics = Metrics()
 
     @abstractmethod
-    def run(self, queue):
+    def run(self, backend):
         pass
 
     def allocateResources(self, constraints):
@@ -36,9 +35,8 @@ class Scheduler(ABC):
             ips, alloc_resources = self.resource_manager.allocateResources(instances)
         return ips, alloc_resources
 
-    def sendWorkflowForExecution(self, wf_plan, ips, sim, deadline):
+    def sendWorkflowForExecution(self, wf_plan, ips, backend, deadline):
         # Send to the executor node - workflow parsing must be handled there
-        backend = backend_for(sim)
         request = {
             "initial-alloc": True,
             "wf-plan": wf_plan,
@@ -46,13 +44,12 @@ class Scheduler(ABC):
             "deadline": deadline
         }
                  
-        executor, on_demand_type = getExecutor(ips, sim)
+        executor, on_demand_type = getExecutor(ips, backend)
         # TODO: What if executor is not created
         if on_demand_type:
             request['hosts']['on-demand'][on_demand_type] =  (request['hosts']['on-demand'][on_demand_type][0], [executor])  
         backend.start_workflow(request, executor)
-    def processJobCompletion(self, sim=None, mb=None):
-        backend = backend_for(sim)
+    def processJobCompletion(self, backend):
         print('Scheduler started listening to completed jobs...')
         while True:
             data = backend.completions.peek()
@@ -65,8 +62,7 @@ class Scheduler(ABC):
             backend.sleep(60) # NOTE: polling interval
 
     # request = {"wf-id", "count", "iteration": ind, "tinyda-iterations", "client-ip", "request-time"}
-    def allocateNewResources(self, request, sim):
-        backend = backend_for(sim)
+    def allocateNewResources(self, request, backend):
         if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
         
@@ -76,12 +72,11 @@ class Scheduler(ABC):
         available_budget = max(0, budget - used_budget) / max((AVG_WORKFLOW_ITERATIONS - request['iteration']), 1)
         alloc_instances = self.checkNewResources(free_resources, instances, available_budget, request, mesh) # {obj: count}
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances) # alloc_resource = {obj: (count, [ips])}
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
+        self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None))
 
-    def sendNewResources(self, wf_id, ips, alloc_resources, sim, client_ip):
+    def sendNewResources(self, wf_id, ips, alloc_resources, backend, client_ip):
         
         # Send to the executor node
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.REQUEST_RESOURCE.value,
             "initial-alloc": False,
@@ -96,8 +91,7 @@ class Scheduler(ABC):
 
 
     # request = {"wf-id", "count", "request-time", "client-ip"} 
-    def freeResources(self, request, sim):
-        backend = backend_for(sim)
+    def freeResources(self, request, backend):
         if backend.now() - request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
             return
         (instances, _, deadline, _, _) = self.resource_manager.getWorkflow(request['wf-id'])
@@ -120,11 +114,10 @@ class Scheduler(ABC):
                     break
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
         # Free resources
-        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, sim, request.get('client-ip', None))
+        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None))
     
-    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, sim, client_ip):
+    def sendFreedResources(self, wf_id, to_free_instances, instances, response_instances, backend, client_ip):
         # Send hosts to be freed to executor
-        backend = backend_for(sim)
         new_req = {
             "request": ExecutorRequest.FREE_RESOURCE.value,
             "initial-alloc": False,
@@ -201,9 +194,8 @@ class Scheduler(ABC):
         return acquired_instances
 
     # Purge and return if workflow has been purged
-    def purgeWorkflow(self, wf_plan, sim) -> bool:
+    def purgeWorkflow(self, wf_plan, backend) -> bool:
         # NOTE: We can have 2 workflow iterations at the least
-        backend = backend_for(sim)
         runtime = MIN_ITERATION_RUNTIME + getEstimate(MIN_RUNTIME, 1 + wf_plan['constraints']['tinydaIterations'])
         if backend.now() + runtime > wf_plan['submit_time'] + wf_plan['constraints']['deadline']:
             print(f"Workflow {wf_plan['id']} can no longer be executed, discarding it at {backend.now()}")
@@ -231,7 +223,7 @@ class Scheduler(ABC):
             runtime += COLD_START_TIME
         return any(math.isclose(runtime, x, rel_tol=CLOSENESS_TOLERANCE) for x in runtimes_list)
 
-    def processFreeRequest(self, request, sim):
+    def processFreeRequest(self, request, backend):
         """Rich moldable scale-up / scale-down negotiation. Decides whether
         to free or acquire resources for the workflow based on what the
         next iteration actually needs, the per-iteration budget/time
@@ -241,7 +233,6 @@ class Scheduler(ABC):
         — it makes its own up/down decision rather than trusting the
         executor's hint, so the caller can route both event types here.
         """
-        backend = backend_for(sim)
         (instances, budget, deadline, _, mesh) = self.resource_manager.getWorkflow(request['wf-id'])
 
         ind = request['iteration']
@@ -267,7 +258,7 @@ class Scheduler(ABC):
                 min_needed_count = request['chains'] // chains_per_node + bool(request['chains'] % chains_per_node)
                 if cur_count >= min_needed_count:
                     request['count'] = cur_count - min_needed_count
-                    self.freeResourcesMoldable(instances, request, sim)
+                    self.freeResourcesMoldable(instances, request, backend)
                     self.metrics.recordScaleDownAttempt(request, request['count'])
                     return
                 else:
@@ -292,9 +283,9 @@ class Scheduler(ABC):
         path = 'on_prem' if isinstance(instances[0][0], OnPremInstance) else 'cloud'
         self.metrics.recordScaleUpAttempt(request, alloc_instances, path=path)
         ips, alloc_resources = self.resource_manager.allocateResources(alloc_instances)
-        self.sendNewResources(request['wf-id'], ips, alloc_resources, sim, request.get('client-ip', None))
+        self.sendNewResources(request['wf-id'], ips, alloc_resources, backend, request.get('client-ip', None))
 
-    def freeResourcesMoldable(self, instances, request, sim):
+    def freeResourcesMoldable(self, instances, request, backend):
         """Variant of freeResources that takes the workflow's instance list
         directly (as already fetched by processFreeRequest), to avoid a
         second resource_manager round-trip."""
@@ -314,7 +305,7 @@ class Scheduler(ABC):
             self.resource_manager.returnResources(request['wf-id'], to_free_instances)
         self.sendFreedResources(
             request['wf-id'], to_free_instances, instances, response_instances,
-            sim, request.get('client-ip', None),
+            backend, request.get('client-ip', None),
         )
 
     def checkNewResourcesMoldable(self, resources, current_resources, budget,

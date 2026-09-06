@@ -25,7 +25,6 @@ from elastiflow.config.constants_LA import (
 )
 from elastiflow.utils.validate_workflow import validate_workflow
 from elastiflow.config.paths import PACKAGE_DIR
-from elastiflow.execution.backend import backend_for
 
 
 def plotSubmitTimes(submitTimes):
@@ -179,7 +178,7 @@ def send_workflow(workflow):
         print('Error:', response.status_code, response.text)
 
 
-def dispatcher_LA(sim, wf_mb):
+def dispatcher_LA(backend):
     """
     LAMF Dispatcher - SimPy process
 
@@ -187,10 +186,8 @@ def dispatcher_LA(sim, wf_mb):
     to the scheduler at realistic intervals.
 
     Args:
-        sim: Simulus simulator instance
-        wf_mb: Mailbox name for workflow submissions
+        backend: the execution backend (its clock, and its workflows channel to submit on)
     """
-    backend = backend_for(sim)
     delays = delayGenerationFromSubmitTimes(TOTAL_WORKFLOWS)
     # Alternative: Use fixed delays for testing
     # delays = [1, 60, 60, 80, 100, 250, 300, 40, 120, 200, 150, 100]

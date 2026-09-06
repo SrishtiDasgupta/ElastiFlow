@@ -22,6 +22,7 @@ import elastiflow
 RUNNERS = {
     'elastiflow.simulate_main', 'elastiflow.simulate_main_LA',
     'elastiflow.simulate_main_HPO', 'elastiflow.simulate_sweep',
+    'elastiflow.__main__',
 }
 
 # Standalone analysis scripts that act on import: speedup_HPO fits curves from

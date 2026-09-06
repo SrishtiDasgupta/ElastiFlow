@@ -6,7 +6,6 @@ from elastiflow.resource_manager.heft_rm import HEFTResourceManager
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.utils.resource import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler import Scheduler
-from elastiflow.execution.backend import backend_for
 
 # Workflows are sorted based on priorities. Priorities are computed based on deadline and budget. Lower deadline and lower budget have lower rank and are executed first
 class PriorityPriority(Scheduler):
@@ -18,25 +17,24 @@ class PriorityPriority(Scheduler):
         self.resource_manager.sortResourcesByFunction(func)
         super().__init__(queue, finish_queue, resource_request_queue)
 
-    def run(self, sim = None, wf_mb = None, resource_request_mb = None):
-        backend = backend_for(sim)
+    def run(self, backend):
         print(f'Starting scheduler...')
 
         # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, sim, self.resource_manager)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
         
         while True:
 
              # Check queue for resource requests
             resource_requests = backend.resource_requests.pop_many(SORT_COUNT)
             # Sort and update resource requests list 
-            self.resource_manager.processResourceRequestsByPriority(resource_requests, self.metrics, sim)
+            self.resource_manager.processResourceRequestsByPriority(resource_requests, self.metrics, backend)
             resource_request = self.resource_manager.peekWorkflow(self.resource_manager.resource_request_heap)
             
             if resource_request:
                 # Moldable scale-up / scale-down via rich base-class
                 # negotiation (processFreeRequest decides internally).
-                self.processFreeRequest(resource_request, sim)
+                self.processFreeRequest(resource_request, backend)
                 self.resource_manager.popWorkflow(self.resource_manager.resource_request_heap)
                 # NOTE: scheduler overhead negligible
                 continue
@@ -44,7 +42,7 @@ class PriorityPriority(Scheduler):
             # Retrieve all new jobs in the queue
             workflows = backend.workflows.pop_many(SORT_COUNT)
             # Sort and update workflow list 
-            self.resource_manager.processWorkflowsByPriority(workflows, sim)
+            self.resource_manager.processWorkflowsByPriority(workflows, backend)
 
              # Check the processed queue for new jobs
             wf_plan = self.resource_manager.peekWorkflow(self.resource_manager.workflow_heap)
@@ -58,7 +56,7 @@ class PriorityPriority(Scheduler):
                     break 
 
                 # If workflow cannot be executed, pop it to prevent stagnation
-                if self.purgeWorkflow(wf_plan, sim):
+                if self.purgeWorkflow(wf_plan, backend):
                     self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
                     continue
             
@@ -73,7 +71,7 @@ class PriorityPriority(Scheduler):
                     self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
                     # NOTE: We start billing at this point
                     start_time = backend.now()
-                    self.sendWorkflowForExecution(wf_plan, ips, sim, constraints['deadline'])
+                    self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
                     wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
                     self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
                 else:

@@ -6,9 +6,6 @@ import time
 import random
 import subprocess
 
-# SIMULATE = False
-# COLD_START_TIME = 0.00
-from elastiflow.execution.backend import backend_for
 region= 'eu-north-1' #change to eu-north-1 when taking runtime of stockholm instances
 
 # Create an EC2 client
@@ -25,16 +22,15 @@ def simulated_ip() -> str:
     return '.'.join(map(str, digits))
 
 
-def createInstance(name: str, count: int = 1, sim = None) -> List[str]:
-    backend = backend_for(sim)
+def createInstance(name: str, count: int = 1, backend = None) -> List[str]:
     if count < 1:
         return []
     print(f'Creating {count} instances of {name}')
     return backend.provision(name, count)
 
-def deleteInstanceFromIp(instances: List[str], sim=None):
+def deleteInstanceFromIp(instances: List[str], backend=None):
     print('Terminating instances', instances)
-    return backend_for(sim).release(instances)
+    return backend.release(instances)
 
 def launchInstance(instanceName: str, count):
     instance_details = []

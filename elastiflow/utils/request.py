@@ -36,7 +36,7 @@ def sendRequest(ip: str, port, data):
 
 # NOTE: Right now, return a random executor node for simulation
 # script to create one executor instance and retrieve its ip. Creation of other instances must be offlloaded to the executor
-def getExecutor(ips, sim) -> str:
+def getExecutor(ips, backend) -> str:
 
     # e = ['10.3.14.60', '10.3.14.41']
     # return e[0], None
@@ -51,5 +51,5 @@ def getExecutor(ips, sim) -> str:
         instance_type = instance
         break
     
-    ip = createInstance(instance_type, 1, sim)[0]
+    ip = createInstance(instance_type, 1, backend)[0]
     return ip, instance_type

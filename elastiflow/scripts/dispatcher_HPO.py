@@ -7,7 +7,6 @@ import numpy as np
 
 from elastiflow.config.constants_HPO import TOTAL_WORKFLOWS as DEFAULT_TOTAL_WORKFLOWS, AVG_INTERARRIVAL_TIME, WORKFLOW_ORDER
 from elastiflow.utils.validate_workflow import validate_workflow
-from elastiflow.execution.backend import backend_for
 
 
 def generate_poisson_delays(num_workflows, avg_interarrival):
@@ -65,7 +64,7 @@ def send_workflow(workflow, scheduler_host='0.0.0.0', port=8080):
         print(f'  Error: {response.status_code} {response.text}')
 
 
-def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=False, avg_delay=None):
+def dispatcher(backend, num_workflows=None, use_generated=False, poisson=False, avg_delay=None):
     """
     HPO workflow dispatcher for simulation mode.
 
@@ -74,14 +73,12 @@ def dispatcher(sim, wf_mb, num_workflows=None, use_generated=False, poisson=Fals
     2. Generated + Poisson: N workflows from data*.yaml with Poisson inter-arrival times
 
     Args:
-        sim: simulus simulator instance
-        wf_mb: workflow mailbox name
+        backend: the execution backend (its clock, and its workflows channel to submit on)
         num_workflows: number of workflows to dispatch (default: 5 for hand-crafted, or TOTAL_WORKFLOWS)
         use_generated: use generated data*.yaml files instead of sim_wf*.yaml
         poisson: use Poisson-distributed inter-arrival times
         avg_delay: average inter-arrival time in seconds (default: AVG_INTERARRIVAL_TIME)
     """
-    backend = backend_for(sim)
     if use_generated or poisson:
         # Generated workflow mode with Poisson arrivals
         if num_workflows is None:

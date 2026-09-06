@@ -13,7 +13,6 @@ from elastiflow.config.paths import PACKAGE_DIR
 # ============================================================================
 
 # LAMF runs in simulation mode by default
-SIMULATE = True
 
 # LAMF is moldable (dynamic resource adjustment)
 MOLDABLE = True

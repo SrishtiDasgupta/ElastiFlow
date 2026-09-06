@@ -8,10 +8,9 @@ and process spawning. Messages keep today's encoding (str(dict) on the wire,
 eval at the consumer); the channels move strings, exactly as the mailboxes and
 Redis queues did.
 
-`backend_for(sim)` is the bridge while the simulator object is still threaded
-through the signatures: runners register the fully wired backend for their
-simulator (and the live entry points for None); anything not registered gets a
-bare backend that supports the clock only.
+B6: the entry points construct one backend and pass it down. Every component
+receives it as `backend`; `backend.simulated` is the only place the two modes
+are told apart (injected overheads, the ledger clock, the live-only retries).
 """
 from __future__ import annotations
 
@@ -45,6 +44,7 @@ class Channel(Protocol):
 
 
 class ExecutionBackend(Protocol):
+    simulated: bool
     def now(self) -> float: ...
     def sleep(self, seconds: float) -> None: ...
     workflows: Channel            # dispatcher -> scheduler
@@ -95,6 +95,7 @@ class SimulatedChannel:
 
 class SimulatedBackend:
     """Simulated time and messaging on a simulus simulator."""
+    simulated = True
 
     def __init__(self, sim, mailboxes: dict | None = None, execute: Callable | None = None,
                  on_resources: Callable | None = None, cold_start: float = 0.0,
@@ -117,7 +118,7 @@ class SimulatedBackend:
         self.sim.sleep(seconds)
 
     def start_workflow(self, request: dict, executor_ip) -> None:
-        self.sim.process(self._execute, request, self.sim)
+        self.sim.process(self._execute, request, self)
 
     def notify_resources(self, request: dict, executor_ip):
         self.sim.process(self._on_resources, request)
@@ -185,6 +186,7 @@ class LiveChannel:
 
 class LiveBackend:
     """Wall-clock time, Redis channels, HTTP to the executor nodes, threads."""
+    simulated = False
 
     def __init__(self, queue=None, finish_queue=None, resource_request_queue=None,
                  launch: Callable | None = None, terminate: Callable | None = None):
@@ -261,28 +263,3 @@ class LiveBackend:
         with open(f"{PACKAGE_DIR}/config/ports.yaml", "w") as f:
             yaml.safe_dump(data, f)
 
-
-# --- registry ----------------------------------------------------------------
-
-_LIVE = LiveBackend()
-_REGISTERED: dict[int, object] = {}
-_BARE: dict[int, SimulatedBackend] = {}
-
-
-def register(sim, backend) -> None:
-    """Bind a fully wired backend to a simulator (or to None for live mode)."""
-    _REGISTERED[id(sim)] = backend
-
-
-def backend_for(sim):
-    """The backend for a simulator object (None means live). One backend per
-    simulator: the registered one, else a bare one that supports the clock."""
-    b = _REGISTERED.get(id(sim))
-    if b is not None:
-        return b
-    if sim is None:
-        return _LIVE
-    b = _BARE.get(id(sim))
-    if b is None or b.sim is not sim:
-        b = _BARE[id(sim)] = SimulatedBackend(sim)
-    return b

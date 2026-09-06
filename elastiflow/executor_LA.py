@@ -12,11 +12,9 @@ from elastiflow.utils.request import getConfig, sendRequest
 from elastiflow.workflow.steep_workflow import Steep_Workflow
 from elastiflow.server import server
 from elastiflow.wf_queue.redis_queue import Redis_Queue
-from elastiflow.config.constants import SIMULATE
-from elastiflow.execution.backend import backend_for
 
 
-def processQueueData(queue):
+def processQueueData(queue, backend):
     """
     Process incoming workflow execution requests
 
@@ -28,7 +26,7 @@ def processQueueData(queue):
             data = eval(data)
             if data["initial-alloc"]:
                 # New workflow - create execution thread
-                thread = threading.Thread(target=executeWorkflowLA, args=[data])
+                thread = threading.Thread(target=executeWorkflowLA, args=[data, backend])
                 thread.start()
             else:
                 # Resource update (moldable reallocation)
@@ -36,7 +34,7 @@ def processQueueData(queue):
             queue.pop()
 
 
-def executeWorkflowLA(data, sim=None):
+def executeWorkflowLA(data, backend):
     """
     Execute license-aware workflow using Steep workflow engine
 
@@ -53,16 +51,15 @@ def executeWorkflowLA(data, sim=None):
             - hosts: Allocated compute resources
             - deadline: Workflow deadline
             - license-holds: List of license hold IDs (optional)
-        sim: SimPy environment (None for real execution)
+        backend: SimPy environment (None for real execution)
     """
-    backend = backend_for(sim)
     workflow_plan = data.get('wf-plan')
     hosts = data.get('hosts')
     deadline = data.get('deadline')
     license_holds = data.get('license-holds', [])
 
     # Create Steep workflow
-    workflow = Steep_Workflow(workflow_plan, sim, deadline)
+    workflow = Steep_Workflow(workflow_plan, backend, deadline)
     start_time = backend.now()
 
     print(f'Executing workflow {workflow.id} at {start_time}')
@@ -73,7 +70,7 @@ def executeWorkflowLA(data, sim=None):
     new_hosts, isComplete = workflow.execute(hosts)
 
     # Executor overhead
-    if SIMULATE:
+    if backend.simulated:
         backend.sleep(7.7)
 
     # Report completion to scheduler
@@ -95,7 +92,7 @@ def executeWorkflowLA(data, sim=None):
     # Kill newly created on-demand instances
     for node in new_hosts.get('on-demand', {}):
         if isinstance(new_hosts['on-demand'][node], tuple):
-            deleteInstanceFromIp(new_hosts['on-demand'][node][1], sim)
+            deleteInstanceFromIp(new_hosts['on-demand'][node][1], backend)
 
 
 def processNewResourcesLA(data):
@@ -139,6 +136,8 @@ if __name__ == "__main__":
 
     # Setup executor queue
     queue = Redis_Queue(queue_name='exec-queue')
+    from elastiflow.execution.backend import LiveBackend
+    backend = LiveBackend()   # the executor node: wall clock, HTTP to the scheduler, boto3 release
 
     # Start HTTP server thread
     server_thread = threading.Thread(
@@ -148,7 +147,7 @@ if __name__ == "__main__":
     server_thread.start()
 
     # Start queue listener daemon thread
-    queue_listener = threading.Thread(target=processQueueData, args=[queue])
+    queue_listener = threading.Thread(target=processQueueData, args=[queue, backend])
     queue_listener.daemon = True
     queue_listener.start()
 

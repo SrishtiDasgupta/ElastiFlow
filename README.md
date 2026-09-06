@@ -52,7 +52,9 @@ They are the contract for any change to the framework.
 
 ## Reproducing results
 
-* One simulated cell: `docs/INSTALL.md`, section "Running a simulated cell by hand".
+* One simulated cell: `python -m elastiflow run --mode simulated --use-case seissol ...`
+  (`docs/INSTALL.md`, section "Running a simulated cell by hand"); `--mode live`
+  starts the live scheduler process instead.
 * A campaign: `use_cases/seissol/results/sweep_PLAIN.py` and
   `use_cases/licence/results/canonical_sweep.py` (they merge into the dataset
   files in place; run them on a branch).
