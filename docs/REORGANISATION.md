@@ -77,7 +77,7 @@ Other facts the layout has to answer for:
 `total_cost_per_run.json`, 0 differing tokens, same twelve numbers). The other two
 still write the superseded N=3/5/7 panel to the same name, and one of them ran last.
 The thesis is right; the repository file is wrong. The same three-writer problem
-exists for `02g_utilization_time`. No other figure in any campaign has more than one
+exists for `02g_utilization_time`. (Both resolved in Phase C, see below.) No other figure in any campaign has more than one
 writer.
 
 ## 2. Target layout
@@ -286,10 +286,14 @@ Exit criterion: the harness extended to every policy at one (N, seed) per campai
 all cell-for-cell identical; then a full re-sweep of one campaign compared to the
 committed dataset.
 
-**Phase C, figure provenance.** One writer per figure. `thesis/figures.yaml` lists
-every thesis figure with its generator and dataset; `sync_figures.py` regenerates and
-byte-compares against the submitted image tree. The stale `04_paired_diff.pdf` is
-fixed here by deleting the two superseded writers, not by editing the thesis.
+**Phase C, figure provenance** (done 2026-09-06). One writer per figure.
+`thesis/figures.yaml` lists every thesis figure with its generator, dataset and
+recorded state; `thesis/sync_figures.py` checks the committed files against the
+submitted image tree, regenerates in a throw-away worktree and lists writers;
+`tests/unit/test_figures_manifest.py` holds the one-writer rule. The stale
+`04_paired_diff.pdf` was fixed by deleting the two superseded writers and
+regenerating the committed file with the writer of record; three more figures
+lost superseded second writers. See `docs/PROVENANCE.md`.
 
 ## 4. Rules that hold throughout
 

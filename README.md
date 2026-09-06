@@ -36,6 +36,8 @@ tests/               regression (one tagged cell per campaign), unit (import com
                      smoke (every policy once), fixtures
 docs/                INSTALL, ARCHITECTURE, PROVENANCE, REORGANISATION (the refactoring plan
                      and its status), history/ (working notes and context logs)
+thesis/              figures.yaml (every data figure of the dissertation: submitted image,
+                     committed file, the one writer, state) and sync_figures.py
 ```
 
 ## Install and check
@@ -63,7 +65,10 @@ They are the contract for any change to the framework.
   `use_cases/licence/results/canonical_sweep.py` (they merge into the dataset
   files in place; run them on a branch).
 * A figure: every dissertation figure is mapped to its dataset, generator and
-  committed output in `docs/PROVENANCE.md`.
+  committed output in `thesis/figures.yaml` (rendered in `docs/PROVENANCE.md`);
+  `python thesis/sync_figures.py check --thesis-images DIR` compares the committed
+  files with the submitted images, `regenerate` re-runs a generator in a
+  throw-away worktree and compares.
 * HPO ran live; its live driver is `elastiflow/simulate_main_HPO.py` with
   `deploy/runners/run_hpo.py` on the cluster, and the batch-size sweep used the
   analytical models under `use_cases/hpo/results/r7_n7_actual_vs_modeled/`.
