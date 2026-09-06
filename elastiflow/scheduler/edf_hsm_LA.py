@@ -24,26 +24,26 @@ Key idea:
   iteration-0 OPTIM factor (0.6) is inert (iteration 0 never renegotiates)
 """
 
-import heapq
 import math
 import threading
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import Dict
 
 from elastiflow.config.constants_LA import (
-    COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST,
-    OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR,
-    RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD,
+    DEADLINE_BUFFER,
+    MIN_INSTANCE_COST,
+    OPTIM_FCFS_BFACTOR,
+    OPTIM_FCFS_DFACTOR,
+    RESOURCE_REQUEST_TIMEOUT,
+    SPEEDUP_THRESHOLD,
     WORKFLOW_POLLING,
-    TOTAL_WORKFLOWS
+    TOTAL_WORKFLOWS,
 )
 
 from elastiflow.scripts.speedup import getRuntime
-from elastiflow.resource_manager.instance import CloudOnDemandInstance, Instance, OnPremInstance
-from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
-from elastiflow.resource_manager.license.exceptions import LicenseError, InsufficientTokens
+from elastiflow.resource_manager.instance import Instance, OnPremInstance
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow, getEstimate
-from elastiflow.scheduler.scheduler_LA import Scheduler_LA
+from elastiflow.scheduler.edf_optimized_LA import EDF_Optimized_LA
 
 import os
 
@@ -97,7 +97,7 @@ HSM_POOL_RHO = {
 }
 
 
-class EDF_HSM_LA(Scheduler_LA):
+class EDF_HSM_LA(EDF_Optimized_LA):
     """
     Hybrid Static-Moldable EDF Scheduler with License Awareness
 
@@ -109,31 +109,15 @@ class EDF_HSM_LA(Scheduler_LA):
     """
 
     def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost_per_iteration'):
-        self.resource_manager = ResourceManager_LA()
-
-        # Sort resources by cost+runtime (like FCFS_Optimized_LA)
-        func = lambda x: x.getValue(sort_key) + (COLD_START_TIME if isinstance(x, CloudOnDemandInstance) else 0)
-        self.resource_manager.sortResourcesByFunction(func)
-
-        # Priority heaps for EDF ordering
-        self.workflow_heap = []
-        self.resource_request_heap = []
-
-        # Heap counters for tiebreaking (prevents dict comparison errors)
-        self.workflow_counter = 0
-        self.resource_request_counter = 0
-
-        # License hold tracking (like LAMF)
-        self.license_holds = {}  # {wf_id: [hold_ids]}
+        # EDF-LAMF's constructor (resource manager sorted by cost plus cold start,
+        # the EDF heaps and counters, the licence-hold table, the licence manager
+        # link) plus the HSM phase table. Before B7.2 the same statements were
+        # written out here.
+        super().__init__(queue, finish_queue, resource_request_queue, sort_key=sort_key)
 
         # HSM per-workflow phase state: 'STATIC' (hold allocation) -> 'MOLDABLE'
         # (full EDF-LAMF). One-way; gated by the licence-aware criterion below.
         self.hsm_phase = {}  # {wf_id: 'STATIC' | 'MOLDABLE'}
-
-        super().__init__(queue, finish_queue, resource_request_queue)
-
-        # Link license manager from resource manager (required for license-aware operations)
-        self.license_manager = self.resource_manager.license_manager
 
     def run(self, backend):
         """
@@ -342,111 +326,9 @@ class EDF_HSM_LA(Scheduler_LA):
     # EDF HEAP MANAGEMENT (from HEFTResourceManager)
     # =========================================================================
 
-    def processWorkflowsByDeadline(self, workflows: List[any]):
-        """Sort workflows by deadline (EDF ordering)"""
-        for wf in workflows:
-            wf_plan = eval(wf)
-            if wf_plan['id'] == 'END':
-                heapq.heappush(self.workflow_heap, (1000000, self.workflow_counter, wf_plan['id'], wf_plan))
-            else:
-                deadline = wf_plan['submit_time'] + wf_plan['constraints']['deadline']
-                heapq.heappush(self.workflow_heap, (deadline, self.workflow_counter, wf_plan['id'], wf_plan))
-            self.workflow_counter += 1
-
-    def processResourceRequestsByDeadline(self, requests: List[any]):
-        """Sort resource requests by deadline (EDF ordering)"""
-        from elastiflow.utils.request import ExecutorRequest
-
-        for req in requests:
-            req_dict = eval(req)
-            if req_dict['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
-                # Min heap with deadlines
-                wf = self.resource_manager.getWorkflow(req_dict['wf-id'])
-                deadline = wf[2] if wf else float('inf')
-            else:
-                deadline = 0  # Free requests always on top
-
-            try:
-                heapq.heappush(self.resource_request_heap, (deadline, self.resource_request_counter, req_dict['wf-id'], req_dict))
-                self.resource_request_counter += 1
-            except Exception as e:
-                print(f'HEAP ERROR: {e}')
-                print(self.resource_request_heap)
-
-    def peekWorkflow(self, heap):
-        """Peek at top of heap without removing"""
-        return heap and heap[0][3]  # Index 3: (deadline, counter, wf_id, data)
-
-    def popWorkflow(self, heap):
-        """Remove top of heap"""
-        try:
-            heapq.heappop(heap)
-        except Exception as e:
-            print(f'HEAP POP ERROR: {e}')
-            print(heap)
-
     # =========================================================================
     # WORKFLOW FEASIBILITY CHECK
     # =========================================================================
-
-    def isWorkflowImpossible(self, constraints) -> bool:
-        """
-        Check if a workflow is truly impossible (exceeds pool capacity)
-        vs temporarily unavailable (resources in use)
-
-        Returns:
-            True if workflow exceeds license pool capacity (impossible)
-            False if workflow can be scheduled when resources become available
-
-        Note: We only check license capacity, not compute capacity, because
-        Instance objects don't track total capacity (only free slots).
-        This is conservative - we may retry impossible compute requests,
-        but we won't incorrectly reject feasible workflows.
-        """
-        license_pool = constraints.get('license_pool', None)
-
-        if not license_pool:
-            # No license requirement - assume temporarily unavailable
-            # (can't determine total compute capacity from Instance objects)
-            return False
-
-        # Check if license requirement exceeds pool capacity
-        # Use checkResources to get a realistic instance allocation
-        instances = self.resource_manager.getResources()
-        count, instance_list = self.checkResources(
-            instances, constraints['min_instances']
-        )
-
-        if count < constraints['min_instances']:
-            # Not enough free compute capacity right now
-            # But we can't determine if it's impossible or just in use
-            # Conservative: assume temporarily unavailable
-            return False
-
-        # Check license capacity with the hypothetical allocation
-        total_cores = sum(inst.cores * cnt for inst, cnt in instance_list)
-
-        try:
-            licenses_needed = self.license_manager.calculate_tokens(
-                pool=license_pool,
-                cores=total_cores,
-                chains=constraints.get('chains', 1)
-            )
-
-            pool_status = self.license_manager.get_pool_status(license_pool)
-
-            if licenses_needed > pool_status['total']:
-                # Truly impossible - exceeds license pool capacity
-                print(f"  ✗ IMPOSSIBLE: Workflow needs {licenses_needed} {license_pool} tokens, pool capacity is {pool_status['total']}")
-                return True
-
-            # License requirement is feasible - temporarily unavailable
-            return False
-
-        except Exception as e:
-            # Error calculating licenses - assume temporarily unavailable
-            print(f"  ⚠ Error checking license feasibility: {e}")
-            return False
 
     # =========================================================================
     # INHERITED METHODS FROM PARENT (Scheduler_LA)
@@ -461,270 +343,6 @@ class EDF_HSM_LA(Scheduler_LA):
     # =========================================================================
     # LICENSE-AWARE RESOURCE MANAGEMENT
     # =========================================================================
-
-    def checkNewResourcesWithLicenses(
-        self,
-        resources: List[Instance],
-        current_resources: List[tuple[Instance, int, List]],
-        budget: float,
-        available_runtime: float,
-        request,
-        mesh,
-        license_pool: Optional[str]
-    ) -> Tuple[List[tuple[Instance, int]], List[str]]:
-        """
-        Check new resources WITH license constraints
-
-        Returns:
-            (alloc_instances, license_holds)
-        """
-        # First, get compute allocation (from checkNewResources)
-        # GLOBAL VIEW: Pass available_runtime for deadline feasibility check.
-        # Pass software_id so the depth (nodes-per-chain) search is license-cost-aware.
-        sid = {'ANSYS': 1, 'ABAQUS': 2, 'LSDYNA': 3}.get(license_pool)
-        alloc_instances = self.checkNewResources(
-            resources, current_resources, budget, available_runtime, request, mesh,
-            software_id=sid
-        )
-
-        if not alloc_instances:
-            # Compute gate rejected the request; the licence pool was never tested.
-            self._last_licence_outcome = 'deny_compute'
-            self.metrics.recordNegotiationOutcome('deny_compute')
-            return ([], [])
-
-        # If no license pool, return compute allocation as-is
-        if not license_pool:
-            return (alloc_instances, [])
-
-        # Calculate licenses needed for proposed allocation
-        total_cores = sum(inst.cores * count for inst, count in alloc_instances)
-
-        try:
-            licenses_needed = self.license_manager.calculate_tokens(
-                pool=license_pool,
-                cores=total_cores,
-                chains=request.get('chains', 1)
-            )
-
-            # Check if licenses available
-            available_tokens = self.license_manager.get_available_tokens(license_pool)
-
-            if available_tokens >= licenses_needed:
-                # Can allocate! Hold licenses
-                hold_id = self.license_manager.hold(
-                    pool=license_pool,
-                    amount=licenses_needed,
-                    owner=request['wf-id'],
-                    ttl=300
-                )
-                self.license_manager.commit(hold_id)
-
-                print(f"  ✓ Allocated {licenses_needed} licenses (available: {available_tokens})")
-                self._last_licence_outcome = 'approve'
-                self.metrics.recordNegotiationOutcome(
-                    'approve', tokens_needed=licenses_needed,
-                    tokens_available=available_tokens)
-                return (alloc_instances, [hold_id])
-
-            else:
-                # Insufficient licenses - try partial allocation
-                print(f"  ⚠ Insufficient licenses: need {licenses_needed}, have {available_tokens}")
-
-                feasible_instances = self.findLicenseFeasibleAllocation(
-                    alloc_instances, available_tokens, license_pool, request
-                )
-
-                if feasible_instances:
-                    # Partial allocation
-                    total_cores_feasible = sum(inst.cores * count for inst, count in feasible_instances)
-                    licenses_feasible = self.license_manager.calculate_tokens(
-                        pool=license_pool,
-                        cores=total_cores_feasible,
-                        chains=request.get('chains', 1)
-                    )
-
-                    hold_id = self.license_manager.hold(
-                        pool=license_pool,
-                        amount=licenses_feasible,
-                        owner=request['wf-id'],
-                        ttl=300
-                    )
-                    self.license_manager.commit(hold_id)
-
-                    print(f"  ✓ Partial allocation: {sum(c for _, c in feasible_instances)} instances, {licenses_feasible} licenses")
-                    self._last_licence_outcome = 'modify'
-                    self.metrics.recordNegotiationOutcome(
-                        'modify',
-                        requested=sum(c for _, c in alloc_instances),
-                        granted=sum(c for _, c in feasible_instances),
-                        tokens_needed=licenses_needed,
-                        tokens_available=available_tokens)
-                    return (feasible_instances, [hold_id])
-
-                else:
-                    print(f"  ✗ Cannot fit any allocation to available licenses")
-                    self._last_licence_outcome = 'deny_licence'
-                    self.metrics.recordNegotiationOutcome(
-                        'deny_licence', tokens_needed=licenses_needed,
-                        tokens_available=available_tokens)
-                    return ([], [])
-
-        except (InsufficientTokens, LicenseError) as e:
-            print(f"  ✗ License error: {e}")
-            self._last_licence_outcome = 'deny_licence'
-            self.metrics.recordNegotiationOutcome('deny_licence')
-            return ([], [])
-
-    def findLicenseFeasibleAllocation(
-        self,
-        instances: List[tuple[Instance, int]],
-        available_licenses: int,
-        license_pool: str,
-        request
-    ) -> Optional[List[tuple[Instance, int]]]:
-        """
-        Find subset of instances that fits available licenses
-
-        Tries to allocate as many instances as possible within license limit.
-        """
-        feasible = []
-        licenses_used = 0
-
-        for inst, count in instances:
-            # Try adding instances one by one
-            for i in range(count):
-                # Calculate licenses for current + 1 instance
-                test_cores = sum(i.cores * c for i, c in feasible) + inst.cores
-                try:
-                    test_licenses = self.license_manager.calculate_tokens(
-                        pool=license_pool,
-                        cores=test_cores,
-                        chains=request.get('chains', 1)
-                    )
-
-                    if test_licenses <= available_licenses:
-                        # Can add this instance
-                        if feasible and feasible[-1][0] == inst:
-                            # Same instance type - increment count
-                            feasible[-1] = (inst, feasible[-1][1] + 1)
-                        else:
-                            # New instance type
-                            feasible.append((inst, 1))
-                        licenses_used = test_licenses
-                    else:
-                        # Would exceed license limit - stop
-                        break
-
-                except LicenseError:
-                    break
-
-        return feasible if feasible else None
-
-    def freeResourcesWithLicenses(self, instances, request, backend, license_pool: Optional[str]):
-        """
-        Free resources AND licenses
-
-        Extends base freeResources() to also release licenses.
-
-        Returns:
-            actual_licenses_released: Actual number of license tokens released
-        """
-        response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
-        freed_count = 0
-        to_free_instances = []
-        actual_licenses_released = 0
-
-        # Free compute resources (LIFO)
-        if request['count'] > 0:
-            for i in range(len(instances)):
-                instance, count, ips = instances[i]
-                to_free = min(request['count'] - freed_count, count)
-                to_free_instances.append((instance, to_free, ips[-to_free:]))
-                instances[i] = (instance, count - to_free, ips[:-to_free])
-                response_instances[instance.type][instance.name] = (to_free, ips[-to_free:])
-                freed_count += to_free
-                if freed_count == request['count']:
-                    break
-
-            self.resource_manager.returnResources(request['wf-id'], to_free_instances)
-
-            # === PARTIAL LICENSE RELEASE ===
-            # Free licenses corresponding to freed instances (but only partially)
-            if license_pool and to_free_instances:
-                total_cores_freed = sum(inst.cores * count for inst, count, _ in to_free_instances)
-
-                try:
-                    licenses_to_free = self.license_manager.calculate_tokens(
-                        pool=license_pool,
-                        cores=total_cores_freed,
-                        chains=1
-                    )
-
-                    import os
-                    PARTIAL_RELEASE_FRACTION = float(os.environ.get('LA_PARTIAL_RELEASE', '0.90'))  # release frac; 0.50 keeps 50% buffer. Configurable for sensitivity.
-
-                    wf_id = request['wf-id']
-                    if wf_id in self.license_holds and self.license_holds[wf_id]:
-                        # Get most recent hold (LIFO)
-                        hold_id = self.license_holds[wf_id][-1]
-
-                        # Get allocation info to determine hold size
-                        if hold_id in self.license_manager.allocations:
-                            alloc = self.license_manager.allocations[hold_id]
-                            licenses_to_actually_release = int(licenses_to_free * PARTIAL_RELEASE_FRACTION)
-
-                            if licenses_to_actually_release >= alloc.amount:
-                                # Release entire hold (can't partially release more than exists)
-                                self.license_holds[wf_id].pop()
-                                self.license_manager.release(hold_id)
-                                actual_licenses_released += alloc.amount
-                                print(f"  ✓ Released full hold: {alloc.amount} licenses (hold: {hold_id})")
-                            else:
-                                # Partial release: release old hold, create new smaller hold
-                                remaining_licenses = alloc.amount - licenses_to_actually_release
-
-                                # Release old hold
-                                self.license_holds[wf_id].pop()
-                                self.license_manager.release(hold_id)
-                                actual_licenses_released += licenses_to_actually_release
-
-                                # Create new smaller hold for retained licenses
-                                new_hold_id = self.license_manager.hold(
-                                    pool=license_pool,
-                                    amount=remaining_licenses,
-                                    owner=wf_id,
-                                    ttl=300
-                                )
-                                self.license_manager.commit(new_hold_id)
-                                self.license_holds[wf_id].append(new_hold_id)
-
-                                # Synchronize ResourceManager tracking
-                                self.resource_manager.updateWorkflowLicenses(
-                                    wf_id,
-                                    self.license_holds[wf_id],
-                                    mode='replace'
-                                )
-
-                                print(f"  ✓ Partial release: {licenses_to_actually_release}/{alloc.amount} licenses ({PARTIAL_RELEASE_FRACTION*100:.0f}%)")
-                                print(f"    Retained {remaining_licenses} licenses as buffer (new hold: {new_hold_id})")
-                        else:
-                            # Fallback: just release the hold if not in allocations
-                            self.license_holds[wf_id].pop()
-                            self.license_manager.release(hold_id)
-                            actual_licenses_released += int(licenses_to_free * PARTIAL_RELEASE_FRACTION)
-                            print(f"  ✓ Released hold: {hold_id} (allocation not tracked)")
-
-                except LicenseError as e:
-                    print(f"  ⚠ License release error: {e}")
-
-        # Send freed resources notification
-        self.sendFreedResources(
-            request['wf-id'], to_free_instances, instances,
-            response_instances, backend, request.get('client-ip', None)
-        )
-
-        return actual_licenses_released
 
     # =========================================================================
     # DDM-EDF RESOURCE REQUEST PROCESSING (with urgency-based scaling)

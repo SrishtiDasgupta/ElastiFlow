@@ -31,10 +31,10 @@ from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
 from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.utils.resource import getEstimate
-from elastiflow.scheduler.scheduler_LA import Scheduler_LA
+from elastiflow.scheduler.scheduler_LA import Scheduler_LA_Elastic
 
 
-class FCFS_Optimized_LA(Scheduler_LA):
+class FCFS_Optimized_LA(Scheduler_LA_Elastic):
     """
     LAMF - License-Aware Moldable FCFS Scheduler
 
@@ -698,121 +698,6 @@ class FCFS_Optimized_LA(Scheduler_LA):
                     break
 
         return feasible if feasible else None
-
-    def freeResourcesWithLicenses(self, instances, request, backend, license_pool: Optional[str]):
-        """
-        Free resources AND licenses
-
-        Extends base freeResources() to also release licenses.
-
-        Returns:
-            actual_licenses_released: Actual number of license tokens released
-        """
-        response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
-        freed_count = 0
-        to_free_instances = []
-        actual_licenses_released = 0  # Track actual releases (BUG FIX #3)
-
-        # Free compute resources (LIFO)
-        if request['count'] > 0:
-            for i in range(len(instances)):
-                instance, count, ips = instances[i]
-                to_free = min(request['count'] - freed_count, count)
-                to_free_instances.append((instance, to_free, ips[-to_free:]))
-                instances[i] = (instance, count - to_free, ips[:-to_free])
-                response_instances[instance.type][instance.name] = (to_free, ips[-to_free:])
-                freed_count += to_free
-                if freed_count == request['count']:
-                    break
-
-            self.resource_manager.returnResources(request['wf-id'], to_free_instances)
-
-            # === PARTIAL LICENSE RELEASE (Solution 3) ===
-            # Free licenses corresponding to freed instances (but only partially)
-            if license_pool and to_free_instances:
-                total_cores_freed = sum(inst.cores * count for inst, count, _ in to_free_instances)
-
-                try:
-                    licenses_to_free = self.license_manager.calculate_tokens(
-                        pool=license_pool,
-                        cores=total_cores_freed,
-                        chains=1
-                    )
-
-                    # === OLD CODE (release all licenses): ===
-                    # wf_id = request['wf-id']
-                    # if wf_id in self.license_holds and self.license_holds[wf_id]:
-                    #     hold_id = self.license_holds[wf_id].pop()
-                    #     self.license_manager.release(hold_id)
-                    #     print(f"  ✓ Released ~{licenses_to_free} licenses (hold: {hold_id})")
-
-                    # === NEW CODE (partial release with buffer retention): ===
-                    import os
-                    PARTIAL_RELEASE_FRACTION = float(os.environ.get('LA_PARTIAL_RELEASE', '0.90'))  # release frac; 0.50 keeps 50% buffer. Configurable for sensitivity.
-
-                    wf_id = request['wf-id']
-                    if wf_id in self.license_holds and self.license_holds[wf_id]:
-                        # Get most recent hold (LIFO)
-                        hold_id = self.license_holds[wf_id][-1]
-
-                        # Get allocation info to determine hold size
-                        if hold_id in self.license_manager.allocations:
-                            alloc = self.license_manager.allocations[hold_id]
-                            licenses_to_actually_release = int(licenses_to_free * PARTIAL_RELEASE_FRACTION)
-
-                            if licenses_to_actually_release >= alloc.amount:
-                                # Release entire hold (can't partially release more than exists)
-                                self.license_holds[wf_id].pop()
-                                self.license_manager.release(hold_id)
-                                actual_licenses_released += alloc.amount  # Track actual release
-                                print(f"  ✓ Released full hold: {alloc.amount} licenses (hold: {hold_id})")
-                            else:
-                                # Partial release: release old hold, create new smaller hold
-                                remaining_licenses = alloc.amount - licenses_to_actually_release
-
-                                # Release old hold
-                                self.license_holds[wf_id].pop()
-                                self.license_manager.release(hold_id)
-                                actual_licenses_released += licenses_to_actually_release  # Track actual release
-
-                                # Create new smaller hold for retained licenses
-                                new_hold_id = self.license_manager.hold(
-                                    pool=license_pool,
-                                    amount=remaining_licenses,
-                                    owner=wf_id,
-                                    ttl=300
-                                )
-                                self.license_manager.commit(new_hold_id)
-                                self.license_holds[wf_id].append(new_hold_id)
-
-                                # FIX: Synchronize ResourceManager tracking to prevent license accumulation
-                                # Update ResourceManager to match Scheduler's new hold list
-                                self.resource_manager.updateWorkflowLicenses(
-                                    wf_id,
-                                    self.license_holds[wf_id],
-                                    mode='replace'
-                                )
-
-                                print(f"  ✓ Partial release: {licenses_to_actually_release}/{alloc.amount} licenses ({PARTIAL_RELEASE_FRACTION*100:.0f}%)")
-                                print(f"    Retained {remaining_licenses} licenses as buffer (new hold: {new_hold_id})")
-                        else:
-                            # Fallback: just release the hold if not in allocations
-                            # Estimate licenses (can't get exact amount without allocation record)
-                            self.license_holds[wf_id].pop()
-                            self.license_manager.release(hold_id)
-                            actual_licenses_released += int(licenses_to_free * PARTIAL_RELEASE_FRACTION)  # Estimate
-                            print(f"  ✓ Released hold: {hold_id} (allocation not tracked)")
-
-                except LicenseError as e:
-                    print(f"  ⚠ License release error: {e}")
-
-        # Send freed resources notification
-        self.sendFreedResources(
-            request['wf-id'], to_free_instances, instances,
-            response_instances, backend, request.get('client-ip', None)
-        )
-
-        return actual_licenses_released  # Return actual amount released (BUG FIX #3)
 
     # === INHERITED METHODS FROM PARENT ===
     # The following methods are inherited from Scheduler_LA:

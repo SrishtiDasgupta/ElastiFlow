@@ -35,3 +35,53 @@ def test_layers_keep_their_own_versions_of_what_differs():
 def test_every_policy_class_is_a_scheduler():
     for p in POLICIES:
         assert issubclass(p.load(), Scheduler), p.name
+
+
+# --- B7.2: the layers inside each family ------------------------------------------
+from elastiflow.scheduler.scheduler import EDFOrderingMixin  # noqa: E402
+from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO_Elastic, Scheduler_HPO_Static  # noqa: E402
+from elastiflow.scheduler.scheduler_LA import Scheduler_LA_Elastic  # noqa: E402
+from elastiflow.scheduler.edf_optimized_LA import EDF_Optimized_LA  # noqa: E402
+from elastiflow.scheduler.edf_hsm_LA import EDF_HSM_LA  # noqa: E402
+from elastiflow.scheduler.edf_scheduler_LA import EDF_Scheduler_LA  # noqa: E402
+from elastiflow.scheduler.fcfs_optimized_LA import FCFS_Optimized_LA  # noqa: E402
+from elastiflow.scheduler.edf_optimized_HPO import EDF_Optimized_HPO  # noqa: E402
+from elastiflow.scheduler.edf_scheduler_HPO import EDF_Scheduler_HPO  # noqa: E402
+from elastiflow.scheduler.fcfs_optimized_HPO import FCFS_Optimized_HPO  # noqa: E402
+from elastiflow.scheduler.fcfs_scheduler_HPO import FCFS_Scheduler_HPO  # noqa: E402
+
+
+def test_edf_policies_share_the_ordering_helpers():
+    for cls in (EDF_Scheduler_LA, EDF_Optimized_LA, EDF_HSM_LA, EDF_Scheduler_HPO, EDF_Optimized_HPO):
+        assert issubclass(cls, EDFOrderingMixin), cls
+        for name in ('peekWorkflow', 'popWorkflow', 'processWorkflowsByDeadline'):
+            assert getattr(cls, name) is getattr(EDFOrderingMixin, name), (cls, name)
+    # the resource-request ordering differs per policy and stays where it was
+    assert EDF_Scheduler_LA.processResourceRequestsByDeadline is not EDF_Optimized_LA.processResourceRequestsByDeadline
+    assert EDF_HSM_LA.processResourceRequestsByDeadline is EDF_Optimized_LA.processResourceRequestsByDeadline
+    assert EDF_Optimized_HPO.processResourceRequestsByDeadline is not EDF_Optimized_LA.processResourceRequestsByDeadline
+
+
+def test_hsm_is_edf_lamf_plus_its_gate():
+    assert issubclass(EDF_HSM_LA, EDF_Optimized_LA)
+    for name in ('checkNewResourcesWithLicenses', 'findLicenseFeasibleAllocation', 'isWorkflowImpossible', 'freeResourcesWithLicenses'):
+        assert getattr(EDF_HSM_LA, name) is getattr(EDF_Optimized_LA, name), name
+    for name in ('run', 'processFreeRequestWithLicenses', '_hsm_in_static_phase', '__init__'):
+        assert name in EDF_HSM_LA.__dict__, name
+
+
+def test_elastic_licence_layer():
+    for cls in (FCFS_Optimized_LA, EDF_Optimized_LA):
+        assert issubclass(cls, Scheduler_LA_Elastic)
+        assert cls.freeResourcesWithLicenses is Scheduler_LA_Elastic.freeResourcesWithLicenses
+    assert 'checkNewResourcesWithLicenses' in FCFS_Optimized_LA.__dict__ and 'checkNewResourcesWithLicenses' in EDF_Optimized_LA.__dict__
+
+
+def test_hpo_static_and_elastic_layers():
+    assert issubclass(FCFS_Scheduler_HPO, Scheduler_HPO_Static) and issubclass(EDF_Scheduler_HPO, Scheduler_HPO_Static)
+    assert issubclass(FCFS_Optimized_HPO, Scheduler_HPO_Elastic) and issubclass(EDF_Optimized_HPO, Scheduler_HPO_Elastic)
+    assert Scheduler_HPO_Static.createOnDemandWorkers is not Scheduler_HPO_Elastic.createOnDemandWorkers
+    for cls in (FCFS_Scheduler_HPO, EDF_Scheduler_HPO, FCFS_Optimized_HPO, EDF_Optimized_HPO):
+        assert cls.getInstanceTypeForHPO is Scheduler_HPO.getInstanceTypeForHPO
+    for name in ('_syncOnDemandIPs', 'freeResources', 'getHPOInstanceCost', 'createOnDemandWorkers'):
+        assert FCFS_Optimized_HPO.__dict__.get(name) is None and getattr(FCFS_Optimized_HPO, name) is getattr(Scheduler_HPO_Elastic, name), name

@@ -62,7 +62,7 @@ for their family); the remaining layers are still copies. Phase B7
 | layer | SeisSol | licence | HPO |
 |---|---|---|---|
 | runner | `simulate_sweep.py` (campaign), `simulate_main.py` (Ch. 7) | `simulate_main_LA.py` | `simulate_main_HPO.py` (live) |
-| scheduler base | `scheduler/scheduler.py` `Scheduler` | `scheduler_LA.py` `Scheduler_LA(Scheduler)` | `scheduler_HPO.py` `Scheduler_HPO(Scheduler)` |
+| scheduler base | `scheduler/scheduler.py` `Scheduler` (+ `EDFOrderingMixin`) | `scheduler_LA.py` `Scheduler_LA(Scheduler)`, `Scheduler_LA_Elastic` | `scheduler_HPO.py` `Scheduler_HPO(Scheduler)`, `Scheduler_HPO_Static`, `Scheduler_HPO_Elastic` |
 | dispatcher | `dispatcher.py` | `dispatcher_LA.py` | `dispatcher_HPO.py` |
 | executor | `executor.py` | `executor_LA.py` | `executor_HPO.py` |
 | constants | `config/constants.py` | `constants_LA.py` | `constants_HPO.py` |

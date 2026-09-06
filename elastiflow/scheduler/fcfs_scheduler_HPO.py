@@ -4,7 +4,6 @@ import math
 
 from elastiflow.config.constants_HPO import WORKFLOW_POLLING, COLD_START_TIME
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
-from elastiflow.scripts.create_instance_HPO import createWorkerInstances
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
@@ -12,11 +11,11 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, OnPremIn
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
 from elastiflow.utils.resource import getConstraintsFromWorkflow
-from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
+from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO_Static
 
 # HPO-specific FCFS Scheduler with Dedicated Executor Design
 # Static version - no moldable resource allocation
-class FCFS_Scheduler_HPO(Scheduler_HPO):
+class FCFS_Scheduler_HPO(Scheduler_HPO_Static):
 
     def __init__(self, queue, finish_queue, resource_request_queue, sort_key='cost',
                  resource_config=None, file_prefix=None):
@@ -254,46 +253,6 @@ class FCFS_Scheduler_HPO(Scheduler_HPO):
 
         print(f"Selected: {best_num_hosts} × {best_instance_type} for {trials} trials (cost: ${best_cost:.2f}, runtime: {best_runtime:.0f}s)")
         return (best_instance_type, best_num_hosts)
-
-    def getInstanceTypeForHPO(self, instance_name):
-        """Map instance names to HPO instance types"""
-        if 'g4dn' in instance_name:
-            return 'g4'
-        elif 'g5' in instance_name:
-            return 'g5'
-        elif 'on-prem' in instance_name:
-            return 'g4'  # On-prem uses g4dn.xlarge instances
-        else:
-            return 'unknown'
-
-    def createOnDemandWorkers(self, ips, backend):
-        """
-        Create actual on-demand worker instances for allocated virtual slots
-        ResourceManager.allocateResources() returns empty IP lists for on-demand,
-        this method creates the actual instances and updates the IP lists.
-        Multiple instance types are created in parallel.
-        """
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-
-        to_create = {itype: count for itype, (count, ip_list) in ips.get('on-demand', {}).items()
-                     if count > 0 and len(ip_list) == 0}
-
-        if not to_create:
-            return ips
-
-        def _create(instance_type, count):
-            print(f"Creating {count} on-demand {instance_type} worker instances...")
-            worker_ips = createWorkerInstances(instance_type, count, backend)
-            print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
-            return instance_type, count, worker_ips
-
-        with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
-            futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
-            for future in as_completed(futures):
-                instance_type, count, worker_ips = future.result()
-                ips['on-demand'][instance_type] = (count, worker_ips)
-
-        return ips
 
     def sendWorkflowForExecutionHPO(self, wf_plan, ips, backend, deadline):
         """

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import heapq
 import math
 import time
 from typing import List
@@ -454,3 +455,33 @@ class Scheduler(ABC):
                 node_count -= 1
 
         return acquired_instances
+
+
+class EDFOrderingMixin:
+    """Deadline ordering of the workflow channel, shared by the EDF policies of
+    the licence and HPO layers (B7.2): the policy keeps a heap of the
+    workflows it has peeked and admits the earliest deadline first. The FCFS
+    policies read the channel in arrival order and do not use it."""
+
+    def peekWorkflow(self, heap):
+        """Peek at top of heap without removing"""
+        return heap and heap[0][3]  # Index 3: (deadline, counter, wf_id, data)
+
+    def popWorkflow(self, heap):
+        """Remove top of heap"""
+        try:
+            heapq.heappop(heap)
+        except Exception as e:
+            print(f'HEAP POP ERROR: {e}')
+            print(heap)
+
+    def processWorkflowsByDeadline(self, workflows: List[any]):
+        """Sort workflows by deadline (EDF ordering)"""
+        for wf in workflows:
+            wf_plan = eval(wf)
+            if wf_plan['id'] == 'END':
+                heapq.heappush(self.workflow_heap, (1000000, self.workflow_counter, wf_plan['id'], wf_plan))
+            else:
+                deadline = wf_plan['submit_time'] + wf_plan['constraints']['deadline']
+                heapq.heappush(self.workflow_heap, (deadline, self.workflow_counter, wf_plan['id'], wf_plan))
+            self.workflow_counter += 1

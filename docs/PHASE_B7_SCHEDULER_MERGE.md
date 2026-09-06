@@ -2,7 +2,7 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 and B7.1 are done; B7.2 onwards are not applied yet. Every figure below was measured on that commit with
+end. B7.0 to B7.2 are done; B7.3 onwards are not applied yet. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -309,6 +309,30 @@ messaging methods carry licence holds). 135 lines removed net;
 `tests/unit/test_scheduler_hierarchy.py` pins which methods resolve to the
 base and which stay overridden. Gates: default suite, smoke (20 cells), HPO
 allocation baseline, all unchanged.
+
+**B7.2 done (2026-09-06).** Only methods whose normalised bodies are
+byte-identical moved, each after the same free-name binding check as B7.1
+(one candidate failed it and stayed: `processResourceRequestsByDeadline`
+differs between EDF-ST-LA and EDF-LAMF, so it stays per policy; HSM's is
+EDF-LAMF's and is inherited). New homes: `EDFOrderingMixin` in
+`scheduler.py` (`peekWorkflow`, `popWorkflow`, `processWorkflowsByDeadline`,
+identical in all five EDF policies of the licence and HPO layers);
+`Scheduler_LA_Elastic` (`freeResourcesWithLicenses`, identical in FCFS-LAMF
+and EDF-LAMF); `Scheduler_HPO_Static` (the static `createOnDemandWorkers`)
+and `Scheduler_HPO_Elastic` (`_syncOnDemandIPs`, the elastic
+`createOnDemandWorkers`, `freeResources`, `getHPOInstanceCost`), with
+`getInstanceTypeForHPO` on `Scheduler_HPO` itself. `EDF_HSM_LA` is now a
+subclass of `EDF_Optimized_LA` and lost its eight identical copies; its
+constructor, which was EDF-LAMF's statement for statement plus the phase
+table (the normalised diff is one added line), now calls EDF-LAMF's and adds
+that table, so the resource manager and metrics are still built once. Class
+hierarchy after the step: FCFS-ST-LA → `Scheduler_LA`; EDF-ST-LA →
+`EDFOrderingMixin`, `Scheduler_LA`; FCFS-LAMF → `Scheduler_LA_Elastic`;
+EDF-LAMF → `EDFOrderingMixin`, `Scheduler_LA_Elastic`; HSM → `EDF_Optimized_LA`;
+the HPO policies likewise over `Scheduler_HPO_Static` / `Scheduler_HPO_Elastic`.
+`elastiflow/scheduler/` went from 8 244 lines before B7.1 to 7 402. Gates:
+default suite (201), smoke (20 cells), HPO allocation baseline, all
+unchanged; `test_scheduler_hierarchy.py` pins the new layers.
 
 ## Method
 

@@ -2,7 +2,7 @@ import time
 from typing import List
 
 from elastiflow.config.constants_HPO import AVG_WORKFLOW_ITERATIONS, MIN_INSTANCE_COST, MIN_ITERATION_RUNTIME, RESOURCE_REQUEST_TIMEOUT
-from elastiflow.scripts.create_instance_HPO import deleteInstanceFromIp
+from elastiflow.scripts.create_instance_HPO import createWorkerInstances, deleteInstanceFromIp
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
 from elastiflow.utils.metrics_HPO import MetricsHPO
 from elastiflow.utils.resource import getEstimate
@@ -199,6 +199,18 @@ class Scheduler_HPO(Scheduler):
         return acquired_instances
 
     # Purge and return if workflow has been purged
+    def getInstanceTypeForHPO(self, instance_name):
+        """Map instance names to HPO instance types"""
+        if 'g4dn' in instance_name:
+            return 'g4'
+        elif 'g5' in instance_name:
+            return 'g5'
+        elif 'on-prem' in instance_name:
+            return 'g4'  # On-prem uses g4dn.xlarge instances
+        else:
+            return 'unknown'
+
+
 # ---------------------------------------------------------------------------
 # Module-level helpers for instance classification.
 #
@@ -224,3 +236,153 @@ def getFamily(instance_name: str) -> str:
 
 def getInstanceKey(instance_name: str) -> str:
     return instance_name
+
+class Scheduler_HPO_Static(Scheduler_HPO):
+    """The static HPO policies (FCFS-ST, EDF-ST): one allocation at admission,
+    on-demand workers created once (B7.2)."""
+
+    def createOnDemandWorkers(self, ips, backend):
+        """
+        Create actual on-demand worker instances for allocated virtual slots
+        ResourceManager.allocateResources() returns empty IP lists for on-demand,
+        this method creates the actual instances and updates the IP lists.
+        Multiple instance types are created in parallel.
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        to_create = {itype: count for itype, (count, ip_list) in ips.get('on-demand', {}).items()
+                     if count > 0 and len(ip_list) == 0}
+
+        if not to_create:
+            return ips
+
+        def _create(instance_type, count):
+            print(f"Creating {count} on-demand {instance_type} worker instances...")
+            worker_ips = createWorkerInstances(instance_type, count, backend)
+            print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
+            return instance_type, count, worker_ips
+
+        with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
+            futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
+            for future in as_completed(futures):
+                instance_type, count, worker_ips = future.result()
+                ips['on-demand'][instance_type] = (count, worker_ips)
+
+        return ips
+
+
+class Scheduler_HPO_Elastic(Scheduler_HPO):
+    """The elastic HPO policies (Elastic-FCFS, Elastic-EDF): on-demand workers
+    created and released between rounds, with the IP bookkeeping that needs
+    (B7.2). Admission, scale-up and the request loop stay per policy."""
+
+    def _syncOnDemandIPs(self, ips, alloc_resources):
+        """Sync actual on-demand IPs from ips dict back into alloc_resources list.
+        After createOnDemandWorkers(), ips has real EC2 IPs but alloc_resources
+        still has empty lists. Syncs BOTH count and IPs to match actual creation
+        (partial creation may return fewer instances than requested)."""
+        for i, (instance, count, ip_list) in enumerate(alloc_resources):
+            if instance.type == 'on-demand' and len(ip_list) == 0:
+                actual_ips = ips.get('on-demand', {}).get(instance.name, (0, []))[1]
+                actual_count = len(actual_ips)
+                # Release over-reserved slots if partial creation
+                if actual_count < count:
+                    over_reserved = count - actual_count
+                    instance.freeResources(over_reserved, [])
+                    print(f"[SYNC] Released {over_reserved} phantom on-demand slots for {instance.name}")
+                alloc_resources[i] = (instance, actual_count, list(actual_ips))
+        return alloc_resources
+
+    def createOnDemandWorkers(self, ips, backend):
+        """Create actual on-demand worker instances for allocated virtual slots.
+        Multiple instance types are created in parallel.
+        Terminates any successfully created instances if other threads fail.
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        to_create = {itype: count for itype, (count, ip_list) in ips.get('on-demand', {}).items()
+                     if count > 0 and len(ip_list) == 0}
+
+        if not to_create:
+            return ips
+
+        def _create(instance_type, count):
+            print(f"Creating {count} on-demand {instance_type} worker instances...")
+            worker_ips = createWorkerInstances(instance_type, count, backend)
+            print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
+            return instance_type, count, worker_ips
+
+        created_ips = []  # Track all created IPs for rollback on failure
+        try:
+            with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
+                futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
+                for future in as_completed(futures):
+                    instance_type, count, worker_ips = future.result()
+                    created_ips.extend(worker_ips)
+                    ips['on-demand'][instance_type] = (count, worker_ips)
+        except Exception as e:
+            print(f"[ERROR] On-demand instance creation failed: {e}")
+            # Terminate any instances that were successfully created
+            if created_ips and not backend.simulated:
+                print(f"[CLEANUP] Rolling back {len(created_ips)} successfully created instances: {created_ips}")
+                try:
+                    deleteInstanceFromIp(created_ips, backend)
+                except Exception as cleanup_err:
+                    print(f"[CLEANUP] Rollback termination failed: {cleanup_err}")
+            # Zero out all on-demand IPs so caller sees creation failed
+            for itype in to_create:
+                ips['on-demand'][itype] = (ips['on-demand'][itype][0], [])
+
+        return ips
+
+    def freeResources(self, instances, request, backend):
+        """
+        Free excess resources when deadline allows
+        Uses LIFO strategy: frees most recently allocated instances first
+        (typically on-demand instances allocated last)
+        """
+        response_instances = {'on-prem': {}, 'reserved': {}, 'on-demand': {}}
+        freed_count = 0
+        to_free_instances = []
+
+        if request['count'] > 0:
+            # LIFO: Iterate from END of instances list (most recently allocated)
+            for i in range(len(instances) - 1, -1, -1):
+                instance, count, ips = instances[i]
+                to_free = min(request['count'] - freed_count, count)
+                # Free last IPs from this instance (LIFO within instance)
+                to_free_instances.append((instance, to_free, ips[-to_free:]))
+                instances[i] = (instance, count - to_free, ips[:-to_free])
+                response_instances[instance.type][instance.name] = (to_free, ips[-to_free:])
+                freed_count += to_free
+                if freed_count == request['count']:
+                    break
+
+            self.resource_manager.returnResources(request['wf-id'], to_free_instances)
+
+            # Record scale-down metrics
+            cores_freed = sum(inst.cores * count for inst, count, _ in to_free_instances)
+            self.metrics.recordScaleDownAttempt(
+                success=True,
+                instances_removed=freed_count,
+                cores_removed=cores_freed
+            )
+
+        # Notify executor FIRST so it stops using freed IPs immediately.
+        # Instance termination happens AFTER to avoid blocking the response
+        # (termination can take 5+ minutes, exceeding executor's 210s timeout).
+        self.sendFreedResources(request['wf-id'], to_free_instances, instances, response_instances, backend, request.get('client-ip', None), iter_idx=request.get('iteration'))
+
+        # Terminate freed on-demand EC2 instances AFTER notifying executor
+        if request['count'] > 0 and not backend.simulated:
+            for instance, count, ips in to_free_instances:
+                if instance.type == 'on-demand' and ips:
+                    print(f"[SCALE-DOWN] Terminating {len(ips)} freed on-demand instances: {ips}")
+                    try:
+                        deleteInstanceFromIp(ips, backend)
+                    except Exception as e:
+                        print(f"[ERROR] Scale-down termination failed: {e}")
+
+    def getHPOInstanceCost(self, instance):
+        """Get cost per hour for HPO instances (from resources YAML)"""
+        return instance.cost_per_second  # $/hour from YAML (field is misnamed)

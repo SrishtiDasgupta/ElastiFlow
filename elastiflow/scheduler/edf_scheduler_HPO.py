@@ -10,15 +10,12 @@ Baseline scheduler for comparison with:
 - fcfs_optimized_HPO.py (Moldable FCFS)
 """
 
-import heapq
 import threading
 import time
 import math
-from typing import List
 
 from elastiflow.config.constants_HPO import WORKFLOW_POLLING, COLD_START_TIME
 from elastiflow.scripts.speedup_HPO_runtime import getRuntime_g4, getRuntime_g5
-from elastiflow.scripts.create_instance_HPO import createWorkerInstances
 from elastiflow.utils.request import ExecutorRequest, sendRequest, getConfig
 import os
 from elastiflow.resource_manager.resource_manager import ResourceManager
@@ -26,10 +23,11 @@ from elastiflow.resource_manager.instance import CloudOnDemandInstance, OnPremIn
 
 _HPO_RESOURCES_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'resources_HPO.yaml')
 from elastiflow.utils.resource import getConstraintsFromWorkflow
-from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO
+from elastiflow.scheduler.scheduler import EDFOrderingMixin
+from elastiflow.scheduler.scheduler_HPO import Scheduler_HPO_Static
 
 
-class EDF_Scheduler_HPO(Scheduler_HPO):
+class EDF_Scheduler_HPO(EDFOrderingMixin, Scheduler_HPO_Static):
     """
     Static EDF scheduler for HPO workflows.
 
@@ -113,29 +111,6 @@ class EDF_Scheduler_HPO(Scheduler_HPO):
     # =========================================================================
     # EDF HEAP MANAGEMENT
     # =========================================================================
-
-    def processWorkflowsByDeadline(self, workflows: List[any]):
-        """Sort workflows by deadline (EDF ordering)"""
-        for wf in workflows:
-            wf_plan = eval(wf)
-            if wf_plan['id'] == 'END':
-                heapq.heappush(self.workflow_heap, (1000000, self.workflow_counter, wf_plan['id'], wf_plan))
-            else:
-                deadline = wf_plan['submit_time'] + wf_plan['constraints']['deadline']
-                heapq.heappush(self.workflow_heap, (deadline, self.workflow_counter, wf_plan['id'], wf_plan))
-            self.workflow_counter += 1
-
-    def peekWorkflow(self, heap):
-        """Peek at top of heap without removing"""
-        return heap and heap[0][3]
-
-    def popWorkflow(self, heap):
-        """Remove top of heap"""
-        try:
-            heapq.heappop(heap)
-        except Exception as e:
-            print(f'HEAP POP ERROR: {e}')
-            print(heap)
 
     # =========================================================================
     # HPO RESOURCE ALLOCATION (same as fcfs_scheduler_HPO.py)
@@ -295,43 +270,6 @@ class EDF_Scheduler_HPO(Scheduler_HPO):
 
         print(f"Selected: {best_num_hosts} x {best_instance_type} for {trials} trials (cost: ${best_cost:.2f}, runtime: {best_runtime:.0f}s)")
         return (best_instance_type, best_num_hosts)
-
-    def getInstanceTypeForHPO(self, instance_name):
-        """Map instance names to HPO instance types"""
-        if 'g4dn' in instance_name:
-            return 'g4'
-        elif 'g5' in instance_name:
-            return 'g5'
-        elif 'on-prem' in instance_name:
-            return 'g4'
-        else:
-            return 'unknown'
-
-    def createOnDemandWorkers(self, ips, backend):
-        """Create actual on-demand worker instances for allocated virtual slots.
-        Multiple instance types are created in parallel.
-        """
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-
-        to_create = {itype: count for itype, (count, ip_list) in ips.get('on-demand', {}).items()
-                     if count > 0 and len(ip_list) == 0}
-
-        if not to_create:
-            return ips
-
-        def _create(instance_type, count):
-            print(f"Creating {count} on-demand {instance_type} worker instances...")
-            worker_ips = createWorkerInstances(instance_type, count, backend)
-            print(f"Created {count} on-demand {instance_type} workers: {worker_ips}")
-            return instance_type, count, worker_ips
-
-        with ThreadPoolExecutor(max_workers=len(to_create)) as pool:
-            futures = [pool.submit(_create, itype, cnt) for itype, cnt in to_create.items()]
-            for future in as_completed(futures):
-                instance_type, count, worker_ips = future.result()
-                ips['on-demand'][instance_type] = (count, worker_ips)
-
-        return ips
 
     def sendWorkflowForExecutionHPO(self, wf_plan, ips, backend, deadline):
         """
