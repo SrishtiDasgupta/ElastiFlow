@@ -109,35 +109,16 @@ class ExecuteAction(Action):
                 backend.return_port(args['port'])
             self.workflow_iterator = self.workflow_iterator + 1 # increment the iterator for the workflow
             print(f"[DEBUG] {self.wf_id}: iteration {self.workflow_iterator}/{self.workflow_iterations}")
-            workflow_type_now = getWorkflowConfig(self.wf_id).get('workflow_type', 'PLAIN')
-            adaptive_terminate = (
-                workflow_type_now == 'PLAIN_ADAPTIVE'
-                and isinstance(result, dict)
-                and result.get('terminate_reason') in ('converged', 'cap')
-            )
-            if adaptive_terminate:
+            # The use case says whether the result ends the workflow and what the next
+            # iteration receives (elastiflow/usecase.py, B7.7)
+            use_case = getWorkflowConfig(self.wf_id)['use_case']
+            if use_case.terminates(result):
                 print(f"[DEBUG] {self.wf_id}: adaptive driver signalled termination "
                       f"({result.get('terminate_reason')}); setting workflow complete")
                 setWorkflowComplete(self.wf_id, True)
             elif self.workflow_iterator < self.workflow_iterations:
-                # Handle output based on workflow type
                 print(f"[DEBUG] {self.wf_id}: Continuing to next iteration")
-                workflow_type = getWorkflowConfig(self.wf_id).get('workflow_type', 'PLAIN')
-                if workflow_type == 'HPO':
-                    # HPO returns full config dict for next iteration
-                    output_value = result.get('config', result)
-                elif workflow_type == 'PLAIN_ADAPTIVE':
-                    # Adaptive SeisSol returns full driver dict (cohesion + next_links/chains
-                    # + posterior moments + diagnostic). Termination is signalled by the
-                    # driver setting next_links == 0 and next_chains == 0; that case still
-                    # yields the dict back, but the workflow_iterator below stops the loop
-                    # when its hard cap is reached or the executor sees the terminate flag.
-                    output_value = result
-                else:
-                    # Plain and LA return numeric cohesion value
-                    output_value = float(result['cohesion'])
-
-                self.output_parameters[0].append((output_value, hosts))
+                self.output_parameters[0].append((use_case.next_input(result), hosts))
             else:
                 # Else condition terminates the execution since a new input value is not appended
                 print(f"[DEBUG] {self.wf_id}: Final iteration, calling setWorkflowComplete")

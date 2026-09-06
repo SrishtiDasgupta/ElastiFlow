@@ -2,7 +2,7 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 to B7.3, B7.5 and B7.6 are done; B7.7 and B7.4 are not applied yet. Every figure below was measured on that commit with
+end. B7.0 to B7.3 and B7.5 to B7.7 are done; B7.4 is not applied yet. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -428,6 +428,30 @@ the process; no campaign plan fails to load. One executor node loop:
 `executor_HPO.py` keep only their execute and resource-update functions and
 their banners (live paths, import composition only). Gates: dispatch record,
 unit (199), default (216), smoke, all exact.
+
+**B7.7 done (2026-09-06).** `elastiflow/usecase.py` is the protocol: a
+`UseCase` names the registry tag a plan of that kind carries, the
+configuration profile, the reader of each iteration's inputs, the scheduler's
+constraints reader, what an iteration's result hands to the next iteration,
+when a result ends the workflow early, and which Steep action classes run
+it. The four readers are the former `getClientInputs_*` functions of
+`utils/exec_sched.py`, moved unchanged; `for_plan` is `detectWorkflowType`'s
+rules in its order (adaptive flag, licence fields, string mesh,
+`workflowConfig`, integer mesh); the registry caches the use case at
+`setWorkflowConfig` and `getClientInputs` routes through it. The execute
+action asks the use case (`terminates`, `next_input`) instead of branching
+on the type string, with the same outcomes for all four kinds. One Steep
+engine: `Steep_Parser` takes the use case's action classes, `Steep_Workflow`
+asks the plan's use case for them, and `steep_parser_HPO.py` and
+`steep_workflow_HPO.py` (a copy of the parser and of the engine class) are
+deleted; `steep_actions_HPO.py` keeps only HPO's execute action, now a
+subclass of the engine's with its own constructor, subprocess runner and
+`execute`, because that runner is HPO's live path (retries, logs under
+`/fsx`) and has the import test only. The HPO executor node builds
+`Steep_Workflow` like the others. Gates: `tests/unit/test_usecase.py`
+(recognition of the three sample plans and the adaptive flag, the hand-over
+rules, the engine building each use case's actions, the input reader
+reached through the registry), default suite (219), smoke, all exact.
 
 ## Method
 

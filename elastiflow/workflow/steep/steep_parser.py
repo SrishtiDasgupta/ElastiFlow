@@ -1,4 +1,4 @@
-from .steep_actions import *
+from .steep_actions import ExecuteAction, ForEachAction
 from .steep_variables import Variable
 
 # Implemented with the gracious help of ChatGPT
@@ -11,7 +11,11 @@ from .steep_variables import Variable
 """
 class Steep_Parser():
 
-    def __init__(self, data):
+    def __init__(self, data, foreach_action=None, execute_action=None):
+        # The action classes of the use case's engine (B7.7); this module's by default
+        self.ForEach = foreach_action or ForEachAction
+        self.Execute = execute_action or ExecuteAction
+
         # Initialize a global registry
         self.object_registry = {}
 
@@ -66,7 +70,7 @@ class Steep_Parser():
                 
                 yieldToInput = self.get_variable(data.get("yieldToInput", None))
                 
-                return ForEachAction(wf_id, input_parameter, enumerator, output_parameter=output_parameter, yieldToInput=yieldToInput, actions=actions)
+                return self.ForEach(wf_id, input_parameter, enumerator, output_parameter=output_parameter, yieldToInput=yieldToInput, actions=actions)
 
             case "execute":
                 service =  data["service"]
@@ -85,7 +89,7 @@ class Steep_Parser():
                         output_parameter = self.get_variable(output["var"])
                         output_parameters.append(output_parameter)
                 
-                return ExecuteAction(wf_id, service, input_parameters, output_parameters)
+                return self.Execute(wf_id, service, input_parameters, output_parameters)
 
 
             case _:

@@ -20,6 +20,7 @@ hyperparameter optimisation (HPO) on live AWS GPU instances.
 ```
 elastiflow/          the framework: gateway (server/, wf_queue/), scheduler/ (policies),
                      policies.py (the registry of the dissertation's policy names),
+                     usecase.py (what each use case contributes: plan recognition, iteration inputs, engine actions),
                      resource_manager/ (incl. licence/), workflow/ (Steep engine), utils/,
                      config/, scripts/ (dispatchers, workload generators, runtime models,
                      provisioning), the runners (simulate_*.py, main*.py)

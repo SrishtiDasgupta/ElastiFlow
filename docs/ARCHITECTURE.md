@@ -14,7 +14,7 @@ The target layout and the plan are in `docs/REORGANISATION.md`.
 | Resource Manager | `elastiflow/resource_manager/` | `instance.py` (instance model), `resource_manager.py` / `resource_manager_LA.py` |
 | Licence Manager | `elastiflow/resource_manager/license/` | `manager.py`, `policy.py` (token laws per solver), `models.py`, `persistence.py` |
 | Load Balancer | inside the schedulers and `utils/exec_sched.py` | stream-to-resource assignment (SeisSol) and phase-conditioned assignment (HPO) are methods of the policy classes, not a separate module yet |
-| Workflow Engine | `elastiflow/workflow/` | Steep parser and actions (`steep/`), `steep_workflow.py`; `utils/validate_workflow.py`; `utils/exec_sched.py` dispatches per workflow type (`detectWorkflowType`, `getClientInputs_*`) |
+| Workflow Engine | `elastiflow/workflow/` | Steep parser and actions (`steep/`), `steep_workflow.py`, one engine for every use case; `utils/validate_workflow.py`; `utils/exec_sched.py` holds the workflow registry and the resource negotiation with the scheduler; `elastiflow/usecase.py` is the use-case protocol (plan recognition, iteration inputs, hand-over between iterations, the engine's action classes) |
 | Application drivers | `use_cases/seissol/driver/` (TinyDA client/server), `use_cases/hpo/application/` (CIFAR-10 trainers, Ray) | the per-iteration `service` a workflow invokes |
 | Runtime model | `elastiflow/scripts/speedup.py`, `speedup_HPO_runtime.py` | fitted speedup curves per mesh and instance type; the simulated backend's source of iteration times |
 | Provisioning | `elastiflow/scripts/create_instance.py`, `create_instance_HPO.py` | boto3 in live mode; `(sim or time).sleep(COLD_START_TIME)` in simulated mode |
@@ -65,6 +65,7 @@ for their family); the remaining layers are still copies. Phase B7
 | scheduler base | `scheduler/scheduler.py` `Scheduler` (+ `EDFOrderingMixin`) | `scheduler_LA.py` `Scheduler_LA(Scheduler)`, `Scheduler_LA_Elastic` | `scheduler_HPO.py` `Scheduler_HPO(Scheduler)`, `Scheduler_HPO_Static`, `Scheduler_HPO_Elastic` |
 | dispatcher | one loop, `dispatcher.dispatcher(backend, arrivals)`; the profile `SEISSOL` | the profile `LICENCE` in `dispatcher_LA.py` | `dispatcher_HPO.arrivals(...)` |
 | executor | one node loop, `executor.processQueueData` / `serve`; SeisSol's execute function | `executor_LA.py` (execute and resource update) | `executor_HPO.py` (execute and resource update) |
+| workflow engine | one, `steep_workflow.Steep_Workflow`; use cases `usecase.SEISSOL`, `SEISSOL_ADAPTIVE` | `usecase.LICENCE` | `usecase.HPO` with `steep_actions_HPO.ExecuteAction`, its own iteration runner |
 | constants | `config/constants.py` | `constants_LA.py` | `constants_HPO.py` |
 | metrics | `utils/metrics.py` | `metrics_LA.py` | `metrics_HPO.py` |
 | resource manager | `resource_manager.py` | `resource_manager_LA.py` | HPO instance model |
