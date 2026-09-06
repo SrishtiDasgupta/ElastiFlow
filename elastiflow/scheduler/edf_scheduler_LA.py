@@ -21,10 +21,8 @@ import threading
 import time
 from typing import List
 
-from elastiflow.config.constants_LA import WORKFLOW_POLLING, TOTAL_WORKFLOWS
 from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.resource_manager_LA import ResourceManager_LA
-from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.scheduler.scheduler import EDFOrderingMixin
 from elastiflow.scheduler.scheduler_LA import Scheduler_LA
 
@@ -57,142 +55,75 @@ class EDF_Scheduler_LA(EDFOrderingMixin, Scheduler_LA):
         # Baseline is non-moldable
         self.is_moldable = False
 
-    def run(self, backend):
+    metrics_prefix = 'EDF_Static_'
+    drop_rejected_now = True
+
+    def printBanner(self, backend):
         print(f'Starting EDF-LA Baseline (Static EDF with License Awareness) Scheduler...')
         print(f'  - Non-moldable: Resources allocated once at workflow start')
         print(f'  - EDF ordering: Workflows prioritized by earliest deadline')
         print(f'  - License-aware: Dual allocation of compute + licenses')
 
-        rejected_workflows = set()
+    def handleRequest(self, request, backend):
+        if request['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
+            # Non-moldable: ignore scale-up requests (shouldn't happen)
+            print(f"[WARNING] Scale-up request from {request['wf-id']} ignored (non-moldable mode)")
+            self.allocateNewResources(request, backend)
+        else:
+            # Handle freeing (when workflow completes or releases resources)
+            self.freeResources(request, backend)
 
-        # Start resource utilization monitoring (including license pools)
-        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager, self.license_manager)
+    def nextWorkflow(self, backend):
+        # Schedule new workflows in EDF order
+        workflows = backend.workflows.pop_many(None)
+        if workflows:
+            # Sort by deadline (EDF)
+            self.processWorkflowsByDeadline(workflows)
+        # Process heap (even if no new workflows)
+        return self.peekWorkflow(self.workflow_heap)
 
-        while True:
-            # Advance the license ledger clock (honest Token-Hours billing — same
-            # basis as the moldable schedulers, so cost is comparable across policies).
-            if backend.simulated:
-                self.license_manager.set_sim_time(backend.now())
+    def dropWorkflow(self, backend):
+        self.popWorkflow(self.workflow_heap)
+        backend.workflows.pop()
 
-            # === PHASE 1: Handle resource requests (minimal for non-moldable) ===
-            resource_request = backend.resource_requests.peek()
+    def printAllocation(self, wf_plan, ips, backend, constraints=None):
+        print(f"✓ {wf_plan['id']} allocated (deadline={constraints['deadline']:.1f}s):", ips)
 
-            if resource_request:
-                resource_request = eval(resource_request)
-                if resource_request['request'] == ExecutorRequest.REQUEST_RESOURCE.value:
-                    # Non-moldable: ignore scale-up requests (shouldn't happen)
-                    print(f"[WARNING] Scale-up request from {resource_request['wf-id']} ignored (non-moldable mode)")
-                    self.allocateNewResources(resource_request, backend)
-                else:
-                    # Handle freeing (when workflow completes or releases resources)
-                    self.freeResources(resource_request, backend)
-                backend.resource_requests.pop()
-                backend.simulated and backend.sleep(0.2)
-                continue
+    def rejectIfImpossible(self, wf_plan, constraints, backend) -> bool:
+        # Allocation failed - check if impossible or temporarily unavailable
+        license_pool = constraints.get('license_pool')
 
-            # === PHASE 2: Schedule new workflows in EDF order ===
-            workflows = backend.workflows.pop_many(None)
+        if license_pool:
+            # Check if workflow is truly impossible (exceeds pool capacity)
+            instances = self.resource_manager.getResources()
+            count, instance_list = self.checkResources(instances, constraints['min_instances'])
 
-            if workflows:
-                # Sort by deadline (EDF)
-                self.processWorkflowsByDeadline(workflows)
+            if count >= constraints['min_instances']:
+                # Compute available, check license capacity
+                total_cores = sum(inst.cores * cnt for inst, cnt in instance_list)
 
-            # Process heap (even if no new workflows)
-            wf_plan = self.peekWorkflow(self.workflow_heap)
+                try:
+                    licenses_needed = self.license_manager.calculate_tokens(
+                        pool=license_pool,
+                        cores=total_cores,
+                        chains=constraints.get('chains', 1)
+                    )
+                    pool_status = self.license_manager.get_pool_status(license_pool)
 
-            if wf_plan:
-                # Check for END signal
-                if wf_plan['id'] == 'END':
-                    self.popWorkflow(self.workflow_heap)
-                    backend.workflows.pop()
-                    self.metrics.computeMetrics(
-                        file_prefix=f'EDF_Static_{TOTAL_WORKFLOWS}_',
-                        license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            backend.now() if backend.simulated else self.license_manager.sim_now))
-                    break
+                    if licenses_needed > pool_status['total']:
+                        # Impossible - exceeds license pool capacity
+                        self.rejected_workflows.add(wf_plan['id'])
+                        self.dropWorkflow(backend)
+                        print(f'⊘ {wf_plan["id"]} REJECTED: needs {licenses_needed} {license_pool}, pool has {pool_status["total"]}')
+                        return True
+                except Exception as e:
+                    print(f"  ⚠ Error checking license feasibility: {e}")
+        return False
 
-                # Skip rejected workflows
-                if wf_plan['id'] in rejected_workflows:
-                    self.popWorkflow(self.workflow_heap)
-                    backend.workflows.pop()
-                    print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
-                    continue
-
-                # Try allocation if resources available
-                if self.resource_manager.getResourcesAvailable():
-                    constraints = getConstraintsFromWorkflow(wf_plan)
-
-                    # Allocate compute + licenses (static, one-time allocation)
-                    ips, alloc_resources, license_holds = self.allocateResourcesWithLicenses(constraints)
-
-                    if ips:
-                        print(f"✓ {wf_plan['id']} allocated (deadline={constraints['deadline']:.1f}s):", ips)
-                        if license_holds:
-                            print(f"  with {len(license_holds)} license hold(s)")
-
-                        self.popWorkflow(self.workflow_heap)
-                        backend.workflows.pop()
-
-                        start_time = backend.now()
-
-                        # Send to executor
-                        self.sendWorkflowForExecution(
-                            wf_plan, ips, backend, constraints['deadline'], license_holds
-                        )
-
-                        # Track workflow
-                        wf = self.resource_manager.addWorkflow(
-                            wf_plan['id'],
-                            alloc_resources,
-                            constraints['budget'],
-                            constraints['deadline'],
-                            start_time,
-                            constraints['mesh'],
-                            constraints.get('software_id', 0),
-                            license_holds
-                        )
-
-                        self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
-
-                    else:
-                        # Allocation failed - check if impossible or temporarily unavailable
-                        license_pool = constraints.get('license_pool')
-
-                        if license_pool:
-                            # Check if workflow is truly impossible (exceeds pool capacity)
-                            instances = self.resource_manager.getResources()
-                            count, instance_list = self.checkResources(instances, constraints['min_instances'])
-
-                            if count >= constraints['min_instances']:
-                                # Compute available, check license capacity
-                                total_cores = sum(inst.cores * cnt for inst, cnt in instance_list)
-
-                                try:
-                                    licenses_needed = self.license_manager.calculate_tokens(
-                                        pool=license_pool,
-                                        cores=total_cores,
-                                        chains=constraints.get('chains', 1)
-                                    )
-                                    pool_status = self.license_manager.get_pool_status(license_pool)
-
-                                    if licenses_needed > pool_status['total']:
-                                        # Impossible - exceeds license pool capacity
-                                        rejected_workflows.add(wf_plan['id'])
-                                        self.popWorkflow(self.workflow_heap)
-                                        backend.workflows.pop()
-                                        print(f'⊘ {wf_plan["id"]} REJECTED: needs {licenses_needed} {license_pool}, pool has {pool_status["total"]}')
-                                        continue
-                                except Exception as e:
-                                    print(f"  ⚠ Error checking license feasibility: {e}")
-
-                        # Temporarily unavailable - wait for resources
-                        self.resource_manager.setResourcesAvailable(False)
-                        print(f'⏳ {wf_plan["id"]} (deadline={constraints["deadline"]:.1f}s) waiting for resources or licenses...')
-                else:
-                    # Resources not available - wait
-                    pass
-
-            backend.sleep(WORKFLOW_POLLING)
+    def wait(self, wf_plan, constraints, backend):
+        # Temporarily unavailable - wait for resources
+        self.resource_manager.setResourcesAvailable(False)
+        print(f'⏳ {wf_plan["id"]} (deadline={constraints["deadline"]:.1f}s) waiting for resources or licenses...')
 
     # =========================================================================
     # EDF HEAP MANAGEMENT (from edf_optimized_LA.py)

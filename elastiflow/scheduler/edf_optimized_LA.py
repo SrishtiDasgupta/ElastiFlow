@@ -22,11 +22,13 @@ import time
 from typing import List, Dict
 
 from elastiflow.config.constants_LA import (
-    COLD_START_TIME, DEADLINE_BUFFER, MIN_INSTANCE_COST,
-    OPTIM_FCFS_BFACTOR, OPTIM_FCFS_DFACTOR,
-    RESOURCE_REQUEST_TIMEOUT, SPEEDUP_THRESHOLD,
-    WORKFLOW_POLLING,
-    TOTAL_WORKFLOWS
+    COLD_START_TIME,
+    DEADLINE_BUFFER,
+    MIN_INSTANCE_COST,
+    OPTIM_FCFS_BFACTOR,
+    OPTIM_FCFS_DFACTOR,
+    RESOURCE_REQUEST_TIMEOUT,
+    SPEEDUP_THRESHOLD,
 )
 
 from elastiflow.scripts.speedup import getRuntime
@@ -71,6 +73,152 @@ class EDF_Optimized_LA(EDFOrderingMixin, Scheduler_LA_Elastic):
         # Link license manager from resource manager (required for license-aware operations)
         self.license_manager = self.resource_manager.license_manager
 
+    metrics_prefix = 'EDF_'
+
+    def printBanner(self, backend):
+        print(f'Starting EDF-ordered LAMF scheduler...')
+        print(f'  - EDF heap ordering: Deadline-based priority queue')
+        print(f'  - LAMF moldability: Iteration-based progress triggers')
+        print(f'  - Iteration weighting: BFACTOR/DFACTOR {list(OPTIM_FCFS_DFACTOR.values())}')
+        print(f'  - Progress triggers: time_progress vs budget_progress')
+        print(f'  - License-aware guards: Pool saturation, late iteration, time/budget progress')
+
+    def beforeLoop(self, backend):
+        super().beforeLoop(backend)         # rejected_workflows: track impossible workflows
+        self.loop_counter = 0               # Track loop iterations for debugging
+        self.idle_loop_count = 0            # Track consecutive idle loops
+
+    def beginCycle(self, backend) -> bool:
+        self.loop_counter += 1
+        super().beginCycle(backend)         # advance the license ledger clock
+        loop_counter, idle_loop_count = self.loop_counter, self.idle_loop_count
+
+        # Progress indicator every 1000 iterations (reduced frequency)
+        if loop_counter % 1000 == 0:
+            current_time = backend.now()
+            active_wfs = len(self.resource_manager.workflows)
+            completed_wfs = self.metrics.workflow_count if hasattr(self.metrics, 'workflow_count') else 0
+            wf_heap_size = len(self.workflow_heap)
+            req_heap_size = len(self.resource_request_heap)
+            print(f"[PROGRESS] Loop {loop_counter}, time={current_time:.1f}s, active={active_wfs}, completed={completed_wfs}, wf_heap={wf_heap_size}, req_heap={req_heap_size}, idle_count={idle_loop_count}")
+
+        # Termination condition: If no active workflows and nothing in queue for 10 consecutive iterations
+        active_wfs = len(self.resource_manager.workflows)
+        wf_heap_empty = len(self.workflow_heap) == 0
+        req_heap_empty = len(self.resource_request_heap) == 0
+
+        if active_wfs == 0 and wf_heap_empty and req_heap_empty:
+            self.idle_loop_count += 1
+            if self.idle_loop_count > 10:
+                print(f"\n{'='*70}")
+                print(f"✓ All workflows completed. Terminating scheduler.")
+                print(f"  Total loops: {loop_counter}")
+                print(f"  Final simulated time: {backend.now():.1f}s")
+                print(f"{'='*70}\n")
+                self.computeFinalMetrics(backend)
+                return True
+            elif self.idle_loop_count == 1:
+                print(f"\n[INFO] No active workflows detected. Waiting for termination (idle_count={self.idle_loop_count}/10)...")
+        else:
+            if self.idle_loop_count > 0:
+                print(f"[DEBUG] Activity detected, resetting idle_count from {self.idle_loop_count} (active={active_wfs}, wf_heap={len(self.workflow_heap)}, req_heap={len(self.resource_request_heap)})")
+            self.idle_loop_count = 0  # Reset if there's activity
+        return False
+
+    def serviceResourceRequests(self, backend) -> bool:
+        # === PHASE 1: Process Resource Requests (EDF ordering) ===
+        resource_requests = backend.resource_requests.pop_many(None)
+        if not resource_requests:
+            return False
+        # Sort resource requests by deadline (EDF)
+        self.processResourceRequestsByDeadline(resource_requests)
+        resource_request = self.peekWorkflow(self.resource_request_heap)
+        if not resource_request:
+            return False
+        # Process with deadline-urgency awareness
+        start = time.time()
+
+        if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
+            self.popWorkflow(self.resource_request_heap)
+            backend.resource_requests.pop()
+            return True
+
+        self.processFreeRequestWithLicenses(backend, resource_request)
+        print(f"  Resource request overhead: {time.time() - start:.3f}s")
+
+        self.popWorkflow(self.resource_request_heap)
+        backend.resource_requests.pop()
+        return True
+
+    def nextWorkflow(self, backend):
+        # === PHASE 2: Schedule New Workflows (EDF ordering) ===
+        workflows = backend.workflows.pop_many(None)
+
+        # Debug heap state periodically
+        if self.loop_counter % 10000 == 0 and len(self.workflow_heap) > 0:
+            print(f"[DEBUG] Workflow heap has {len(self.workflow_heap)} workflows, checking top workflow...")
+            resources_available = self.resource_manager.getResourcesAvailable()
+            print(f"[DEBUG] Resources available: {resources_available}")
+
+        if workflows:
+            if self.loop_counter <= 100 or self.loop_counter % 10000 == 0:  # Debug early and periodically
+                print(f"[DEBUG] Received {len(workflows)} workflows at loop {self.loop_counter}")
+            # Sort workflows by deadline (EDF)
+            self.processWorkflowsByDeadline(workflows)
+
+        # Process heap even if no new workflows arrived
+        return self.peekWorkflow(self.workflow_heap)
+
+    def dropWorkflow(self, backend):
+        self.popWorkflow(self.workflow_heap)
+        backend.workflows.pop()
+
+    def admissionDebug(self, wf_plan, available, backend):
+        # Debug why scheduling is blocked
+        if self.loop_counter % 10000 == 0:
+            print(f"[DEBUG] Phase 3: resources_available={available}, heap_size={len(self.workflow_heap)}")
+
+    def printAllocation(self, wf_plan, ips, backend, constraints=None):
+        print(f"✓ {wf_plan['id']} allocated: {ips}")
+
+    def afterAdmission(self, wf_plan, alloc_resources, license_holds):
+        # Track initial allocation in scheduler
+        if license_holds:
+            self.license_holds[wf_plan['id']] = license_holds
+
+    def whenRefused(self, wf_plan, constraints, ips, alloc_resources, license_holds, backend):
+        if ips is None and alloc_resources is None and license_holds is None:
+            # Check if workflow is truly impossible or just temporarily unavailable
+            constraints_check = getConstraintsFromWorkflow(wf_plan)
+            is_impossible = self.isWorkflowImpossible(constraints_check)
+
+            if is_impossible:
+                # Truly impossible (exceeds pool capacity) - permanently reject
+                self.rejected_workflows.add(wf_plan['id'])
+                self.dropWorkflow(backend)
+                print(f"⊘ Rejecting impossible workflow {wf_plan['id']}")
+            else:
+                self.waitForResources(wf_plan, backend)
+        else:
+            self.waitNoResources(wf_plan, backend)
+
+    def waitForResources(self, wf_plan, backend):
+        # Temporarily unavailable - wait for resources
+        self.resource_manager.setResourcesAvailable(False)
+        if self.loop_counter % 10000 == 0:
+            print(f'⏳ {wf_plan["id"]} waiting for resources/licenses (heap_size={len(self.workflow_heap)})...')
+
+    def waitNoResources(self, wf_plan, backend):
+        # Wait for resources
+        self.resource_manager.setResourcesAvailable(False)
+        if self.loop_counter % 10000 == 0:
+            print(f'[DEBUG] No resources to allocate, waiting... (heap_size={len(self.workflow_heap)})')
+
+    def whenUnavailable(self, wf_plan, backend):
+        # Resources not available - this is likely the blocking condition
+        if self.loop_counter % 10000 == 0:
+            print(f'[DEBUG] Resources marked as unavailable, skipping allocation (heap_size={len(self.workflow_heap)})')
+
     # Log labels of the negotiation trace; HSM overrides them (B7.3).
     negotiation_label = 'EDF-LAMF'
     phase_note = ''
@@ -83,202 +231,6 @@ class EDF_Optimized_LA(EDFOrderingMixin, Scheduler_LA_Elastic):
         """HSM's phase gate: True while a workflow holds its allocation (no
         scale-down). EDF-LAMF never holds; EDF_HSM_LA overrides this (B7.3)."""
         return False
-
-    def run(self, backend):
-        """
-        Main scheduler loop with EDF ordering
-        """
-        print(f'Starting EDF-ordered LAMF scheduler...')
-        print(f'  - EDF heap ordering: Deadline-based priority queue')
-        print(f'  - LAMF moldability: Iteration-based progress triggers')
-        print(f'  - Iteration weighting: BFACTOR/DFACTOR {list(OPTIM_FCFS_DFACTOR.values())}')
-        print(f'  - Progress triggers: time_progress vs budget_progress')
-        print(f'  - License-aware guards: Pool saturation, late iteration, time/budget progress')
-
-        # Start resource utilization monitoring (including license pools)
-        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager, self.license_manager)
-
-        rejected_workflows = set()  # Track impossible workflows
-        loop_counter = 0  # Track loop iterations for debugging
-        idle_loop_count = 0  # Track consecutive idle loops
-
-        while True:
-            loop_counter += 1
-
-            # Advance the license ledger clock so every token hold/release this cycle
-            # is billed at the correct backend timestamp (honest Token-Hours billing).
-            if backend.simulated:
-                self.license_manager.set_sim_time(backend.now())
-
-            # Progress indicator every 1000 iterations (reduced frequency)
-            if loop_counter % 1000 == 0:
-                current_time = backend.now()
-                active_wfs = len(self.resource_manager.workflows)
-                completed_wfs = self.metrics.workflow_count if hasattr(self.metrics, 'workflow_count') else 0
-                wf_heap_size = len(self.workflow_heap)
-                req_heap_size = len(self.resource_request_heap)
-                print(f"[PROGRESS] Loop {loop_counter}, time={current_time:.1f}s, active={active_wfs}, completed={completed_wfs}, wf_heap={wf_heap_size}, req_heap={req_heap_size}, idle_count={idle_loop_count}")
-
-            # Termination condition: If no active workflows and nothing in queue for 10 consecutive iterations
-            active_wfs = len(self.resource_manager.workflows)
-            wf_heap_empty = len(self.workflow_heap) == 0
-            req_heap_empty = len(self.resource_request_heap) == 0
-
-            if active_wfs == 0 and wf_heap_empty and req_heap_empty:
-                idle_loop_count += 1
-                if idle_loop_count > 10:
-                    print(f"\n{'='*70}")
-                    print(f"✓ All workflows completed. Terminating scheduler.")
-                    print(f"  Total loops: {loop_counter}")
-                    print(f"  Final simulated time: {backend.now():.1f}s")
-                    print(f"{'='*70}\n")
-                    from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(
-                        file_prefix=f'EDF_{TOTAL_WORKFLOWS}_',
-                        license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            backend.now() if backend.simulated else self.license_manager.sim_now))
-                    break
-                elif idle_loop_count == 1:
-                    print(f"\n[INFO] No active workflows detected. Waiting for termination (idle_count={idle_loop_count}/10)...")
-            else:
-                if idle_loop_count > 0:
-                    print(f"[DEBUG] Activity detected, resetting idle_count from {idle_loop_count} (active={active_wfs}, wf_heap={len(self.workflow_heap)}, req_heap={len(self.resource_request_heap)})")
-                idle_loop_count = 0  # Reset if there's activity
-
-            # === PHASE 1: Process Resource Requests (EDF ordering) ===
-            resource_requests = backend.resource_requests.pop_many(None)
-
-            if resource_requests:
-                # Sort resource requests by deadline (EDF)
-                self.processResourceRequestsByDeadline(resource_requests)
-                resource_request = self.peekWorkflow(self.resource_request_heap)
-
-                if resource_request:
-                    # Process with deadline-urgency awareness
-                    start = time.time()
-
-                    if backend.now() - resource_request['request-time'] > RESOURCE_REQUEST_TIMEOUT:
-                        self.popWorkflow(self.resource_request_heap)
-                        backend.resource_requests.pop()
-                        continue
-
-                    self.processFreeRequestWithLicenses(backend, resource_request)
-                    print(f"  Resource request overhead: {time.time() - start:.3f}s")
-
-                    self.popWorkflow(self.resource_request_heap)
-                    backend.resource_requests.pop()
-                    continue
-
-            # === PHASE 2: Schedule New Workflows (EDF ordering) ===
-            workflows = backend.workflows.pop_many(None)
-
-            # Debug heap state periodically
-            if loop_counter % 10000 == 0 and len(self.workflow_heap) > 0:
-                print(f"[DEBUG] Workflow heap has {len(self.workflow_heap)} workflows, checking top workflow...")
-                resources_available = self.resource_manager.getResourcesAvailable()
-                print(f"[DEBUG] Resources available: {resources_available}")
-
-            if workflows:
-                if loop_counter <= 100 or loop_counter % 10000 == 0:  # Debug early and periodically
-                    print(f"[DEBUG] Received {len(workflows)} workflows at loop {loop_counter}")
-                # Sort workflows by deadline (EDF)
-                self.processWorkflowsByDeadline(workflows)
-
-            # Process heap even if no new workflows arrived
-            wf_plan = self.peekWorkflow(self.workflow_heap)
-            if wf_plan:
-                # Check for END signal
-                if wf_plan['id'] == 'END':
-                    self.popWorkflow(self.workflow_heap)
-                    backend.workflows.pop()
-                    from elastiflow.config.constants_LA import TOTAL_WORKFLOWS
-                    self.metrics.computeMetrics(
-                        file_prefix=f'EDF_{TOTAL_WORKFLOWS}_',
-                        license_cost_by_owner=self.license_manager.license_cost_by_owner(
-                            backend.now() if backend.simulated else self.license_manager.sim_now))
-                    break
-
-                # Skip rejected workflows
-                if wf_plan['id'] in rejected_workflows:
-                    self.popWorkflow(self.workflow_heap)
-                    backend.workflows.pop()
-                    print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
-                    continue
-
-                # Try to schedule if resources available
-                resources_available = self.resource_manager.getResourcesAvailable()
-
-                # Debug why scheduling is blocked
-                if loop_counter % 10000 == 0:
-                    print(f"[DEBUG] Phase 3: resources_available={resources_available}, heap_size={len(self.workflow_heap)}")
-
-                if resources_available:
-                    constraints = getConstraintsFromWorkflow(wf_plan)
-
-                    # Allocate compute + licenses
-                    ips, alloc_resources, license_holds = self.allocateResourcesWithLicenses(constraints)
-
-                    if ips:
-                        print(f"✓ {wf_plan['id']} allocated: {ips}")
-                        if license_holds:
-                            print(f"  with {len(license_holds)} license hold(s)")
-
-                        self.popWorkflow(self.workflow_heap)
-                        backend.workflows.pop()
-
-                        # Start billing
-                        start_time = backend.now()
-
-                        # Send to executor
-                        self.sendWorkflowForExecution(
-                            wf_plan, ips, backend, constraints['deadline'], license_holds
-                        )
-
-                        # Track workflow with licenses
-                        wf = self.resource_manager.addWorkflow(
-                            wf_plan['id'],
-                            alloc_resources,
-                            constraints['budget'],
-                            constraints['deadline'],
-                            start_time,
-                            constraints['mesh'],
-                            constraints.get('software_id', 0),
-                            license_holds
-                        )
-
-                        self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
-
-                        # Track initial allocation in scheduler
-                        if license_holds:
-                            self.license_holds[wf_plan['id']] = license_holds
-
-                    elif ips is None and alloc_resources is None and license_holds is None:
-                        # Check if workflow is truly impossible or just temporarily unavailable
-                        constraints_check = getConstraintsFromWorkflow(wf_plan)
-                        is_impossible = self.isWorkflowImpossible(constraints_check)
-
-                        if is_impossible:
-                            # Truly impossible (exceeds pool capacity) - permanently reject
-                            rejected_workflows.add(wf_plan['id'])
-                            self.popWorkflow(self.workflow_heap)
-                            backend.workflows.pop()
-                            print(f"⊘ Rejecting impossible workflow {wf_plan['id']}")
-                        else:
-                            # Temporarily unavailable - wait for resources
-                            self.resource_manager.setResourcesAvailable(False)
-                            if loop_counter % 10000 == 0:
-                                print(f'⏳ {wf_plan["id"]} waiting for resources/licenses (heap_size={len(self.workflow_heap)})...')
-                    else:
-                        # Wait for resources
-                        self.resource_manager.setResourcesAvailable(False)
-                        if loop_counter % 10000 == 0:
-                            print(f'[DEBUG] No resources to allocate, waiting... (heap_size={len(self.workflow_heap)})')
-                else:
-                    # Resources not available - this is likely the blocking condition
-                    if loop_counter % 10000 == 0:
-                        print(f'[DEBUG] Resources marked as unavailable, skipping allocation (heap_size={len(self.workflow_heap)})')
-
-            backend.sleep(WORKFLOW_POLLING)
 
     # =========================================================================
     # EDF HEAP MANAGEMENT (from HEFTResourceManager)

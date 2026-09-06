@@ -32,6 +32,7 @@ from elastiflow.config.constants import (
 from elastiflow.scripts.speedup import getRuntime
 from elastiflow.utils.metrics_LA import MetricsLA
 from elastiflow.utils.resource import getEstimate
+from elastiflow.utils.resource_LA import getConstraintsFromWorkflow
 from elastiflow.resource_manager.instance import Instance, OnPremInstance, CloudOnDemandInstance
 from elastiflow.resource_manager.license.manager import LicenseManager
 from elastiflow.resource_manager.license.exceptions import InsufficientTokens, LicenseError
@@ -60,6 +61,125 @@ class Scheduler_LA(Scheduler):
         # (initialized in subclass after resource_manager is created)
         self.license_manager = None
         self.license_holds = {}  # {wf_id: [hold_ids]}
+
+    # ------------------------------------------------------------------
+    # The request loop's hooks for the licence policies (B7.4). Defaults are
+    # FCFS-ST-LA's; the other four override what differs for them.
+    # ------------------------------------------------------------------
+    metrics_prefix = 'Baseline_'        # the metrics files: <prefix><TOTAL_WORKFLOWS>_
+    drop_rejected_now = False           # EDF policies drop a rejected workflow at once; FCFS on the next cycle
+
+    def startMonitoring(self, backend):
+        # Start a thread to periodically compute resource utilization (including license pools)
+        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager, self.license_manager)
+
+    def beforeLoop(self, backend):
+        # Track workflows that are impossible to allocate (prevent infinite waiting)
+        self.rejected_workflows = set()
+
+    def beginCycle(self, backend) -> bool:
+        # Advance the license ledger clock (honest Token-Hours billing — same
+        # basis as the moldable schedulers, so cost is comparable across policies).
+        if backend.simulated:
+            self.license_manager.set_sim_time(backend.now())
+        return False
+
+    def ledgerNow(self, backend):
+        return backend.now() if backend.simulated else self.license_manager.sim_now
+
+    def computeFinalMetrics(self, backend):
+        from elastiflow.config.constants_LA import TOTAL_WORKFLOWS      # late-bound at END, as the loops did
+        self.metrics.computeMetrics(
+            file_prefix=f'{self.metrics_prefix}{TOTAL_WORKFLOWS}_',
+            license_cost_by_owner=self.license_manager.license_cost_by_owner(self.ledgerNow(backend)))
+
+    def finish(self, wf_plan, backend):
+        self.dropWorkflow(backend)
+        self.computeFinalMetrics(backend)
+
+    def skipWorkflow(self, wf_plan, backend) -> bool:
+        # Skip workflows that have been rejected as impossible
+        if wf_plan['id'] in self.rejected_workflows:
+            self.dropWorkflow(backend)
+            print(f"⊘ Skipping rejected workflow {wf_plan['id']}")
+            return True
+        return False
+
+    def admit(self, wf_plan, backend):
+        available = self.resource_manager.getResourcesAvailable()
+        self.admissionDebug(wf_plan, available, backend)
+        if not available:
+            self.whenUnavailable(wf_plan, backend)
+            return
+        constraints = getConstraintsFromWorkflow(wf_plan)
+        # Allocate BOTH compute and licenses
+        ips, alloc_resources, license_holds = self.allocateResourcesWithLicenses(constraints)
+        if ips:
+            self.printAllocation(wf_plan, ips, backend, constraints)
+            if license_holds:
+                print(f"  with {len(license_holds)} license hold(s)")
+            self.dropWorkflow(backend)
+            # Start billing
+            start_time = backend.now()
+            # Send workflow with license info
+            self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'], license_holds)
+            # Track workflow with licenses
+            wf = self.resource_manager.addWorkflow(
+                wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time,
+                constraints['mesh'], constraints.get('software_id', 0), license_holds)
+            self.metrics.addToDataframe(wf_plan['id'], wf, wf_plan['submit_time'])
+            self.afterAdmission(wf_plan, alloc_resources, license_holds)
+        else:
+            self.whenRefused(wf_plan, constraints, ips, alloc_resources, license_holds, backend)
+
+    def admissionDebug(self, wf_plan, available, backend):
+        pass
+
+    def printAllocation(self, wf_plan, ips, backend, constraints=None):
+        print(f"{wf_plan['id']} allocated at {backend.now()}:", ips)
+
+    def afterAdmission(self, wf_plan, alloc_resources, license_holds):
+        pass
+
+    def whenUnavailable(self, wf_plan, backend):
+        pass
+
+    def whenRefused(self, wf_plan, constraints, ips, alloc_resources, license_holds, backend):
+        # Check if this is an impossible allocation (exceeds pool capacity)
+        if self.rejectIfImpossible(wf_plan, constraints, backend):
+            return
+        # Temporary shortage - wait until resources become available
+        self.wait(wf_plan, constraints, backend)
+
+    def rejectIfImpossible(self, wf_plan, constraints, backend) -> bool:
+        license_pool = constraints.get('license_pool')
+        if license_pool:
+            # Get hypothetical instance allocation
+            instances = self.resource_manager.getResources()
+            count, instance_list = self.checkResources(instances, constraints['min_instances'])
+
+            if count >= constraints['min_instances']:
+                total_cores = sum(inst.cores * cnt for inst, cnt in instance_list)
+                licenses_needed = self.license_manager.calculate_tokens(
+                    pool=license_pool,
+                    cores=total_cores,
+                    chains=constraints.get('chains', 1)
+                )
+                pool_status = self.license_manager.get_pool_status(license_pool)
+
+                if licenses_needed > pool_status['total']:
+                    # Impossible allocation - reject permanently
+                    self.rejected_workflows.add(wf_plan['id'])
+                    if self.drop_rejected_now:
+                        self.dropWorkflow(backend)
+                    print(f'⊘ {wf_plan["id"]} REJECTED - needs {licenses_needed} tokens, pool has {pool_status["total"]}')
+                    # (FCFS: will be removed from queue on next iteration)
+                    return True
+        return False
+
+    def wait(self, wf_plan, constraints, backend):
+        self.resource_manager.setResourcesAvailable(False)
+        print(f'⏳ {wf_plan["id"]} waiting for resources or licenses...')
 
     def allocateResourcesWithLicenses(self, constraints):
         """

@@ -3,7 +3,7 @@
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
 end. B7.0 to B7.3 and B7.5 to B7.7 are done; B7.4 is in progress (the SeisSol
-family is on the skeleton). Every figure below was measured on that commit with
+and licence families are on the skeleton, HPO is next). Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -470,6 +470,27 @@ FCFS-ST its two log lines, Elastic-Rank charges no scheduler overhead, as
 before. All eight SeisSol `run` methods are gone (about 490 lines for about
 150 of hooks). Arbiter: the smoke suite, exact on all 15 SeisSol cells (the
 11 cited and the 4 uncited); default suite 219.
+
+**B7.4, licence (2026-09-06).** The five licence loops (118 to 202 lines)
+are the skeleton plus hooks on `Scheduler_LA`: the licence monitoring, the
+rejected set, the ledger clock in `beginCycle`, the metrics call with the
+policy's `metrics_prefix` and the late-bound workflow count, the skip of
+rejected workflows, and one admission body (availability, dual allocation,
+the send with licence holds, the eight-argument tracking) with `printAllocation`,
+`afterAdmission`, `whenRefused` (`rejectIfImpossible` then `wait`) and
+`whenUnavailable` as the policy's points of difference. FCFS-ST-LA is the
+defaults; EDF-ST-LA warns on scale-up requests, drains the channel into its
+heap, drops a rejected workflow at once (`drop_rejected_now`) and has its own
+guarded rejection check; FCFS-LAMF keeps the timeout-dropping request phase,
+the honest-billing lines before its metrics, the initial-allocation
+bookkeeping and the compute-versus-licence wait; EDF-LAMF keeps the loop
+counters and idle termination in `beginCycle`, the heap-served request phase
+with its quirk (requests already in the heap are served only in a cycle that
+drains new ones, as before), the debug lines and the `isWorkflowImpossible`
+route; HSM is EDF-LAMF with its banner, prefix and the non-blocking waits
+(the difference reported under B7.3 item 4 is now two short methods). About
+820 lines of loops for about 330 of hooks. Arbiter: the smoke suite, exact on
+the 5 licence cells; default suite unchanged.
 
 ## Method
 

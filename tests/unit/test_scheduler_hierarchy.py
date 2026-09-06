@@ -71,8 +71,9 @@ def test_hsm_is_edf_lamf_plus_its_gate():
     assert issubclass(EDF_HSM_LA, EDF_Optimized_LA)
     for name in ('checkNewResourcesWithLicenses', 'findLicenseFeasibleAllocation', 'isWorkflowImpossible', 'freeResourcesWithLicenses'):
         assert getattr(EDF_HSM_LA, name) is getattr(EDF_Optimized_LA, name), name
-    for name in ('run', '_hsm_in_static_phase', '_holdAllocation', '__init__'):
+    for name in ('_hsm_in_static_phase', '_holdAllocation', '__init__', 'printBanner', 'waitForResources', 'waitNoResources'):
         assert name in EDF_HSM_LA.__dict__, name
+    assert 'run' not in EDF_HSM_LA.__dict__   # B7.4: the skeleton's loop, HSM's hooks
     assert EDF_HSM_LA.processFreeRequestWithLicenses is EDF_Optimized_LA.processFreeRequestWithLicenses   # B7.3: the gate is a hook
 
 
