@@ -70,6 +70,13 @@ unrelated abstract base classes. Phase B merges them.
 
 ### Policies as the dissertation names them
 
+The mapping below is code: `elastiflow/policies.py` is the registry the
+entry points resolve through (name → class, constructor arguments, whether
+the name is offered). The four SeisSol policies the dissertation does not
+cite (`fcfs_scheduler`, the policy of the live `main.py`; `earliest_deadline_fcfs`;
+`priority_fcfs`; `heft_fcfs_req`) are registered by module name, the last
+three as inactive, and each has one cell in the smoke baseline.
+
 SeisSol–TinyDA, via `simulate_sweep.py <algo> <mode> [--sort-key runtime|cost]`:
 
 | thesis name | algo/mode | class |

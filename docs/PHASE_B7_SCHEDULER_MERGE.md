@@ -1,8 +1,8 @@
 # Phase B7: merging the three scheduler forks
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
-decisions of the same day are recorded at the end. Nothing in this document is
-applied yet. Every figure below was measured on that commit with
+decisions of the same day and the progress of the steps are recorded at the
+end. B7.0 is done; B7.1 onwards are not applied yet. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -259,6 +259,36 @@ Still open:
 
 4. The HPO hybrid driver keeps its name through B7; renaming it is a separate
    decision (see decision 3 in `docs/PHASE_B_BACKEND.md`).
+
+## Progress
+
+**B7.0 done (2026-09-06).** (a) `tests/regression/hpo_allocation.py` runs the
+four HPO schedulers' pure allocation methods offline: `selectOptimalInstanceType`
+over 648 grid points (3 models × 3 budget scales × 3 deadline scales × 3
+trial counts × 2 epoch counts), the admission allocation for each of the 15
+`data*.yaml` HPO workflows on a fresh scheduler and in sequence on one
+scheduler without releases (which reaches the on-prem, reserved, on-demand
+and exhausted paths), and a scale-up probe (`checkNewResourcesHPO`) after
+each fresh elastic allocation (11 grow, 4 do not). 768 records in
+`baseline_hpo_allocation.json`, recorded twice and compared before writing,
+checked exactly by `test_hpo_allocation_baseline.py`. One finding on the way:
+the HPO schedulers provision on-demand workers from a thread pool
+(`createOnDemandWorkers`), and a simulus clock cannot be slept on from
+another thread, so the harness uses a stub backend (simulated, clock 0,
+immediate provisioning with IPs derived from the instance type); the hybrid
+driver could never have reached this path on a simulated clock either, which
+is consistent with HPO having run live. (b) `elastiflow/policies.py` is the
+registry; `simulate_sweep.py`, `simulate_main_LA.py`, `simulate_main_HPO.py`
+and `main_HPO.py` resolve through it with their argument sets and printed
+lines unchanged (`tests/unit/test_policies.py` pins every name the drivers use
+to the class it had). The three uncited SeisSol policies are `active=False`;
+`fcfs_scheduler` is active as the live `main.py` policy. (c) The smoke
+baseline was re-recorded with one cell for each of the four uncited policies
+(`fcfs_scheduler`, `earliest_deadline_fcfs`, `priority_fcfs`, `heft_fcfs_req`,
+each static, N = 100, seed 7); the 16 existing cells are byte-identical to the
+previous file, so the reference did not move. All four run to completion;
+`heft_fcfs_req` finishes 94 of 100 workflows at this cell, which is its
+recorded behaviour, not a defect introduced here.
 
 ## Method
 

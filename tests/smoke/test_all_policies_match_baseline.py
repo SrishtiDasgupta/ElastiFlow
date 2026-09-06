@@ -3,8 +3,9 @@ Every simulated policy of every campaign, re-run and compared exactly with the
 recorded baseline (tests/regression/baseline_all_policies.json).
 
 This is the Phase B gate: the regression tests pin three cells to the datasets
-of record; this suite pins all 16 policies to the behaviour recorded from a
-tree that passed those tests. About half a minute since the in-process runtime
+of record; this suite pins all 16 policies, plus the 4 uncited SeisSol
+policies kept inactive, to the behaviour recorded from a tree that passed
+those tests. About half a minute since the in-process runtime
 model (B4b); marked `smoke`, so it is
 excluded from a plain `pytest` run and selected with `pytest -m smoke`.
 
@@ -17,8 +18,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'regression'))
-from conftest import (LICENCE_POLICIES, REPO, assert_records_equal, licence_cell,  # noqa: E402
-                      load_json, run, seissol_cell, seissol_variants, strip_bookkeeping)
+from conftest import (LICENCE_POLICIES, REPO, UNCITED_SEISSOL_VARIANTS, assert_records_equal,  # noqa: E402
+                      licence_cell, load_json, run, seissol_cell, seissol_variants, strip_bookkeeping)
 
 pytestmark = pytest.mark.smoke
 
@@ -32,6 +33,13 @@ def baseline() -> dict:
 
 @pytest.mark.parametrize('variant', sorted(seissol_variants()))
 def test_seissol_policy_matches_baseline(variant, python, tmp_path, baseline):
+    rec = strip_bookkeeping(seissol_cell(python, variant, tmp_path / variant))
+    assert_records_equal(baseline[f'seissol/{variant}'], rec)
+
+
+@pytest.mark.parametrize('variant', sorted(UNCITED_SEISSOL_VARIANTS))
+def test_uncited_seissol_policy_matches_baseline(variant, python, tmp_path, baseline):
+    """Kept, inactive, never cited: the cell exists so the code cannot rot."""
     rec = strip_bookkeeping(seissol_cell(python, variant, tmp_path / variant))
     assert_records_equal(baseline[f'seissol/{variant}'], rec)
 

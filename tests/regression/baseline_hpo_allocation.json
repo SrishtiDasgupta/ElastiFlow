@@ -1,0 +1,5678 @@
+{
+ "_provenance": {
+  "git_head": "7e7677e73d8700bc43ff7bfe0d88df09f2072d3b",
+  "note": "Every field must be reproduced exactly (floats to 1e-12) by tests/regression/test_hpo_allocation_baseline.py.",
+  "policies": [
+   "FCFS-ST",
+   "Elastic-FCFS",
+   "EDF-ST",
+   "Elastic-EDF"
+  ],
+  "python": "3.13.9",
+  "recorded": "2026-09-06",
+  "select_grid": {
+   "budget_scales": [
+    0.5,
+    1.0,
+    2.0
+   ],
+   "deadline_scales": [
+    0.5,
+    1.0,
+    2.0
+   ],
+   "epochs": [
+    5,
+    20
+   ],
+   "trials": [
+    1,
+    2,
+    4
+   ]
+  },
+  "workflows": [
+   "data0.yaml",
+   "data1.yaml",
+   "data2.yaml",
+   "data3.yaml",
+   "data4.yaml",
+   "data5.yaml",
+   "data6.yaml",
+   "data7.yaml",
+   "data8.yaml",
+   "data9.yaml",
+   "data10.yaml",
+   "data11.yaml",
+   "data12.yaml",
+   "data13.yaml",
+   "data14.yaml"
+  ]
+ },
+ "records": {
+  "EDF-ST/fresh/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-60bf3eb4": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-73120874": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-a87b8123": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-b03a4442": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-c10c49c2": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-cb7a7521": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-ccb43739": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-cd563898": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-df19b440": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-f0363876": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-f4815881": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/fresh/hpo-ff42ba35": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/select/convnext_large/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/convnext_large/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/convnext_large/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/convnext_large/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/vgg19/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/vgg19/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/vgg19/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "EDF-ST/select/wide_resnet101_2/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "EDF-ST/sequence/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/sequence/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "EDF-ST/sequence/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "g4dn.xlarge/reserved",
+     2,
+     [
+      "172.31.0.209",
+      "172.31.9.217"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {},
+    "reserved": {
+     "g4dn.xlarge": [
+      2,
+      [
+       "172.31.0.209",
+       "172.31.9.217"
+      ]
+     ]
+    }
+   }
+  },
+  "EDF-ST/sequence/hpo-60bf3eb4": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-73120874": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-a87b8123": {
+   "alloc": [
+    [
+     "g4dn.xlarge/on-demand",
+     3,
+     []
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g4dn.xlarge": [
+      3,
+      [
+       "10.19.54.1",
+       "10.19.54.2",
+       "10.19.54.3"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {}
+   }
+  },
+  "EDF-ST/sequence/hpo-b03a4442": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-c10c49c2": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-cb7a7521": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-ccb43739": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-cd563898": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-df19b440": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-f0363876": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-f4815881": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "EDF-ST/sequence/hpo-ff42ba35": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/fresh/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-EDF/fresh/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-60bf3eb4": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-EDF/fresh/hpo-73120874": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-a87b8123": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-EDF/fresh/hpo-b03a4442": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-c10c49c2": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-cb7a7521": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-ccb43739": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-EDF/fresh/hpo-cd563898": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-df19b440": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-f0363876": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-f4815881": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-EDF/fresh/hpo-ff42ba35": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-EDF/select/convnext_large/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/convnext_large/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/vgg19/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/vgg19/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/vgg19/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/select/wide_resnet101_2/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-EDF/sequence/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "Elastic-EDF/sequence/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "Elastic-EDF/sequence/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "g4dn.xlarge/reserved",
+     2,
+     [
+      "172.31.0.209",
+      "172.31.9.217"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {},
+    "reserved": {
+     "g4dn.xlarge": [
+      2,
+      [
+       "172.31.0.209",
+       "172.31.9.217"
+      ]
+     ]
+    }
+   }
+  },
+  "Elastic-EDF/sequence/hpo-60bf3eb4": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-73120874": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-a87b8123": {
+   "alloc": [
+    [
+     "g5.xlarge/reserved",
+     2,
+     [
+      "172.31.0.120",
+      "172.31.8.91"
+     ]
+    ],
+    [
+     "g5.xlarge/on-demand",
+     2,
+     [
+      "10.19.45.1",
+      "10.19.45.2"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 1,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g5.xlarge": [
+      2,
+      [
+       "10.19.45.1",
+       "10.19.45.2"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {
+     "g5.xlarge": [
+      2,
+      [
+       "172.31.0.120",
+       "172.31.8.91"
+      ]
+     ]
+    }
+   }
+  },
+  "Elastic-EDF/sequence/hpo-b03a4442": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-c10c49c2": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-cb7a7521": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-ccb43739": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-cd563898": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-df19b440": {
+   "alloc": [
+    [
+     "g5.xlarge/on-demand",
+     1,
+     [
+      "10.19.45.1"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g5.xlarge": [
+      1,
+      [
+       "10.19.45.1"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {}
+   }
+  },
+  "Elastic-EDF/sequence/hpo-f0363876": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-f4815881": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-EDF/sequence/hpo-ff42ba35": {
+   "alloc": [
+    [
+     "g4dn.xlarge/on-demand",
+     3,
+     [
+      "10.19.54.1",
+      "10.19.54.2",
+      "10.19.54.3"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 1,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g4dn.xlarge": [
+      3,
+      [
+       "10.19.54.1",
+       "10.19.54.2",
+       "10.19.54.3"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {}
+   }
+  },
+  "Elastic-FCFS/fresh/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-FCFS/fresh/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-60bf3eb4": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-FCFS/fresh/hpo-73120874": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-a87b8123": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-FCFS/fresh/hpo-b03a4442": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-c10c49c2": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-cb7a7521": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-ccb43739": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": []
+  },
+  "Elastic-FCFS/fresh/hpo-cd563898": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-df19b440": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-f0363876": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     2
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-f4815881": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-FCFS/fresh/hpo-ff42ba35": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   },
+   "scale_up": [
+    [
+     "on-prem/on-prem",
+     1
+    ]
+   ]
+  },
+  "Elastic-FCFS/select/convnext_large/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/convnext_large/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/vgg19/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/select/wide_resnet101_2/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "Elastic-FCFS/sequence/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "Elastic-FCFS/sequence/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "Elastic-FCFS/sequence/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "g4dn.xlarge/reserved",
+     2,
+     [
+      "172.31.0.209",
+      "172.31.9.217"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {},
+    "reserved": {
+     "g4dn.xlarge": [
+      2,
+      [
+       "172.31.0.209",
+       "172.31.9.217"
+      ]
+     ]
+    }
+   }
+  },
+  "Elastic-FCFS/sequence/hpo-60bf3eb4": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-73120874": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-a87b8123": {
+   "alloc": [
+    [
+     "g5.xlarge/reserved",
+     2,
+     [
+      "172.31.0.120",
+      "172.31.8.91"
+     ]
+    ],
+    [
+     "g5.xlarge/on-demand",
+     2,
+     [
+      "10.19.45.1",
+      "10.19.45.2"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 1,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g5.xlarge": [
+      2,
+      [
+       "10.19.45.1",
+       "10.19.45.2"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {
+     "g5.xlarge": [
+      2,
+      [
+       "172.31.0.120",
+       "172.31.8.91"
+      ]
+     ]
+    }
+   }
+  },
+  "Elastic-FCFS/sequence/hpo-b03a4442": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-c10c49c2": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-cb7a7521": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-ccb43739": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-cd563898": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-df19b440": {
+   "alloc": [
+    [
+     "g5.xlarge/on-demand",
+     1,
+     [
+      "10.19.45.1"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g5.xlarge": [
+      1,
+      [
+       "10.19.45.1"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {}
+   }
+  },
+  "Elastic-FCFS/sequence/hpo-f0363876": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-f4815881": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 0,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "Elastic-FCFS/sequence/hpo-ff42ba35": {
+   "alloc": [
+    [
+     "g4dn.xlarge/on-demand",
+     3,
+     [
+      "10.19.54.1",
+      "10.19.54.2",
+      "10.19.54.3"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 1,
+    "g5.xlarge/reserved": 0,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g4dn.xlarge": [
+      3,
+      [
+       "10.19.54.1",
+       "10.19.54.2",
+       "10.19.54.3"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-60bf3eb4": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-73120874": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-a87b8123": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-b03a4442": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-c10c49c2": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-cb7a7521": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-ccb43739": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     4,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      4,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-cd563898": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-df19b440": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-f0363876": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-f4815881": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/fresh/hpo-ff42ba35": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     3,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 1
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      3,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/select/convnext_large/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/convnext_large/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/convnext_large/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/convnext_large/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/vgg19/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/vgg19/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/vgg19/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b0.5/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b1/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d0.5/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d0.5/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d0.5/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d0.5/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d0.5/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d0.5/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d1/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d1/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d1/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d1/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d1/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d1/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d2/t1/e20": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d2/t1/e5": [
+   "g4",
+   1
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d2/t2/e20": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d2/t2/e5": [
+   "g4",
+   2
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d2/t4/e20": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/select/wide_resnet101_2/b2/d2/t4/e5": [
+   "g4",
+   4
+  ],
+  "FCFS-ST/sequence/hpo-0a5998a0": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 2
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/sequence/hpo-417bb2bd": {
+   "alloc": [
+    [
+     "on-prem/on-prem",
+     2,
+     [
+      "172.31.10.149"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 2,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {
+     "on-prem": [
+      2,
+      [
+       "172.31.10.149"
+      ]
+     ]
+    },
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/sequence/hpo-5e16eb0a": {
+   "alloc": [
+    [
+     "g4dn.xlarge/reserved",
+     2,
+     [
+      "172.31.0.209",
+      "172.31.9.217"
+     ]
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 3,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {},
+    "on-prem": {},
+    "reserved": {
+     "g4dn.xlarge": [
+      2,
+      [
+       "172.31.0.209",
+       "172.31.9.217"
+      ]
+     ]
+    }
+   }
+  },
+  "FCFS-ST/sequence/hpo-60bf3eb4": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-73120874": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-a87b8123": {
+   "alloc": [
+    [
+     "g4dn.xlarge/on-demand",
+     3,
+     []
+    ]
+   ],
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": {
+    "on-demand": {
+     "g4dn.xlarge": [
+      3,
+      [
+       "10.19.54.1",
+       "10.19.54.2",
+       "10.19.54.3"
+      ]
+     ]
+    },
+    "on-prem": {},
+    "reserved": {}
+   }
+  },
+  "FCFS-ST/sequence/hpo-b03a4442": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-c10c49c2": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-cb7a7521": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-ccb43739": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-cd563898": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-df19b440": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-f0363876": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-f4815881": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  },
+  "FCFS-ST/sequence/hpo-ff42ba35": {
+   "alloc": null,
+   "free_slots": {
+    "g4dn.xlarge/on-demand": 0,
+    "g4dn.xlarge/reserved": 0,
+    "g5.xlarge/on-demand": 3,
+    "g5.xlarge/reserved": 2,
+    "on-prem/on-prem": 0
+   },
+   "ips": null
+  }
+ }
+}

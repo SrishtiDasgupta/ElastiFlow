@@ -49,6 +49,9 @@ pass before and after any change to the framework. The smoke suite re-runs all
 `tests/regression/baseline_all_policies.json`, recorded from a tree that passed
 the regression tests. To move that reference deliberately, run
 `tests/regression/record_baseline.py` and commit the new file with the reason.
+The HPO schedulers, which have no simulated cell, are pinned the same way by
+`tests/regression/baseline_hpo_allocation.json` (their allocation decisions,
+recorded by `tests/regression/record_hpo_allocation.py`).
 
 ## Running a simulated cell by hand
 

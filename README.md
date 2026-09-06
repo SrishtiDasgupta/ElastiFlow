@@ -19,6 +19,7 @@ hyperparameter optimisation (HPO) on live AWS GPU instances.
 
 ```
 elastiflow/          the framework: gateway (server/, wf_queue/), scheduler/ (policies),
+                     policies.py (the registry of the dissertation's policy names),
                      resource_manager/ (incl. licence/), workflow/ (Steep engine), utils/,
                      config/, scripts/ (dispatchers, workload generators, runtime models,
                      provisioning), the runners (simulate_*.py, main*.py)
@@ -43,7 +44,7 @@ See `docs/INSTALL.md`. In short: a venv, `pip install -r requirements.txt`,
 
 ```
 python -m pytest            # unit + regression, about half a minute
-python -m pytest -m smoke   # every simulated policy once against the recorded baseline, about half a minute
+python -m pytest -m smoke   # every simulated policy once against the recorded baseline, about 40 s
 ```
 
 The regression tests re-run one committed cell of each campaign and compare
