@@ -12,7 +12,8 @@ if __name__ == "__main__":
     finish_queue = Redis_Queue(queue_name='completed-jobs-queue')
     resource_request_queue = Redis_Queue(queue_name='resource-request-queue')
     from elastiflow.execution.backend import LiveBackend, register
-    register(None, LiveBackend(queue, finish_queue, resource_request_queue))
+    from elastiflow.scripts.create_instance import launchInstance, terminateInstance
+    register(None, LiveBackend(queue, finish_queue, resource_request_queue, launch=launchInstance, terminate=terminateInstance))
     sched = FCFS_Scheduler(queue, finish_queue, resource_request_queue, sort_key='cost_per_iteration')
 
     # Create threads

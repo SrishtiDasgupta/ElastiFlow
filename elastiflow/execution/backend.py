@@ -37,6 +37,8 @@ class ExecutionBackend(Protocol):
     def start_workflow(self, request: dict, executor_ip) -> None: ...
     def notify_resources(self, request: dict, executor_ip): ...
     def spawn(self, fn: Callable, *args, name=None) -> None: ...
+    def provision(self, instance_type: str, count: int) -> list: ...   # returns instance ips
+    def release(self, ips) -> None: ...
 
 
 # --- simulated ---------------------------------------------------------------
@@ -76,8 +78,10 @@ class SimulatedBackend:
     """Simulated time and messaging on a simulus simulator."""
 
     def __init__(self, sim, mailboxes: dict | None = None, execute: Callable | None = None,
-                 on_resources: Callable | None = None):
+                 on_resources: Callable | None = None, cold_start: float = 0.0,
+                 fake_ip: Callable | None = None, release_message: str | None = None):
         self.sim = sim
+        self._cold_start, self._fake_ip, self._release_message = cold_start, fake_ip, release_message
         mailboxes = mailboxes or {}
         self.workflows = SimulatedChannel(sim, 'wf_mb', mailboxes.get('wf_mb'))
         self.completions = SimulatedChannel(sim, 'completed_jobs_mb', mailboxes.get('completed_jobs_mb'))
@@ -99,6 +103,17 @@ class SimulatedBackend:
 
     def spawn(self, fn: Callable, *args, name=None) -> None:
         self.sim.process(fn, *args)
+
+    def provision(self, instance_type: str, count: int) -> list:
+        """Cloud provisioning as a simulated delay of the measured cold start,
+        then synthetic private IPs from the use case's generator (the draws are
+        the same calls in the same order as before B3)."""
+        self.sleep(self._cold_start)
+        return [self._fake_ip() for _ in range(count)]
+
+    def release(self, ips) -> None:
+        if self._release_message:
+            print(self._release_message.format(ips=ips))
 
 
 # --- live --------------------------------------------------------------------
@@ -128,9 +143,11 @@ class LiveChannel:
 class LiveBackend:
     """Wall-clock time, Redis channels, HTTP to the executor nodes, threads."""
 
-    def __init__(self, queue=None, finish_queue=None, resource_request_queue=None):
+    def __init__(self, queue=None, finish_queue=None, resource_request_queue=None,
+                 launch: Callable | None = None, terminate: Callable | None = None):
         self._queues = (queue, finish_queue, resource_request_queue)
         self._channels = None
+        self._launch, self._terminate = launch, terminate
 
     def _build(self):
         from elastiflow.utils.request import getConfig
@@ -164,6 +181,18 @@ class LiveBackend:
 
     def spawn(self, fn: Callable, *args, name=None) -> None:
         threading.Thread(target=fn, args=list(args), name=name).start()
+
+    def provision(self, instance_type: str, count: int) -> list:
+        if self._launch is None:
+            from elastiflow.scripts.create_instance import launchInstance
+            self._launch = launchInstance
+        return self._launch(instance_type, count)
+
+    def release(self, ips) -> None:
+        if self._terminate is None:
+            from elastiflow.scripts.create_instance import terminateInstance
+            self._terminate = terminateInstance
+        return self._terminate(ips)
 
 
 # --- registry ----------------------------------------------------------------

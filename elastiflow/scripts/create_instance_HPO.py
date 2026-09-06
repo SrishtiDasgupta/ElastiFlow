@@ -66,17 +66,10 @@ def createWorkerInstances(instance_type: str, count: int, sim=None) -> List[str]
 
     print(f'Creating {count} worker instances of {instance_type}')
 
+    ips = backend.provision(instance_type, count)
     if sim or SIMULATE:
-        backend.sleep(COLD_START_TIME)
-        ips = []
-        for i in range(count):
-            # Generate simulated IPs for workers
-            digits = [10, 19] + random.choices(range(100, 199), k=2)
-            ips.append('.'.join(map(str, digits)))
         print(f'Simulated worker IPs: {ips}')
-        return ips
-    else:
-        return launchInstanceHPO(instance_type, count, 'worker')
+    return ips
 
 def createInstance(name: str, count: int = 1, sim=None) -> List[str]:
     """
@@ -335,13 +328,26 @@ def setupInstanceHPO(ssh, instance_ip: str):
         print(f"Error in setupInstanceHPO for {instance_ip}: {e}")
         return False
 
-def deleteInstanceFromIp(instances: List[str]):
+def simulated_worker_ip() -> str:
+    """A synthetic private IP for a simulated HPO worker (the same draw as before B3)."""
+    digits = [10, 19] + random.choices(range(100, 199), k=2)
+    return '.'.join(map(str, digits))
+
+
+def launch_workers(instance_type: str, count: int) -> List[str]:
+    """The live provisioning path, for LiveBackend.provision."""
+    return launchInstanceHPO(instance_type, count, 'worker')
+
+
+def deleteInstanceFromIp(instances: List[str], sim=None):
     """
     Terminate instances by IP addresses
     """
     print(f'Terminating HPO instances: {instances}')
 
-    if SIMULATE:
+    if sim is not None:
+        return backend_for(sim).release(instances)
+    if SIMULATE:   # live entry points pass no sim; the constant still guards the CLI helpers below
         print(f'Simulated termination of {instances}')
         return
 
@@ -380,11 +386,16 @@ def deleteInstanceFromIp(instances: List[str]):
     except Exception as e:
         print(f"Error terminating instances: {e}")
 
-def terminateInstance(instance_ips: List[str]):
+def terminate_live(instance_ips: List[str]):
+    """The live termination path, for LiveBackend.release."""
+    return deleteInstanceFromIp(instance_ips)
+
+
+def terminateInstance(instance_ips: List[str], sim=None):
     """
     Backward compatibility function
     """
-    deleteInstanceFromIp(instance_ips)
+    deleteInstanceFromIp(instance_ips, sim)
 
 # Additional HPO-specific utility functions
 
