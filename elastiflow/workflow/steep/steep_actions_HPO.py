@@ -1,5 +1,3 @@
-from enum import Enum, auto
-from abc import ABC
 import sys
 import os
 import time
@@ -21,53 +19,14 @@ MAX_ITERATIONS = 0
 MAX_RETRIES = 2          # Retry failed iterations (e.g. cloud SSH timeout)
 RETRY_DELAY_SECS = 60   # Wait before retry (let cloud instances finish booting)
 
-class ActionType(Enum):
-    ForEach = auto()
-    Execute = auto()
-    Include = auto()
+# The for-each action and the action types are the engine's (steep_actions); only
+# the execute action is HPO's own: it runs run_hpo.py as a subprocess with retries
+# and keeps its logs under /fsx (the live path, B7.7).
+from .steep_actions import Action, ActionType, ForEachAction  # noqa: F401  (re-exported)
+from .steep_actions import ExecuteAction as _ExecuteAction
 
-class Action(ABC):
-    def execute():
-        pass
 
-class ForEachAction(Action):
-
-    # we need to have an init in order to subscribe to the important variables
-    def __init__(self, wf_id, input_parameter: Variable, enumerator: Variable, output_parameter: Variable=None, yieldToInput: Variable=None, actions: List[Action] = []):
-        self.type = ActionType.ForEach
-
-        # Initialize parameters
-        self.input_parameter = input_parameter # List of all inputs
-        self.enumerator = enumerator # Current input value
-        self.yieldToInput = yieldToInput # The output that must be passed back as input - the same as output from execute action
-        self.output_parameter = output_parameter # Output of all iterations
-        self.actions = actions
-        self.wf_id = wf_id
-
-        # Subscribe to variables - prepare for next iteration when there is a change in yieldToInput
-        self.yieldToInput and self.yieldToInput.subscribe(self.prepareOutput)
-            
-    def add_to_input(self, value):
-        self.input_parameter.append(value)
-        self.execute(self.hosts)
-    
-    def prepareOutput(self):
-        outputValue = self.yieldToInput.getValue()
-        self.add_to_input(outputValue)
-        self.output_parameter and self.output_parameter.append(outputValue)
-    
-    def execute(self, hosts):
-        # Add value from input to enumerator
-        self.hosts = hosts
-        new_input = self.input_parameter.getValue()
-        if isinstance(new_input, tuple):
-            self.hosts = hosts
-            self.enumerator.append(new_input)
-        else:
-            self.enumerator.append((new_input, hosts))
-        return self.hosts
-
-class ExecuteAction(Action):
+class ExecuteAction(_ExecuteAction):
 
     def __init__(self, wf_id, service, input_parameters : List[Variable] = [], output_parameters: List[Variable] = []):
         self.type = ActionType.Execute
@@ -82,14 +41,6 @@ class ExecuteAction(Action):
         
         for parameter in self.input_parameters:
             parameter.subscribe(self.check_readiness)
-    
-    def check_readiness(self):
-        # value is discarded for execute actions
-        ready = True
-        for parameter in self.input_parameters:
-            ready = ready and parameter.value_list
-        if ready:
-            self.execute()
     
     def _run_subprocess(self, args, command, env):
         """Run the HPO subprocess with retry logic for transient cloud failures.

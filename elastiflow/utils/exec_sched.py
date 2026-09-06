@@ -2,7 +2,7 @@ import time
 from typing import List, Tuple
 import re
 
-from elastiflow.config.constants import FREE_RESOURCES, MOLDABLE, RESOURCE_REQUEST_TIMEOUT
+from elastiflow.config.constants import FREE_RESOURCES, RESOURCE_REQUEST_TIMEOUT
 from .request import ExecutorRequest, getConfig, sendRequest
 from . import negotiation_log
 
@@ -12,50 +12,6 @@ import os
 _PORTS_YAML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'ports.yaml')
 
 workflow_config = {}
-
-
-def detectWorkflowType(wf_id):
-    """
-    Detect workflow type based on distinguishing fields.
-
-    Three workflow types:
-    - PLAIN: Plain SeisSol (uses workflowConfig array, no licenses)
-    - LA: License-Aware SeisSol (has license_pool/software_id, uses constraints)
-    - HPO: Hyperparameter Optimization (string mesh, dict inputs)
-
-    Detection hierarchy (order matters - check most specific first):
-    1. License fields (license_pool/software_id) → LA
-    2. String mesh → HPO
-    3. workflowConfig array → PLAIN
-    4. Integer mesh → PLAIN (fallback)
-    """
-    config = getWorkflowConfig(wf_id)
-    constraints = config.get('constraints', {})
-    mesh = config.get('mesh')
-
-    # 0. Explicit adaptive opt-in via config.adaptive: true
-    if config.get('adaptive') is True:
-        return 'PLAIN_ADAPTIVE'
-
-    # 1. Check for LA-specific fields (most specific)
-    if 'license_pool' in constraints or 'software_id' in config:
-        return 'LA'
-
-    # 2. Check for HPO-specific fields (string mesh = model names like "vgg19")
-    if isinstance(mesh, str):
-        return 'HPO'
-
-    # 3. Check for Plain-specific fields (workflowConfig array)
-    if 'workflowConfig' in config:
-        return 'PLAIN'
-
-    # 4. Fallback: integer mesh likely means Plain or LA without explicit fields
-    #    Default to PLAIN for backwards compatibility
-    if isinstance(mesh, int):
-        return 'PLAIN'
-
-    # 5. Ultimate fallback
-    raise ValueError(f"Cannot determine workflow type for {wf_id}: mesh={mesh}, config keys={config.keys()}")
 
 
 def getWorkflowOnpremPort():
@@ -81,8 +37,11 @@ def setWorkflowConfig(id, workflow, backend, deadline):
     workflow_config[id]['deadline'] = deadline
     workflow_config[id]['complete'] = False
 
-    # Detect and cache workflow type for efficient routing
-    workflow_config[id]['workflow_type'] = detectWorkflowType(id)
+    # The use case (elastiflow/usecase.py) is recognised once from the plan and cached
+    from elastiflow.usecase import for_plan
+    use_case = for_plan(workflow_config[id])
+    workflow_config[id]['use_case'] = use_case
+    workflow_config[id]['workflow_type'] = use_case.workflow_type
 
 def getWorkflowConfig(id):
     return workflow_config[id]
@@ -103,192 +62,9 @@ def setWorkflowComplete(id, isComplete: bool):
     workflow_config[id]['complete'] = isComplete
 
 
-def getClientInputs_Plain(wf_id, input: Tuple, ind):
-    """
-    Handler for Plain SeisSol workflows.
-
-    Plain workflows use workflowConfig array for pre-planned iteration configs.
-    Input format: (cohesion_value, hosts) where cohesion_value is numeric/string scalar.
-    """
-    mesh = getWorkflowConfig(wf_id)['mesh']
-    backend = getWorkflowConfig(wf_id)['backend']
-    workflow_config_array = getWorkflowConfig(wf_id)['workflowConfig']
-
-    # Extract from pre-planned workflowConfig array
-    chains = workflow_config_array[ind]['chains']
-    tinyda_iterations = workflow_config_array[ind]['tinydaIterations']
-
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, MOLDABLE, chains)
-
-    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
-
-    return {
-        'wf_id': wf_id,
-        'cohesion': input[0],  # Simple scalar value
-        'hosts': alloc_hosts,
-        'chains': chains,
-        'tinyda_iterations': tinyda_iterations,
-        'mesh': mesh,
-        'port': port
-    }, hosts, backend
-
-
-def getClientInputs_LA(wf_id, input: Tuple, ind):
-    """
-    Handler for License-Aware SeisSol workflows.
-
-    LA workflows can use either:
-    - workflowConfig array for moldable scheduling (chains vary per iteration)
-    - constraints for static allocation (chains constant across iterations)
-
-    Input format: (cohesion_value, hosts) where cohesion_value is numeric scalar.
-    """
-    mesh = getWorkflowConfig(wf_id)['mesh']
-    backend = getWorkflowConfig(wf_id)['backend']
-
-    # Read from workflowConfig if present (for moldable LAMF scheduling)
-    # This allows chains to vary per iteration, triggering resource requests
-    if 'workflowConfig' in getWorkflowConfig(wf_id):
-        workflow_config_array = getWorkflowConfig(wf_id)['workflowConfig']
-        chains = workflow_config_array[ind]['chains']
-        tinyda_iterations = workflow_config_array[ind]['tinydaIterations']
-    else:
-        # Fallback to static constraints (for baseline static scheduling)
-        constraints = getWorkflowConfig(wf_id).get('constraints', {})
-        chains = constraints.get('chains', 1)
-        tinyda_iterations = constraints.get('tinydaIterations', 1)
-
-    # OLD CODE (always used static constraints):
-    # constraints = getWorkflowConfig(wf_id).get('constraints', {})
-    # chains = constraints.get('chains', 1)
-    # tinyda_iterations = constraints.get('tinydaIterations', 1)
-
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, MOLDABLE, chains)
-
-    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
-
-    return {
-        'wf_id': wf_id,
-        'cohesion': input[0],  # Simple scalar value
-        'hosts': alloc_hosts,
-        'chains': chains,
-        'tinyda_iterations': tinyda_iterations,
-        'mesh': mesh,
-        'port': port
-    }, hosts, backend
-
-
-def getClientInputs_HPO(wf_id, input: Tuple, ind):
-    """
-    Handler for HPO (Hyperparameter Optimization) workflows.
-
-    HPO workflows use dynamic dict input for iteration config.
-    Input format: (config_dict, hosts) where config_dict has epochs/next_trials keys.
-    """
-    mesh = getWorkflowConfig(wf_id)['mesh']
-    backend = getWorkflowConfig(wf_id)['backend']
-
-    # Iteration 0: input[0] is initial config from workflow YAML (has 'epochs', 'next_trials')
-    # Iteration 1+: input[0] is HPO pipeline output (has 'epoch', 'next_trials')
-    if ind == 0:
-        # First iteration: use 'epochs' (plural) and 'next_trials'
-        constraints = getWorkflowConfig(wf_id).get('constraints', {})
-        chains = input[0].get('next_trials', constraints.get('chains', 1))
-        tinyda_iterations = input[0].get('epochs', constraints.get('tinydaIterations', 1))
-    else:
-        # Subsequent iterations: use 'epoch' (singular) from HPO output
-        chains = input[0].get('next_trials', 0)
-        tinyda_iterations = input[0].get('epoch', input[0].get('epochs', 1))
-
-    # HPO uses its own constants from constants_HPO (not the shared constants.py)
-    from elastiflow.config.constants_HPO import MOLDABLE as HPO_MOLDABLE
-    from elastiflow.config.constants_HPO import FREE_RESOURCES as HPO_FREE_RESOURCES
-    from elastiflow.config.constants_HPO import RESOURCE_REQUEST_TIMEOUT as HPO_TIMEOUT
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, HPO_MOLDABLE, chains,
-                                               HPO_FREE_RESOURCES, HPO_TIMEOUT)
-
-    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
-
-    return {
-        'wf_id': wf_id,
-        'cohesion': input[0],  # Full dict (HPO config)
-        'hosts': alloc_hosts,
-        'chains': chains,
-        'tinyda_iterations': tinyda_iterations,
-        'mesh': mesh,
-        'port': port
-    }, hosts, backend
-
-
-def getClientInputs_PlainAdaptive(wf_id, input: Tuple, ind):
-    """
-    Handler for PLAIN_ADAPTIVE SeisSol workflows (convergence-driven).
-
-    Input format: (config_dict, hosts) where config_dict carries the previous
-    iteration's adaptive driver output: cohesion (scalar), next_links,
-    next_chains, next_cohesion_mean, next_cohesion_var.
-
-    On iteration 0 the dict comes from vars[0].value in the YAML and may only
-    contain {cohesion, next_links, next_chains}.
-    """
-    cfg = getWorkflowConfig(wf_id)
-    mesh = cfg['mesh']
-    backend = cfg['backend']
-    constraints = cfg.get('constraints', {})
-
-    inner = input[0] if isinstance(input[0], dict) else {'cohesion': input[0]}
-
-    if ind == 0:
-        chains = int(inner.get('next_chains', constraints.get('chains', 2)))
-        tinyda_iterations = int(inner.get('next_links',
-                                          constraints.get('tinydaIterations', 2)))
-    else:
-        chains = int(inner.get('next_chains', constraints.get('chains', 2)))
-        tinyda_iterations = int(inner.get('next_links',
-                                          constraints.get('tinydaIterations', 2)))
-
-    alloc_hosts, hosts = getHostsForIteration(wf_id, input[1], ind, backend, MOLDABLE, chains)
-
-    port = backend.lease_port() if len(hosts.get('on-prem', [])) != 0 else 4242
-
-    cumulative_cap = constraints.get('tinydaIterations',
-                                     cfg.get('workflowIterations', 10) * tinyda_iterations)
-
-    return {
-        'wf_id': wf_id,
-        'cohesion': inner,             # full dict carries adaptive feedback fields
-        'hosts': alloc_hosts,
-        'chains': chains,
-        'tinyda_iterations': tinyda_iterations,
-        'mesh': mesh,
-        'port': port,
-        'cumulative_links_cap': cumulative_cap,
-    }, hosts, backend
-
-
 def getClientInputs(wf_id, input: Tuple, ind):
-    """
-    Dispatcher function that routes to type-specific input handlers.
-
-    Routes to:
-    - getClientInputs_Plain() for Plain SeisSol workflows
-    - getClientInputs_LA() for License-Aware SeisSol workflows
-    - getClientInputs_HPO() for HPO workflows
-
-    Workflow type is detected once at initialization and cached in workflow_config.
-    """
-    workflow_type = getWorkflowConfig(wf_id).get('workflow_type', 'PLAIN')
-
-    if workflow_type == 'PLAIN':
-        return getClientInputs_Plain(wf_id, input, ind)
-    elif workflow_type == 'LA':
-        return getClientInputs_LA(wf_id, input, ind)
-    elif workflow_type == 'HPO':
-        return getClientInputs_HPO(wf_id, input, ind)
-    elif workflow_type == 'PLAIN_ADAPTIVE':
-        return getClientInputs_PlainAdaptive(wf_id, input, ind)
-    else:
-        raise ValueError(f"Unknown workflow type: {workflow_type} for workflow {wf_id}")
+    """The next iteration's inputs, read by the plan's use case (elastiflow/usecase.py)."""
+    return getWorkflowConfig(wf_id)['use_case'].client_inputs(wf_id, input, ind)
 
 
 # hosts = {'on-prem': {}, 'reserved': {name: (n, [ips])}, 'on-demand': {}}

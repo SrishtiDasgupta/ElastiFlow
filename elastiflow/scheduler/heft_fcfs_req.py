@@ -1,15 +1,12 @@
 import threading
 import time
-from elastiflow.config.constants import SORT_COUNT, WORKFLOW_POLLING
 from elastiflow.scripts.speedup import getRuntime
-from elastiflow.utils.request import ExecutorRequest
 from elastiflow.resource_manager.heft_rm import HEFTResourceManager
-from elastiflow.utils.resource import getConstraintsFromWorkflow
-from elastiflow.scheduler.scheduler import Scheduler
+from elastiflow.scheduler.scheduler import Scheduler_Ordered
 
 # Workflows are sorted based on computation and communication cost
 # Workflow with the highest cost is allocated to fastest available instance
-class HEFT_FCFS_REQ(Scheduler):
+class HEFT_FCFS_REQ(Scheduler_Ordered):
     
     def __init__(self, queue, finish_queue, resource_request_queue):
         self.resource_manager = HEFTResourceManager()
@@ -19,6 +16,9 @@ class HEFT_FCFS_REQ(Scheduler):
         # Maintain sorted lists based on mesh size
         self.node_resources_1000 = sorted(self.resource_manager.getResources(), key = lambda x: getRuntime(1, 1000, x.getValue('name')))
         self.node_resources_750 = sorted(self.resource_manager.getResources(), key = lambda x: getRuntime(1, 1000, x.getValue('name')))
+
+    def orderWorkflows(self, workflows, backend):
+        self.resource_manager.processWorkflows(workflows)
 
     def allocateResources(self, constraints):
         ips, alloc_resources = {}, []
@@ -34,64 +34,3 @@ class HEFT_FCFS_REQ(Scheduler):
             ips, alloc_resources = self.resource_manager.allocateResources(instances)
         return ips, alloc_resources
     
-    def run(self, backend):
-        print(f'Starting scheduler...')
-
-        # Start a thread to periodically compute resource utilization
-        backend.spawn(self.metrics.collectResourceUtilization, backend, self.resource_manager)
-
-        while True:
-
-            # Check queue for resource requests
-            resource_request =  backend.resource_requests.peek()
-
-            if resource_request:
-                # Moldable scale-up / scale-down via rich base-class
-                # negotiation (processFreeRequest decides internally).
-                resource_request = eval(resource_request)
-                self.processFreeRequest(resource_request, backend)
-                backend.resource_requests.pop()
-                backend.simulated and backend.sleep(0.2) # NOTE: scheduler overhead
-                continue
-
-            # Retrieve all new jobs in the queue
-            workflows = backend.workflows.pop_many(SORT_COUNT)
-            # Sort and update workflow list 
-            self.resource_manager.processWorkflows(workflows)
-
-            # Check the processed queue for new jobs
-            wf_plan = self.resource_manager.peekWorkflow(self.resource_manager.workflow_heap)
-
-            if wf_plan:
-
-                # End the simulation and compute metrics
-                if wf_plan['id'] == 'END':
-                    self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
-                    self.metrics.computeMetrics()
-                    break 
-
-                # If workflow cannot be executed, pop it to prevent stagnation
-                if self.purgeWorkflow(wf_plan, backend):
-                    self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
-                    continue
-
-                # Scheduling
-                constraints = getConstraintsFromWorkflow(wf_plan)
-                ips, alloc_resources = self.allocateResources(constraints)
-                print(f"{wf_plan['id']} allocated: ", ips)
-               
-                # Remove the element if we found the resources needed.
-                if ips:
-                    self.resource_manager.popWorkflow(self.resource_manager.workflow_heap)
-                    # NOTE: We start billing at this point
-                    start_time = backend.now()
-                    self.sendWorkflowForExecution(wf_plan, ips, backend, constraints['deadline'])
-                    wf = self.resource_manager.addWorkflow(wf_plan['id'], alloc_resources, constraints['budget'], constraints['deadline'], start_time, constraints['mesh'])
-                    self.metrics.addToDataframe(wf_plan['id'], wf, submit_time=wf_plan['submit_time'])
-
-                else:
-                    print('No resources to allocate, waiting...')
-
-            backend.sleep(WORKFLOW_POLLING)
-
-        

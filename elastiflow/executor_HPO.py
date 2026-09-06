@@ -2,7 +2,7 @@ import argparse
 from elastiflow.utils.exec_sched import setNewResources, isResourceRequestPending
 from elastiflow.scripts.create_instance_HPO import deleteInstanceFromIp
 from elastiflow.utils.request import getConfig, sendRequest
-from elastiflow.workflow.steep_workflow_HPO import Steep_Workflow_HPO
+from elastiflow.workflow.steep_workflow import Steep_Workflow
 
 def executeWorkflowHPO(data, backend):
     """
@@ -28,7 +28,7 @@ def executeWorkflowHPO(data, backend):
 
     # Create Steep workflow (same as SeisSol)
     try:
-        workflow = Steep_Workflow_HPO(workflow_plan, backend, deadline)
+        workflow = Steep_Workflow(workflow_plan, backend, deadline)
         start_time = backend.now()
 
         print(f'Executing HPO workflow {workflow.id} at {start_time}')
