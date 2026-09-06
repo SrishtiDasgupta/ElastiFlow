@@ -2,7 +2,7 @@
 
 Status: plan, 2026-09-06, written after B6 (commit 9d8e705); the author's
 decisions of the same day and the progress of the steps are recorded at the
-end. B7.0 to B7.3 are done; B7.5 onwards are not applied yet. Every figure below was measured on that commit with
+end. B7.0 to B7.3 and B7.5 are done; B7.6, B7.7 and B7.4 are not applied yet. Every figure below was measured on that commit with
 the scripts described in the "Method" section at the end.
 
 ## The constraint, restated
@@ -392,6 +392,21 @@ each and reported here:*
 `elastiflow/scheduler/` is at 6 167 lines (8 244 before B7.1). Gates:
 default suite (204), smoke (20 cells), the widened HPO record, all exact;
 `test_scheduler_hierarchy.py` pins the hooks and labels.
+
+**B7.5 done (2026-09-06).** `elastiflow/config/profiles.py` names the
+constants module each use case runs with and returns the module object
+itself, because the runners patch it before the schedulers bind its values;
+the three modules keep their files and names, which the drivers and the
+provenance notes cite. `Policy.profile` reads it. The CLI gains `--policy
+NAME`: `policies.runner_args` translates a dissertation name into the entry
+point's own arguments (SeisSol: `algo mode out_dir --sort-key`; licence:
+`--scheduler NAME`; HPO: `--algo --mode`), the usage text lists the active
+names per use case, and the live SeisSol and licence entry points, which
+construct their policy themselves, refuse the option with a message. Gates:
+`tests/unit/test_cli.py` (every registered policy round-trips through its
+entry point's resolver), two new CLI regression cells by policy name
+(Elastic-EDF_c and EDF-LAMF reproduce the datasets of record), default
+suite (214), smoke unchanged.
 
 ## Method
 

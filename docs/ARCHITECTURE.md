@@ -75,7 +75,10 @@ for their family); the remaining layers are still copies. Phase B7
 
 The mapping below is code: `elastiflow/policies.py` is the registry the
 entry points resolve through (name → class, constructor arguments, whether
-the name is offered). The four SeisSol policies the dissertation does not
+the name is offered), `python -m elastiflow run ... --policy NAME` translates a
+name into the runner's own arguments, and `elastiflow/config/profiles.py`
+names the constants module each use case runs with (the three modules stay
+where they are: `constants.py`, `constants_LA.py`, `constants_HPO.py`). The four SeisSol policies the dissertation does not
 cite (`fcfs_scheduler`, the policy of the live `main.py`; `earliest_deadline_fcfs`;
 `priority_fcfs`; `heft_fcfs_req`) are registered by module name, the last
 three as inactive, and each has one cell in the smoke baseline.

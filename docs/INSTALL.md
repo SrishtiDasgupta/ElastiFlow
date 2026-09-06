@@ -64,13 +64,20 @@ python simulate_main_LA.py --scheduler EDF-LAMF --N 150 --seed 7 --output-dir /t
 ```
 
 or, from anywhere, through the one-switch entry point (`--mode` selects the
-execution backend; everything after `--use-case` goes to the runner unchanged):
+execution backend, `--policy` names the policy as the dissertation does and
+is translated into the runner's own arguments; everything else after the
+options goes to the runner unchanged):
 
 ```
-python -m elastiflow run --mode simulated --use-case seissol edf moldable --sort-key cost /tmp/out --seed 7 --N 100
-python -m elastiflow run --mode simulated --use-case licence --scheduler EDF-LAMF --N 150 --seed 7 --output-dir /tmp/la
+python -m elastiflow run --mode simulated --use-case seissol --policy Elastic-EDF_c /tmp/out --seed 7 --N 100
+python -m elastiflow run --mode simulated --use-case licence --policy EDF-LAMF --N 150 --seed 7 --output-dir /tmp/la
+python -m elastiflow run --mode simulated --use-case seissol edf moldable --sort-key cost /tmp/out --seed 7 --N 100   # the runner's own arguments
 python -m elastiflow run --mode live --use-case seissol        # the live scheduler process (Redis, AWS); executor nodes run elastiflow/executor.py
 ```
+
+`python -m elastiflow` with no arguments lists the policy names. HSM's uniform
+rho gate is an environment setting of the driver (`LA_HSM_POOL_RHO*=0.70`),
+not of the runner, so set it as `canonical_sweep.py` does.
 
 `pip install -e .` also installs the same command as `elastiflow`.
 

@@ -37,6 +37,12 @@ class Policy:
         """Import the scheduler class (only now: the runner has patched its constants)."""
         return getattr(importlib.import_module(self.module), self.cls)
 
+    @property
+    def profile(self):
+        """The constants module this policy runs with (elastiflow/config/profiles.py)."""
+        from elastiflow.config import profiles
+        return profiles.load(self.use_case)
+
     def kwargs(self, runner_sort_key: str | None = None) -> dict:
         """Constructor keyword arguments beyond the three queues."""
         if self.sort_key is None:
@@ -137,3 +143,25 @@ def resolve_seissol(algo: str, mode: str, sort_key: str) -> Policy:
 def resolve_hpo(algo: str, mode: str) -> Policy:
     """The HPO runners' (--algo {fcfs,edf}, --mode {static,moldable}) pair."""
     return get('hpo', ('Elastic-' if mode == 'moldable' else '') + algo.upper() + ('' if mode == 'moldable' else '-ST'))
+
+
+_SWEEP_WORDS = {'FCFS_Optimized': 'fcfs', 'EarliestDeadlineEDF': 'edf', 'HEFT_HEFT_REQ': 'heft', 'PriorityPriority': 'rank'}
+
+
+def runner_args(policy: Policy, rest: list[str]) -> list[str]:
+    """The entry point's own arguments for a policy name (the CLI's --policy,
+    B7.5), with the user's remaining arguments in place. The inverse of
+    resolve_seissol / get / resolve_hpo: resolving the result gives `policy`.
+
+    SeisSol: simulate_sweep.py's `algo mode out_dir [--sort-key]`, so `rest`
+    starts with the output directory. Licence: `--scheduler NAME` (HSM's
+    uniform-rho gate is the driver's environment, LA_HSM_POOL_RHO*=0.70).
+    HPO: `--algo --mode`."""
+    if policy.use_case == 'seissol':
+        args = [_SWEEP_WORDS.get(policy.cls, policy.name), 'moldable' if policy.elastic else 'static', *rest]
+        if policy.sort_key in (_R, _C):
+            args += ['--sort-key', 'runtime' if policy.sort_key == _R else 'cost']
+        return args
+    if policy.use_case == 'licence':
+        return ['--scheduler', policy.name, *rest]
+    return ['--algo', 'fcfs' if 'FCFS' in policy.cls else 'edf', '--mode', 'moldable' if policy.elastic else 'static', *rest]
